@@ -6,7 +6,7 @@ const Playlist = require('../models/Playlist');
 const axios = require('axios');
 
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
-const CAMPUSX_PLAYLIST_ID = 'PLc2rvf0OCt4nQhC-xNlCjVnDOHRn12lE1';
+const CAMPUSX_PLAYLIST_ID = 'PLKnIA16_Rmvbr7zKYQuBfsVkjoLcJgxHH';
 
 // Middleware to check auth
 const auth = async (req, res, next) => {
