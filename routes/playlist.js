@@ -1,3 +1,5 @@
+
+
 const express = require('express');
 const router = express.Router();
 const Playlist = require('../models/Playlist');
@@ -13,6 +15,27 @@ const auth = async (req, res, next) => {
     }
     next();
 };
+
+router.get('/test', (req, res) => {
+    res.json({ 
+        message: '✅ Playlist router is working!',
+        hasYouTubeKey: !!YOUTUBE_API_KEY,
+        timestamp: new Date().toISOString()
+    });
+});
+
+router.post('/import-test', auth, async (req, res) => {
+    try {
+        console.log('Import test hit by user:', req.session.userId);
+        res.json({ 
+            message: '✅ Import test route is accessible!',
+            userId: req.session.userId,
+            hasYouTubeKey: !!YOUTUBE_API_KEY
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 router.post('/import', auth, async (req, res) => {
     try {
