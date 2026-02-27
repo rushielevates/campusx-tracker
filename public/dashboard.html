@@ -39,10 +39,55 @@
         .main-content { flex: 1; padding: 20px; overflow-y: auto; background: #f5f5f5; }
         
         /* Player Section */
-        .player-section { background: black; border-radius: 15px 15px 0 0; overflow: hidden; position: relative; }
-        #youtube-player { width: 100%; aspect-ratio: 16/9; background: #000; }
-        .player-controls { position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; background: linear-gradient(transparent, rgba(0,0,0,0.8)); opacity: 0; transition: opacity 0.3s; display: flex; gap: 10px; }
-        .player-section:hover .player-controls { opacity: 1; }
+        .player-section { 
+    background: black; 
+    border-radius: 15px 15px 0 0; 
+    overflow: hidden; 
+    position: relative; 
+    margin-bottom: 0;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+#youtube-player { 
+    width: 100%; 
+    aspect-ratio: 16/9; 
+    background: #000;
+    display: block;
+}
+
+.player-controls { 
+    position: absolute; 
+    bottom: 0; 
+    left: 0; 
+    right: 0; 
+    padding: 15px; 
+    background: linear-gradient(transparent, rgba(0,0,0,0.8)); 
+    opacity: 0; 
+    transition: opacity 0.3s; 
+    display: flex; 
+    gap: 10px; 
+    z-index: 10;
+}
+
+.player-section:hover .player-controls { 
+    opacity: 1; 
+}
+
+/* Fullscreen styles */
+.player-section:-webkit-full-screen #youtube-player {
+    height: 100vh;
+    width: 100vw;
+}
+
+.player-section:-moz-full-screen #youtube-player {
+    height: 100vh;
+    width: 100vw;
+}
+
+.player-section:fullscreen #youtube-player {
+    height: 100vh;
+    width: 100vw;
+}
         .fullscreen-btn { padding: 8px 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 5px; cursor: pointer; font-size: 14px; }
         .fullscreen-btn:hover { background: rgba(255,255,255,0.3); }
         .now-playing { color: white; font-size: 14px; flex: 1; padding: 0 10px; }
@@ -337,54 +382,68 @@
             // Player will be created when first video is played
         }
 
+     // here
         function playVideo(videoId, videoTitle) {
-            console.log('Playing video:', videoId);
-            
-            // Show player section
-            document.getElementById('player-section').style.display = 'block';
-            
-            // Update now playing text
-            document.getElementById('now-playing').textContent = videoTitle || 'Now playing';
-            
-            // Remove active class from all videos
-            document.querySelectorAll('.video-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            
-            // Add active class to current video
-            const videoItems = document.querySelectorAll('.video-item');
-            for (let item of videoItems) {
-                if (item.querySelector('.video-title')?.textContent.includes(videoTitle?.substring(0, 20))) {
-                    item.classList.add('active');
-                    break;
-                }
-            }
-            
-            // Create or update player
-            if (!player) {
-                // Create new player
-                player = new YT.Player('youtube-player', {
-                    height: '100%',
-                    width: '100%',
-                    videoId: videoId,
-                    playerVars: {
-                        autoplay: 1,
-                        controls: 1,
-                        rel: 0,
-                        modestbranding: 1
-                    },
-                    events: {
-                        'onReady': onPlayerReady,
-                        'onStateChange': onPlayerStateChange
-                    }
-                });
-            } else {
-                // Load new video in existing player
-                player.loadVideoById(videoId);
-            }
-            
-            currentVideoId = videoId;
+    console.log('Playing video:', videoId);
+    
+    // Show player section
+    document.getElementById('player-section').style.display = 'block';
+    
+    // Update now playing text
+    document.getElementById('now-playing').textContent = videoTitle || 'Now playing';
+    
+    // Remove active class from all videos
+    document.querySelectorAll('.video-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // Add active class to current video
+    const videoItems = document.querySelectorAll('.video-item');
+    for (let item of videoItems) {
+        if (item.querySelector('.video-title')?.textContent.includes(videoTitle?.substring(0, 20))) {
+            item.classList.add('active');
+            break;
         }
+    }
+    
+    // Create or update player
+    if (!player) {
+        // Create new player with full controls
+        player = new YT.Player('youtube-player', {
+            height: '100%',
+            width: '100%',
+            videoId: videoId,
+            playerVars: {
+                autoplay: 1,
+                controls: 2,                // Full YouTube controls
+                rel: 0,                      // Don't show related videos
+                modestbranding: 1,            // Minimal YouTube logo
+                iv_load_policy: 3,            // Hide annotations
+                cc_load_policy: 0,            // Hide captions
+                fs: 1,                        // Show fullscreen button
+                playsinline: 1,                // Mobile inline playback
+                disablekb: 0,                  // Enable keyboard controls
+                enablejsapi: 1,                // Enable JS API
+                origin: window.location.origin,
+                widget_referrer: window.location.origin,
+                color: 'red',                  // Red progress bar
+                autohide: 0,                    // Never auto-hide controls
+                theme: 'dark'                    // Dark theme
+            },
+            events: {
+                'onReady': onPlayerReady,
+                'onStateChange': onPlayerStateChange,
+                'onError': onPlayerError
+            }
+        });
+    } else {
+        // Load new video in existing player
+        player.loadVideoById(videoId);
+    }
+    
+    currentVideoId = videoId;
+}
+        
 
         function onPlayerReady(event) {
             console.log('Player ready');
