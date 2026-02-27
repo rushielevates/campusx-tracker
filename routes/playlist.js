@@ -19,6 +19,7 @@ router.get('/test', (req, res) => {
     res.json({ 
         message: '✅ Playlist router is working!',
         hasYouTubeKey: !!YOUTUBE_API_KEY,
+        youtubeKeyPrefix: YOUTUBE_API_KEY ? YOUTUBE_API_KEY.substring(0, 8) + '...' : 'not set',
         timestamp: new Date().toISOString()
     });
 });
@@ -37,19 +38,72 @@ router.post('/import-test', auth, async (req, res) => {
 });
 // ===== END TEST ROUTES =====
 
-// MAIN IMPORT ROUTE - UPDATED WITH ERROR HANDLING
+// ===== MAIN IMPORT ROUTE WITH DEBUG LOGGING =====
 router.post('/import', auth, async (req, res) => {
     try {
-        console.log('🚀 Starting playlist import...');
+        console.log('\n🚀 ========== IMPORT STARTED ==========');
+        console.log('User ID:', req.session.userId);
+        console.log('YouTube API Key exists:', !!YOUTUBE_API_KEY);
+        console.log('API Key prefix:', YOUTUBE_API_KEY ? YOUTUBE_API_KEY.substring(0, 8) + '...' : 'none');
+        
         const playlistId = req.body.playlistId || CAMPUSX_PLAYLIST_ID;
+        console.log('Target Playlist ID:', playlistId);
         
         if (!YOUTUBE_API_KEY) {
+            console.error('❌ ERROR: YouTube API key not configured');
             return res.status(500).json({ error: 'YouTube API key not configured in environment variables' });
         }
 
-        console.log('📡 Fetching playlist details for ID:', playlistId);
-        
-        // Fetch playlist details
+        // STEP 1: Test YouTube API connection
+        console.log('\n📡 STEP 1: Testing YouTube API connection...');
+        try {
+            const testResponse = await axios.get('https://www.googleapis.com/youtube/v3/playlists', {
+                params: { 
+                    part: 'snippet', 
+                    id: playlistId, 
+                    key: YOUTUBE_API_KEY 
+                },
+                timeout: 10000
+            });
+            console.log('✅ YouTube API test successful');
+            console.log('Response status:', testResponse.status);
+            console.log('Items found:', testResponse.data.items?.length || 0);
+            
+            if (testResponse.data.items && testResponse.data.items.length > 0) {
+                console.log('Playlist title:', testResponse.data.items[0].snippet.title);
+            }
+        } catch (testError) {
+            console.error('❌ YouTube API test failed:');
+            if (testError.response) {
+                console.error('Status:', testError.response.status);
+                console.error('Status Text:', testError.response.statusText);
+                console.error('Error Data:', JSON.stringify(testError.response.data, null, 2));
+                
+                // Check for specific error reasons
+                const errorReason = testError.response.data?.error?.errors?.[0]?.reason;
+                if (errorReason === 'accessNotConfigured') {
+                    console.error('❌ YouTube Data API v3 is not enabled in Google Cloud Console');
+                } else if (errorReason === 'keyInvalid') {
+                    console.error('❌ API key is invalid');
+                } else if (errorReason === 'quotaExceeded') {
+                    console.error('❌ API quota exceeded');
+                }
+            } else {
+                console.error('Error Message:', testError.message);
+            }
+            
+            return res.status(400).json({ 
+                error: 'YouTube API connection failed',
+                details: {
+                    status: testError.response?.status,
+                    message: testError.response?.data?.error?.message || testError.message,
+                    reason: testError.response?.data?.error?.errors?.[0]?.reason
+                }
+            });
+        }
+
+        // STEP 2: Fetch playlist details
+        console.log('\n📡 STEP 2: Fetching playlist details...');
         const playlistRes = await axios.get('https://www.googleapis.com/youtube/v3/playlists', {
             params: { 
                 part: 'snippet', 
@@ -59,19 +113,25 @@ router.post('/import', auth, async (req, res) => {
         });
 
         if (!playlistRes.data.items || playlistRes.data.items.length === 0) {
+            console.error('❌ Playlist not found on YouTube');
             return res.status(404).json({ error: 'Playlist not found on YouTube' });
         }
 
         const playlistInfo = playlistRes.data.items[0];
         console.log('✅ Playlist found:', playlistInfo.snippet.title);
+        console.log('Channel:', playlistInfo.snippet.channelTitle);
+        console.log('Description length:', playlistInfo.snippet.description?.length || 0);
 
-        // Fetch playlist videos
-        console.log('📡 Fetching videos from playlist...');
+        // STEP 3: Fetch all videos (handle pagination)
+        console.log('\n📡 STEP 3: Fetching videos from playlist...');
         let allVideos = [];
         let nextPageToken = '';
+        let pageCount = 0;
         
-        // Loop to get all videos (handles pagination)
         do {
+            pageCount++;
+            console.log(`📥 Fetching page ${pageCount}...`);
+            
             const videosRes = await axios.get('https://www.googleapis.com/youtube/v3/playlistItems', {
                 params: { 
                     part: 'snippet,contentDetails', 
@@ -84,54 +144,92 @@ router.post('/import', auth, async (req, res) => {
 
             if (videosRes.data.items && videosRes.data.items.length > 0) {
                 allVideos = [...allVideos, ...videosRes.data.items];
+                console.log(`   Added ${videosRes.data.items.length} videos`);
             }
             
             nextPageToken = videosRes.data.nextPageToken || '';
-            console.log(`📥 Fetched ${allVideos.length} videos so far...`);
             
         } while (nextPageToken);
 
-        console.log(`✅ Total videos found: ${allVideos.length}`);
+        console.log(`✅ Total videos found: ${allVideos.length} across ${pageCount} pages`);
 
         if (allVideos.length === 0) {
+            console.error('❌ No videos found in playlist');
             return res.status(404).json({ error: 'No videos found in playlist' });
         }
 
-        // Get all video IDs for duration fetch
+        // STEP 4: Fetch video durations
+        console.log('\n📡 STEP 4: Fetching video durations...');
+        
+        // Get all valid video IDs
         const videoIds = allVideos
             .map(item => item.contentDetails?.videoId)
-            .filter(id => id) // Remove undefined
-            .join(',');
-
-        // Fetch video durations
-        console.log('📡 Fetching video durations...');
+            .filter(id => id && id.length > 0);
+        
+        console.log(`Found ${videoIds.length} valid video IDs`);
+        
         let detailsRes = { data: { items: [] } };
-        if (videoIds) {
-            detailsRes = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
-                params: { 
-                    part: 'contentDetails', 
-                    id: videoIds, 
-                    key: YOUTUBE_API_KEY 
+        if (videoIds.length > 0) {
+            // YouTube API can handle up to 50 IDs at once, so we need to chunk
+            const chunkSize = 50;
+            const chunks = [];
+            for (let i = 0; i < videoIds.length; i += chunkSize) {
+                chunks.push(videoIds.slice(i, i + chunkSize));
+            }
+            
+            console.log(`Fetching durations in ${chunks.length} chunks...`);
+            
+            let allDetails = [];
+            for (let i = 0; i < chunks.length; i++) {
+                console.log(`   Fetching chunk ${i+1}/${chunks.length}...`);
+                const chunkResponse = await axios.get('https://www.googleapis.com/youtube/v3/videos', {
+                    params: { 
+                        part: 'contentDetails', 
+                        id: chunks[i].join(','), 
+                        key: YOUTUBE_API_KEY 
+                    }
+                });
+                if (chunkResponse.data.items) {
+                    allDetails = [...allDetails, ...chunkResponse.data.items];
                 }
-            });
+            }
+            detailsRes.data.items = allDetails;
+            console.log(`✅ Fetched durations for ${allDetails.length} videos`);
         }
 
-        // Helper function to parse YouTube duration format
+        // Helper function to parse YouTube duration format (ISO 8601)
         function parseYouTubeDuration(duration) {
             if (!duration) return 0;
             
-            const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
-            const hours = (match[1] || '').replace('H', '') || 0;
-            const minutes = (match[2] || '').replace('M', '') || 0;
-            const seconds = (match[3] || '').replace('S', '') || 0;
-            
-            return (parseInt(hours) * 3600) + (parseInt(minutes) * 60) + parseInt(seconds);
+            try {
+                const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+                const hours = parseInt(match[1] || '0', 10);
+                const minutes = parseInt(match[2] || '0', 10);
+                const seconds = parseInt(match[3] || '0', 10);
+                
+                return (hours * 3600) + (minutes * 60) + seconds;
+            } catch (err) {
+                console.error('Error parsing duration:', duration, err);
+                return 0;
+            }
         }
 
-        // Create videos array with error handling for each video
-        const videos = allVideos.map((item, index) => {
+        // STEP 5: Process videos
+        console.log('\n📝 STEP 5: Processing videos...');
+        const videos = [];
+        let processedCount = 0;
+        let failedCount = 0;
+        
+        for (let index = 0; index < allVideos.length; index++) {
             try {
+                const item = allVideos[index];
                 const videoId = item.contentDetails?.videoId;
+                
+                if (!videoId) {
+                    failedCount++;
+                    continue;
+                }
+                
                 const detail = detailsRes.data.items?.find(v => v.id === videoId);
                 
                 // Parse duration
@@ -146,31 +244,39 @@ router.post('/import', auth, async (req, res) => {
                     thumbnail = item.snippet.thumbnails.maxres?.url || 
                                 item.snippet.thumbnails.high?.url || 
                                 item.snippet.thumbnails.medium?.url || 
-                                item.snippet.thumbnails.default?.url || 
-                                '';
+                                item.snippet.thumbnails.default?.url || '';
                 }
                 
-                return {
-                    videoId: videoId || `unknown-${index}`,
-                    title: item.snippet?.title || 'Untitled',
+                videos.push({
+                    videoId: videoId,
+                    title: item.snippet?.title || `Video ${index + 1}`,
                     duration: duration,
                     thumbnail: thumbnail,
                     position: index,
                     completed: false
-                };
+                });
+                
+                processedCount++;
+                if (processedCount % 25 === 0) {
+                    console.log(`   Processed ${processedCount}/${allVideos.length} videos...`);
+                }
+                
             } catch (err) {
-                console.error('❌ Error processing video:', err);
-                return null;
+                console.error('Error processing video at index', index, ':', err.message);
+                failedCount++;
             }
-        }).filter(v => v !== null); // Remove any failed videos
+        }
+
+        console.log(`✅ Successfully processed ${processedCount} videos (${failedCount} failed)`);
 
         if (videos.length === 0) {
+            console.error('❌ No videos could be processed');
             return res.status(500).json({ error: 'No videos could be processed' });
         }
 
-        console.log(`✅ Successfully processed ${videos.length} videos`);
-
-        // Create playlist in database
+        // STEP 6: Save to database
+        console.log('\n💾 STEP 6: Saving to database...');
+        
         const playlist = new Playlist({
             playlistId,
             title: playlistInfo.snippet?.title || 'Untitled Playlist',
@@ -186,8 +292,11 @@ router.post('/import', auth, async (req, res) => {
         
         await playlist.save();
         console.log('✅ Playlist saved to database successfully!');
+        console.log('Playlist ID:', playlist._id);
+        console.log('========== IMPORT COMPLETE ==========\n');
         
         res.status(201).json({
+            success: true,
             message: 'Playlist imported successfully',
             playlist: {
                 id: playlist._id,
@@ -197,57 +306,65 @@ router.post('/import', auth, async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Import error:', {
-            message: error.message,
-            response: error.response?.data,
-            status: error.response?.status
-        });
+        console.error('\n❌ ========== IMPORT ERROR ==========');
+        console.error('Message:', error.message);
+        console.error('Stack:', error.stack);
         
-        // Send appropriate error message
-        if (error.response?.status === 403) {
-            res.status(403).json({ error: 'YouTube API key invalid or quota exceeded' });
-        } else if (error.response?.status === 404) {
-            res.status(404).json({ error: 'Playlist not found' });
-        } else {
-            res.status(500).json({ 
-                error: error.message,
-                details: error.response?.data 
-            });
+        if (error.response) {
+            console.error('Response Status:', error.response.status);
+            console.error('Response Headers:', error.response.headers);
+            console.error('Response Data:', JSON.stringify(error.response.data, null, 2));
         }
+        
+        console.error('=====================================\n');
+        
+        res.status(500).json({ 
+            error: 'Import failed',
+            message: error.message,
+            details: error.response?.data
+        });
     }
 });
 
-// GET USER PLAYLISTS
+// ===== GET USER PLAYLISTS =====
 router.get('/user-playlists', auth, async (req, res) => {
     try {
+        console.log('Fetching playlists for user:', req.session.userId);
         const playlists = await Playlist.find({ userId: req.session.userId });
+        console.log(`Found ${playlists.length} playlists`);
         res.json(playlists);
     } catch (error) {
+        console.error('Error fetching playlists:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// GET SINGLE PLAYLIST
+// ===== GET SINGLE PLAYLIST =====
 router.get('/:playlistId', auth, async (req, res) => {
     try {
+        console.log('Fetching playlist:', req.params.playlistId);
         const playlist = await Playlist.findOne({ 
             _id: req.params.playlistId, 
             userId: req.session.userId 
         });
         
         if (!playlist) {
+            console.log('Playlist not found');
             return res.status(404).json({ error: 'Playlist not found' });
         }
         
         res.json(playlist);
     } catch (error) {
+        console.error('Error fetching playlist:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// TOGGLE VIDEO COMPLETION
+// ===== TOGGLE VIDEO COMPLETION =====
 router.post('/:playlistId/video/:videoId/toggle', auth, async (req, res) => {
     try {
+        console.log('Toggling video completion for playlist:', req.params.playlistId);
+        
         const playlist = await Playlist.findOne({ 
             _id: req.params.playlistId, 
             userId: req.session.userId 
@@ -271,6 +388,8 @@ router.post('/:playlistId/video/:videoId/toggle', auth, async (req, res) => {
         const completedCount = playlist.videos.filter(v => v.completed).length;
         const progress = (completedCount / playlist.videos.length) * 100;
         
+        console.log('Video toggled. New progress:', progress.toFixed(1) + '%');
+        
         res.json({ 
             video, 
             progress: {
@@ -281,13 +400,16 @@ router.post('/:playlistId/video/:videoId/toggle', auth, async (req, res) => {
         });
         
     } catch (error) {
+        console.error('Error toggling video:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// UPDATE PLAYBACK SPEED
+// ===== UPDATE PLAYBACK SPEED =====
 router.post('/:playlistId/speed', auth, async (req, res) => {
     try {
+        console.log('Updating speed for playlist:', req.params.playlistId);
+        
         const playlist = await Playlist.findOne({ 
             _id: req.params.playlistId, 
             userId: req.session.userId 
@@ -300,9 +422,12 @@ router.post('/:playlistId/speed', auth, async (req, res) => {
         playlist.playlistSpeed = req.body.speed;
         await playlist.save();
         
+        console.log('Speed updated to:', playlist.playlistSpeed);
+        
         res.json({ speed: playlist.playlistSpeed });
         
     } catch (error) {
+        console.error('Error updating speed:', error);
         res.status(500).json({ error: error.message });
     }
 });
