@@ -1,1 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard - CampusX ML Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: Arial; background: #f5f5f5; }
+        .app-container { display: flex; height: 100vh; }
+        .sidebar { width: 300px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 30px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .sidebar-header h2 { font-size: 24px; }
+        .user-info { padding: 20px; display: flex; align-items: center; border-bottom: 1px solid #e0e0e0; }
+        .user-avatar { width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; margin-right: 15px; }
+        .playlists-section { flex: 1; padding: 20px; overflow-y: auto; }
+        .playlist-item { padding: 15px; background: #f8f9fa; border-radius: 10px; margin-bottom: 10px; cursor: pointer; }
+        .playlist-item:hover { background: #e9ecef; }
+        .playlist-title { font-weight: bold; margin-bottom: 5px; }
+        .playlist-stats { font-size: 12px; color: #666; }
+        .import-btn { margin: 20px; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; cursor: pointer; }
+        .logout-btn { margin: 0 20px 20px; padding: 10px; background: none; border: 2px solid #dc3545; color: #dc3545; border-radius: 10px; cursor: pointer; }
+        .main-content { flex: 1; padding: 20px; overflow-y: auto; }
+        .playlist-view { background: white; border-radius: 15px; padding: 20px; }
+        .playlist-header { margin-bottom: 20px; }
+        .playlist-header h1 { font-size: 28px; margin-bottom: 10px; }
+        .playlist-meta { display: flex; gap: 30px; margin: 20px 0; }
+        .meta-item { text-align: center; }
+        .meta-label { font-size: 12px; color: #666; }
+        .meta-value { font-size: 24px; font-weight: bold; color: #667eea; }
+        .speed-control { background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; }
+        .speed-control input { width: 100%; margin: 10px 0; }
+        .remaining-time { background: #e3f2fd; padding: 10px; border-radius: 5px; color: #1976d2; }
+        .videos-list { margin-top: 20px; }
+        .video-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #e0e0e0; cursor: pointer; }
+        .video-item:hover { background: #f8f9fa; }
+        .video-item.completed { opacity: 0.7; }
+        .video-checkbox { margin-right: 15px; width: 20px; height: 20px; }
+        .video-thumbnail { width: 120px; height: 68px; background: #ddd; border-radius: 5px; margin-right: 15px; }
+        .video-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
+        .video-info { flex: 1; }
+        .video-title { font-weight: 500; margin-bottom: 5px; }
+        .video-duration { font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>CampusX ML</h2>
+                <p>Your Learning Progress</p>
+            </div>
+            
+            <div class="user-info">
+                <div class="user-avatar">CX</div>
+                <div>
+                    <div id="username">Loading...</div>
+                    <small id="user-email"></small>
+                </div>
+            </div>
 
+            <div class="playlists-section">
+                <h3>Your Playlists</h3>
+                <div id="playlists-list"></div>
+            </div>
+
+            <button class="import-btn" onclick="importPlaylist()">+ Import CampusX ML</button>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <div class="main-content">
+            <div id="playlist-view" class="playlist-view">
+                <h3>Select a playlist to start tracking</h3>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentPlaylist = null;
+
+        window.onload = async () => {
+            await loadPlaylists();
+        };
+
+        async function loadPlaylists() {
+            const res = await fetch('/api/playlists/user-playlists');
+            if (!res.ok) {
+                window.location.href = '/';
+                return;
+            }
+            
+            const playlists = await res.json();
+            const list = document.getElementById('playlists-list');
+            list.innerHTML = '';
+            
+            playlists.forEach(p => {
+                const div = document.createElement('div');
+                div.className = 'playlist-item';
+                div.onclick = () => loadPlaylist(p._id);
+                div.innerHTML = `
+                    <div class="playlist-title">${p.title}</div>
+                    <div class="playlist-stats">${p.videos?.length || 0} videos</div>
+                `;
+                list.appendChild(div);
+            });
+            
+            if (playlists.length) loadPlaylist(playlists[0]._id);
+        }
+
+        async function loadPlaylist(id) {
+            const res = await fetch(`/api/playlists/${id}`);
+            currentPlaylist = await res.json();
+            displayPlaylist(currentPlaylist);
+        }
+
+        function displayPlaylist(p) {
+            const view = document.getElementById('playlist-view');
+            const progress = p.getProgress ? p.getProgress() : { completed: 0, total: p.videos.length, percentage: 0 };
+            
+            view.innerHTML = `
+                <div class="playlist-header">
+                    <h1>${p.title}</h1>
+                    <div class="playlist-meta">
+                        <div class="meta-item">
+                            <div class="meta-label">Videos</div>
+                            <div class="meta-value">${p.videos.length}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Completed</div>
+                            <div class="meta-value">${progress.completed}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Progress</div>
+                            <div class="meta-value">${Math.round(progress.percentage)}%</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="speed-control">
+                    <label>Playback Speed: <span id="speed-value">${p.playlistSpeed || 1}x</span></label>
+                    <input type="range" min="0.5" max="2" step="0.25" value="${p.playlistSpeed || 1}" onchange="updateSpeed(this.value)">
+                    <div class="remaining-time" id="remaining-time">
+                        ⏱️ Remaining: ${p.getRemainingTime ? p.getRemainingTime().formatted : '0h 0m'}
+                    </div>
+                </div>
+                
+                <div class="videos-list">
+                    ${p.videos.map((v, i) => `
+                        <div class="video-item ${v.completed ? 'completed' : ''}" onclick="playVideo('${v.videoId}')">
+                            <input type="checkbox" class="video-checkbox" ${v.completed ? 'checked' : ''} onclick="event.stopPropagation(); toggleVideo('${v._id}')">
+                            <div class="video-thumbnail">
+                                <img src="${v.thumbnail}" alt="">
+                            </div>
+                            <div class="video-info">
+                                <div class="video-title">${i+1}. ${v.title}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        async function importPlaylist() {
+            const res = await fetch('/api/playlists/import', { method: 'POST' });
+            if (res.ok) {
+                alert('Playlist imported!');
+                loadPlaylists();
+            }
+        }
+
+        async function toggleVideo(videoId) {
+            if (!currentPlaylist) return;
+            await fetch(`/api/playlists/${currentPlaylist._id}/video/${videoId}/toggle`, { method: 'POST' });
+            loadPlaylist(currentPlaylist._id);
+        }
+
+        async function updateSpeed(speed) {
+            document.getElementById('speed-value').textContent = speed + 'x';
+            if (!currentPlaylist) return;
+            const res = await fetch(`/api/playlists/${currentPlaylist._id}/speed`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ speed: parseFloat(speed) })
+            });
+            const data = await res.json();
+            document.getElementById('remaining-time').textContent = `⏱️ Remaining: ${data.remaining.formatted}`;
+        }
+
+        function playVideo(videoId) {
+            window.open(`https://youtube.com/watch?v=${videoId}`, '_blank');
+        }
+
+        async function logout() {
+            await fetch('/api/auth/logout');
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>
