@@ -37,33 +37,45 @@
         
         /* Main Content Styles */
         .main-content { flex: 1; padding: 20px; overflow-y: auto; background: #f5f5f5; }
-        .playlist-view { background: white; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); overflow: hidden; }
         
-        .playlist-header { padding: 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-        .playlist-header h1 { font-size: 28px; margin-bottom: 10px; }
-        .playlist-description { opacity: 0.9; margin-bottom: 20px; line-height: 1.6; }
+        /* Player Section */
+        .player-section { background: black; border-radius: 15px 15px 0 0; overflow: hidden; position: relative; }
+        #youtube-player { width: 100%; aspect-ratio: 16/9; background: #000; }
+        .player-controls { position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; background: linear-gradient(transparent, rgba(0,0,0,0.8)); opacity: 0; transition: opacity 0.3s; display: flex; gap: 10px; }
+        .player-section:hover .player-controls { opacity: 1; }
+        .fullscreen-btn { padding: 8px 16px; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 5px; cursor: pointer; font-size: 14px; }
+        .fullscreen-btn:hover { background: rgba(255,255,255,0.3); }
+        .now-playing { color: white; font-size: 14px; flex: 1; padding: 0 10px; }
         
-        .playlist-meta { display: flex; gap: 30px; margin-top: 20px; }
-        .meta-item { display: flex; flex-direction: column; }
-        .meta-label { font-size: 12px; opacity: 0.8; margin-bottom: 5px; }
-        .meta-value { font-size: 20px; font-weight: bold; }
+        /* Playlist View */
+        .playlist-view { background: white; border-radius: 0 0 15px 15px; padding: 20px; }
         
-        .speed-control { margin: 20px 30px; padding: 20px; background: #f8f9fa; border-radius: 10px; }
+        .playlist-header { margin-bottom: 20px; }
+        .playlist-header h1 { font-size: 28px; margin-bottom: 10px; color: #333; }
+        
+        .playlist-meta { display: flex; gap: 30px; margin: 20px 0; }
+        .meta-item { text-align: center; }
+        .meta-label { font-size: 12px; color: #666; }
+        .meta-value { font-size: 24px; font-weight: bold; color: #667eea; }
+        
+        .speed-control { background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; }
         .speed-control label { display: block; margin-bottom: 10px; font-weight: 600; color: #333; }
         .speed-input { display: flex; align-items: center; gap: 15px; }
         .speed-input input { flex: 1; height: 40px; }
         .speed-value { font-weight: 600; color: #667eea; min-width: 60px; }
         .remaining-time { margin-top: 10px; padding: 10px; background: #e3f2fd; border-radius: 5px; color: #1976d2; font-weight: 500; }
         
-        .videos-list { padding: 20px 30px; }
-        .video-item { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #e0e0e0; cursor: pointer; transition: background 0.3s; }
+        .videos-list { margin-top: 20px; max-height: 400px; overflow-y: auto; }
+        .video-item { display: flex; align-items: center; padding: 10px; border-bottom: 1px solid #e0e0e0; cursor: pointer; transition: background 0.2s; }
         .video-item:hover { background: #f8f9fa; }
         .video-item.completed { opacity: 0.7; }
+        .video-item.active { background: #e3f2fd; border-left: 4px solid #667eea; }
         .video-checkbox { margin-right: 15px; width: 20px; height: 20px; cursor: pointer; }
         .video-thumbnail { width: 120px; height: 68px; background: #ddd; border-radius: 5px; margin-right: 15px; overflow: hidden; }
         .video-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
         .video-info { flex: 1; }
-        .video-title { font-weight: 500; color: #333; margin-bottom: 5px; }
+        .video-title { font-weight: 500; margin-bottom: 5px; font-size: 14px; }
+        .video-duration { font-size: 12px; color: #666; }
         .video-number { margin-right: 20px; color: #999; font-size: 14px; }
         
         .loading { text-align: center; padding: 50px; color: #666; }
@@ -103,15 +115,30 @@
 
         <!-- Main Content -->
         <div class="main-content">
+            <!-- YouTube Player Section -->
+            <div class="player-section" id="player-section" style="display: none;">
+                <div id="youtube-player"></div>
+                <div class="player-controls">
+                    <span class="now-playing" id="now-playing">Not playing</span>
+                    <button class="fullscreen-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+                </div>
+            </div>
+
+            <!-- Playlist View -->
             <div id="playlist-view" class="playlist-view">
                 <div class="loading">Select a playlist to start tracking</div>
             </div>
         </div>
     </div>
 
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
+    
     <script>
         // Global variables
         let currentPlaylist = null;
+        let player = null;
+        let currentVideoId = null;
         
         // Load data when page loads
         window.onload = async function() {
@@ -140,7 +167,6 @@
                 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        // Not logged in, redirect to login
                         window.location.href = '/';
                         return;
                     }
@@ -214,6 +240,11 @@
                 
                 currentPlaylist = playlist;
                 displayPlaylist(playlist);
+                
+                // If there's a last watched video, play it
+                if (playlist.lastWatched && playlist.lastWatched.videoId) {
+                    playVideo(playlist.lastWatched.videoId);
+                }
             } catch (error) {
                 console.error('Error loading playlist:', error);
                 document.getElementById('playlist-view').innerHTML = '<div class="error-message">Error loading playlist</div>';
@@ -234,23 +265,23 @@
             const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
             
             // Calculate remaining time (mock data for now)
-            const remainingTime = '2h 30m';
+            const remainingTime = 'Calculating...';
             
             view.innerHTML = `
                 <div class="playlist-header">
                     <h1>${playlist.title || 'CampusX ML Playlist'}</h1>
                     <div class="playlist-meta">
                         <div class="meta-item">
-                            <span class="meta-label">Videos</span>
-                            <span class="meta-value">${total}</span>
+                            <div class="meta-label">Videos</div>
+                            <div class="meta-value">${total}</div>
                         </div>
                         <div class="meta-item">
-                            <span class="meta-label">Completed</span>
-                            <span class="meta-value">${completed}</span>
+                            <div class="meta-label">Completed</div>
+                            <div class="meta-value">${completed}</div>
                         </div>
                         <div class="meta-item">
-                            <span class="meta-label">Progress</span>
-                            <span class="meta-value">${percentage}%</span>
+                            <div class="meta-label">Progress</div>
+                            <div class="meta-value">${percentage}%</div>
                         </div>
                     </div>
                 </div>
@@ -258,8 +289,8 @@
                 <div class="speed-control">
                     <label>Playback Speed</label>
                     <div class="speed-input">
-                        <input type="range" min="0.5" max="2" step="0.25" value="1" onchange="updateSpeed(this.value)">
-                        <span class="speed-value" id="speed-display">1x</span>
+                        <input type="range" min="0.5" max="2" step="0.25" value="${playlist.playlistSpeed || 1}" onchange="updateSpeed(this.value)">
+                        <span class="speed-value" id="speed-display">${playlist.playlistSpeed || 1}x</span>
                     </div>
                     <div class="remaining-time" id="remaining-time">
                         ⏱️ Remaining time: ${remainingTime}
@@ -268,14 +299,17 @@
                 
                 <div class="videos-list">
                     ${playlist.videos.map((video, index) => `
-                        <div class="video-item ${video.completed ? 'completed' : ''}" onclick="playVideo('${video.videoId}')">
-                            <input type="checkbox" class="video-checkbox" ${video.completed ? 'checked' : ''} onclick="event.stopPropagation(); toggleVideoComplete('${video._id}')">
+                        <div class="video-item ${video.completed ? 'completed' : ''} ${video.videoId === currentVideoId ? 'active' : ''}" 
+                             onclick="playVideo('${video.videoId}', '${video.title.replace(/'/g, "\\'")}')">
+                            <input type="checkbox" class="video-checkbox" ${video.completed ? 'checked' : ''} 
+                                   onclick="event.stopPropagation(); toggleVideoComplete('${video._id}')">
                             <span class="video-number">${index + 1}</span>
                             <div class="video-thumbnail">
                                 <img src="${video.thumbnail || 'https://via.placeholder.com/120x68'}" alt="${video.title}">
                             </div>
                             <div class="video-info">
                                 <div class="video-title">${video.title || `Video ${index + 1}`}</div>
+                                <div class="video-duration">${formatDuration(video.duration)}</div>
                             </div>
                         </div>
                     `).join('')}
@@ -283,11 +317,112 @@
             `;
         }
 
+        // Format duration from seconds to MM:SS or HH:MM:SS
+        function formatDuration(seconds) {
+            if (!seconds) return '00:00';
+            
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            
+            if (hours > 0) {
+                return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+            return `${minutes}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // YouTube Player Functions
+        function onYouTubeIframeAPIReady() {
+            console.log('YouTube API ready');
+            // Player will be created when first video is played
+        }
+
+        function playVideo(videoId, videoTitle) {
+            console.log('Playing video:', videoId);
+            
+            // Show player section
+            document.getElementById('player-section').style.display = 'block';
+            
+            // Update now playing text
+            document.getElementById('now-playing').textContent = videoTitle || 'Now playing';
+            
+            // Remove active class from all videos
+            document.querySelectorAll('.video-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Add active class to current video
+            const videoItems = document.querySelectorAll('.video-item');
+            for (let item of videoItems) {
+                if (item.querySelector('.video-title')?.textContent.includes(videoTitle?.substring(0, 20))) {
+                    item.classList.add('active');
+                    break;
+                }
+            }
+            
+            // Create or update player
+            if (!player) {
+                // Create new player
+                player = new YT.Player('youtube-player', {
+                    height: '100%',
+                    width: '100%',
+                    videoId: videoId,
+                    playerVars: {
+                        autoplay: 1,
+                        controls: 1,
+                        rel: 0,
+                        modestbranding: 1
+                    },
+                    events: {
+                        'onReady': onPlayerReady,
+                        'onStateChange': onPlayerStateChange
+                    }
+                });
+            } else {
+                // Load new video in existing player
+                player.loadVideoById(videoId);
+            }
+            
+            currentVideoId = videoId;
+        }
+
+        function onPlayerReady(event) {
+            console.log('Player ready');
+            event.target.playVideo();
+        }
+
+        function onPlayerStateChange(event) {
+            // Video ended
+            if (event.data === YT.PlayerState.ENDED) {
+                console.log('Video ended');
+                // Find next video in playlist
+                if (currentPlaylist && currentPlaylist.videos) {
+                    const currentIndex = currentPlaylist.videos.findIndex(v => v.videoId === currentVideoId);
+                    if (currentIndex >= 0 && currentIndex < currentPlaylist.videos.length - 1) {
+                        const nextVideo = currentPlaylist.videos[currentIndex + 1];
+                        setTimeout(() => {
+                            playVideo(nextVideo.videoId, nextVideo.title);
+                        }, 3000);
+                    }
+                }
+            }
+        }
+
+        function toggleFullscreen() {
+            const playerSection = document.getElementById('player-section');
+            if (!document.fullscreenElement) {
+                playerSection.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
         // Import playlist
         async function importPlaylist() {
             try {
                 console.log('Importing playlist...');
-                const button = event.target;
+                const button = document.querySelector('.import-btn');
+                const originalText = button.innerHTML;
                 button.disabled = true;
                 button.innerHTML = '⏳ Importing...';
                 
@@ -298,14 +433,15 @@
                     }
                 });
                 
-                console.log('Import response:', response.status);
+                console.log('Import response status:', response.status);
                 
                 if (response.ok) {
-                    alert('✅ Playlist imported successfully!');
+                    const data = await response.json();
+                    alert(`✅ Playlist imported successfully! ${data.playlist.videoCount} videos found.`);
                     await loadPlaylists(); // Reload playlists
                 } else {
-                    const data = await response.json();
-                    alert('❌ Failed to import: ' + (data.error || 'Unknown error'));
+                    const error = await response.json();
+                    alert('❌ Failed to import: ' + (error.error || error.message || 'Unknown error'));
                 }
             } catch (error) {
                 console.error('Error importing:', error);
@@ -353,11 +489,6 @@
             } catch (error) {
                 console.error('Error updating speed:', error);
             }
-        }
-
-        // Play video
-        function playVideo(videoId) {
-            window.open(`https://www.youtube.com/watch?v=${videoId}`, '_blank');
         }
 
         // Logout
