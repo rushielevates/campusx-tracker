@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Analytics - CampusX ML Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: #f5f5f5; }
+        .app-container { display: flex; height: 100vh; }
+        
+        /* Sidebar Styles (same as dashboard) */
+        .sidebar { width: 300px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 30px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .sidebar-header h2 { font-size: 24px; margin-bottom: 5px; }
+        .sidebar-header p { opacity: 0.9; font-size: 14px; }
+        
+        .user-info { padding: 20px; display: flex; align-items: center; border-bottom: 1px solid #e0e0e0; }
+        .user-avatar { width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 15px; }
+        .user-details { display: flex; flex-direction: column; }
+        .user-details span:first-child { font-weight: 600; color: #333; }
+        .user-details span:last-child { font-size: 12px; color: #666; }
+        
+        /* Navigation Menu */
+        .nav-menu { padding: 20px; flex: 1; }
+        .nav-item { padding: 12px 15px; margin-bottom: 5px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.3s; color: #555; }
+        .nav-item:hover { background: #f0f0f0; transform: translateX(5px); }
+        .nav-item.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .nav-icon { font-size: 20px; width: 24px; text-align: center; }
+        .nav-text { font-size: 15px; font-weight: 500; }
+        
+        .logout-btn { margin: 20px; padding: 10px; background: none; border: 2px solid #dc3545; color: #dc3545; border-radius: 10px; cursor: pointer; }
+        .logout-btn:hover { background: #dc3545; color: white; }
+        
+        /* Main Content */
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; background: #f5f5f5; }
+        
+        .analytics-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        /* Stats Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+        
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        /* Streak Cards */
+        .streak-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .streak-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .streak-number {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .streak-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .fire-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        /* Calendar Section */
+        .calendar-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .calendar-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .calendar-legend {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .legend-color {
+            width: 15px;
+            height: 15px;
+            border-radius: 3px;
+        }
+        
+        .calendar-wrapper {
+            overflow-x: auto;
+            padding: 10px 0;
+        }
+        
+        .calendar-grid {
+            display: inline-grid;
+            grid-template-columns: 30px repeat(53, 1fr);
+            gap: 3px;
+            min-width: 800px;
+        }
+        
+        .month-labels {
+            display: grid;
+            grid-template-columns: 30px repeat(53, 1fr);
+            gap: 3px;
+            margin-bottom: 5px;
+            font-size: 10px;
+            color: #666;
+            min-width: 800px;
+        }
+        
+        .day-label {
+            display: flex;
+            align-items: center;
+            font-size: 10px;
+            color: #666;
+            height: 20px;
+        }
+        
+        .calendar-cell {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 3px;
+            background: #ebedf0;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        
+        .calendar-cell:hover {
+            transform: scale(1.2);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+        
+        .calendar-cell[data-level="0"] { background: #ebedf0; }
+        .calendar-cell[data-level="1"] { background: #9be9a8; }
+        .calendar-cell[data-level="2"] { background: #40c463; }
+        .calendar-cell[data-level="3"] { background: #30a14e; }
+        .calendar-cell[data-level="4"] { background: #216e39; }
+        
+        /* Recent Activity */
+        .activity-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .activity-list {
+            margin-top: 20px;
+        }
+        
+        .activity-item {
+            display: flex;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+        
+        .activity-date {
+            width: 100px;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .activity-bar-container {
+            flex: 1;
+            height: 30px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            margin: 0 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .activity-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 15px;
+            transition: width 0.3s;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .activity-bar-label {
+            position: absolute;
+            top: 50%;
+            left: 10px;
+            transform: translateY(-50%);
+            color: white;
+            font-size: 12px;
+            font-weight: 500;
+            z-index: 2;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+        }
+        
+        .activity-count {
+            width: 50px;
+            text-align: right;
+            font-weight: 600;
+            color: #667eea;
+        }
+        
+        .loading { 
+            text-align: center; 
+            padding: 50px; 
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .error-message { 
+            text-align: center; 
+            padding: 20px; 
+            color: #dc3545; 
+            background: #fee; 
+            border-radius: 10px; 
+            margin: 20px;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar with Navigation -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>CampusX ML</h2>
+                <p>Your Learning Journey</p>
+            </div>
+            
+            <div class="user-info">
+                <div class="user-avatar">CX</div>
+                <div class="user-details">
+                    <span id="username">Loading...</span>
+                    <span id="user-email"></span>
+                </div>
+            </div>
+
+            <!-- Navigation Menu -->
+            <div class="nav-menu">
+                <div class="nav-item" onclick="window.location.href='/dashboard.html'">
+                    <span class="nav-icon">📺</span>
+                    <span class="nav-text">Dashboard</span>
+                </div>
+                <div class="nav-item active" onclick="window.location.href='/analytics.html'">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Analytics</span>
+                </div>
+                <div class="nav-item" onclick="window.location.href='/profile.html'">
+                    <span class="nav-icon">👤</span>
+                    <span class="nav-text">Profile</span>
+                </div>
+            </div>
+
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="analytics-container">
+                <!-- Stats Cards -->
+                <div class="stats-grid" id="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-label">Videos Watched</div>
+                        <div class="stat-value" id="videos-watched">0</div>
+                        <div class="stat-label">of <span id="total-videos">0</span> total</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Completion</div>
+                        <div class="stat-value" id="completion">0%</div>
+                        <div class="stat-label">Overall Progress</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Watch Time</div>
+                        <div class="stat-value" id="watch-time">0h</div>
+                        <div class="stat-label">Total Learning</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Active Days</div>
+                        <div class="stat-value" id="active-days">0</div>
+                        <div class="stat-label">Days Learning</div>
+                    </div>
+                </div>
+
+                <!-- Streak Cards -->
+                <div class="streak-container">
+                    <div class="streak-card">
+                        <div class="fire-icon">🔥</div>
+                        <div class="streak-number" id="current-streak">0</div>
+                        <div class="streak-label">Current Streak</div>
+                    </div>
+                    <div class="streak-card">
+                        <div class="fire-icon">🏆</div>
+                        <div class="streak-number" id="longest-streak">0</div>
+                        <div class="streak-label">Longest Streak</div>
+                    </div>
+                </div>
+
+                <!-- Contribution Calendar -->
+                <div class="calendar-section">
+                    <div class="calendar-header">
+                        <div class="calendar-title">📅 Learning Activity (Last 12 Months)</div>
+                        <div class="calendar-legend">
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #ebedf0"></div>
+                                <span>No videos</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #9be9a8"></div>
+                                <span>1-2</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #40c463"></div>
+                                <span>3-4</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #30a14e"></div>
+                                <span>5-6</span>
+                            </div>
+                            <div class="legend-item">
+                                <div class="legend-color" style="background: #216e39"></div>
+                                <span>7+</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="calendar-wrapper">
+                        <div id="calendar-container"></div>
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="activity-section">
+                    <div class="calendar-title">📊 Recent Activity (Last 7 Days)</div>
+                    <div class="activity-list" id="activity-list">
+                        <div class="loading">Loading activity...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let analyticsData = null;
+        
+        // Load data when page loads
+        window.onload = async function() {
+            console.log('Analytics page loaded');
+            await loadUserInfo();
+            await loadAnalytics();
+        };
+
+        // Load user info
+        async function loadUserInfo() {
+            try {
+                // Try to get from session (you can enhance this later)
+                document.getElementById('username').textContent = 'CampusX Learner';
+                document.getElementById('user-email').textContent = 'learner@campusx.com';
+            } catch (error) {
+                console.error('Error loading user info:', error);
+            }
+        }
+
+        // Load analytics data
+        async function loadAnalytics() {
+            try {
+                console.log('Loading analytics...');
+                const response = await fetch('/api/analytics/user-stats');
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = '/';
+                        return;
+                    }
+                    throw new Error('Failed to load analytics');
+                }
+                
+                analyticsData = await response.json();
+                console.log('Analytics loaded:', analyticsData);
+                
+                // Update all sections
+                updateStatsCards();
+                updateStreakCards();
+                generateCalendar();
+                updateRecentActivity();
+                
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+                showError('Failed to load analytics data. Please refresh the page.');
+            }
+        }
+
+        // Update stats cards
+        function updateStatsCards() {
+            if (!analyticsData) return;
+            
+            document.getElementById('videos-watched').textContent = analyticsData.totalStats.totalWatched || 0;
+            document.getElementById('total-videos').textContent = analyticsData.totalStats.totalVideos || 0;
+            document.getElementById('completion').textContent = analyticsData.totalStats.completionPercentage || '0';
+            
+            const watchTimeHours = Math.floor((analyticsData.totalStats.totalWatchTimeMinutes || 0) / 60);
+            document.getElementById('watch-time').textContent = watchTimeHours + 'h';
+            
+            document.getElementById('active-days').textContent = analyticsData.totalStats.totalActiveDays || 0;
+        }
+
+        // Update streak cards
+        function updateStreakCards() {
+            if (!analyticsData) return;
+            
+            document.getElementById('current-streak').textContent = analyticsData.streak.current || 0;
+            document.getElementById('longest-streak').textContent = analyticsData.streak.longest || 0;
+        }
+
+        // Generate GitHub-style calendar
+        function generateCalendar() {
+            if (!analyticsData || !analyticsData.calendarData) {
+                document.getElementById('calendar-container').innerHTML = '<div class="no-data">No calendar data available</div>';
+                return;
+            }
+            
+            const container = document.getElementById('calendar-container');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            
+            // Generate month labels
+            let monthLabels = '<div class="month-labels"><div class="day-label"></div>';
+            for (let week = 0; week < 53; week++) {
+                const monthIndex = Math.floor(week / 4.5) % 12;
+                monthLabels += `<div style="text-align: left;">${week % 4 === 0 ? months[monthIndex] : ''}</div>`;
+            }
+            monthLabels += '</div>';
+            
+            // Day labels and calendar cells
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            let calendar = '<div class="calendar-grid">';
+            
+            for (let day = 0; day < 7; day++) {
+                calendar += `<div class="day-label">${days[day]}</div>`;
+                
+                for (let week = 0; week < 53; week++) {
+                    const index = day * 53 + week;
+                    if (index < analyticsData.calendarData.length) {
+                        const dayData = analyticsData.calendarData[index];
+                        calendar += `<div class="calendar-cell" data-level="${dayData.intensity}" 
+                                         title="${dayData.date}: ${dayData.count} video${dayData.count !== 1 ? 's' : ''}"></div>`;
+                    } else {
+                        calendar += '<div class="calendar-cell" data-level="0" title="No data"></div>';
+                    }
+                }
+            }
+            
+            calendar += '</div>';
+            container.innerHTML = monthLabels + calendar;
+        }
+
+        // Update recent activity
+        function updateRecentActivity() {
+            const list = document.getElementById('activity-list');
+            
+            if (!analyticsData || !analyticsData.recentActivity || analyticsData.recentActivity.length === 0) {
+                list.innerHTML = '<div class="no-data">No recent activity</div>';
+                return;
+            }
+            
+            const maxVideos = Math.max(...analyticsData.recentActivity.map(d => d.videosWatched), 5);
+            
+            list.innerHTML = analyticsData.recentActivity.reverse().map(day => {
+                const date = new Date(day.date);
+                const formattedDate = date.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+                
+                const percentage = maxVideos > 0 ? (day.videosWatched / maxVideos) * 100 : 0;
+                
+                return `
+                    <div class="activity-item">
+                        <div class="activity-date">${formattedDate}</div>
+                        <div class="activity-bar-container">
+                            <div class="activity-bar" style="width: ${percentage}%"></div>
+                            <span class="activity-bar-label">${day.videosWatched} video${day.videosWatched !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div class="activity-count">${day.watchTimeMinutes || 0} min</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Show error message
+        function showError(message) {
+            const container = document.querySelector('.analytics-container');
+            container.innerHTML = `<div class="error-message">❌ ${message}</div>`;
+        }
+
+        // Logout
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout');
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Error logging out:', error);
+            }
+        }
+
+        // Auto-refresh data every 5 minutes
+        setInterval(loadAnalytics, 5 * 60 * 1000);
+    </script>
+</body>
+</html>
