@@ -19,20 +19,15 @@
         .user-details span:first-child { font-weight: 600; color: #333; }
         .user-details span:last-child { font-size: 12px; color: #666; }
         
-        .playlists-section { flex: 1; padding: 20px; overflow-y: auto; }
-        .playlists-section h3 { margin-bottom: 15px; color: #333; font-size: 16px; }
-        .playlist-item { padding: 15px; background: #f8f9fa; border-radius: 10px; margin-bottom: 10px; cursor: pointer; transition: all 0.3s; }
-        .playlist-item:hover { background: #e9ecef; transform: translateX(5px); }
-        .playlist-item.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-        .playlist-title { font-weight: 600; margin-bottom: 5px; }
-        .playlist-stats { font-size: 12px; color: #666; }
-        .playlist-item.active .playlist-stats { color: rgba(255,255,255,0.9); }
+        /* Navigation Menu */
+        .nav-menu { padding: 20px; flex: 1; }
+        .nav-item { padding: 12px 15px; margin-bottom: 5px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.3s; color: #555; }
+        .nav-item:hover { background: #f0f0f0; transform: translateX(5px); }
+        .nav-item.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .nav-icon { font-size: 20px; width: 24px; text-align: center; }
+        .nav-text { font-size: 15px; font-weight: 500; }
         
-        .import-btn { margin: 20px; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: transform 0.3s; }
-        .import-btn:hover { transform: translateY(-2px); }
-        .import-btn span { margin-right: 5px; font-size: 18px; }
-        
-        .logout-btn { margin: 0 20px 20px; padding: 10px; background: none; border: 2px solid #dc3545; color: #dc3545; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .logout-btn { margin: 20px; padding: 10px; background: none; border: 2px solid #dc3545; color: #dc3545; border-radius: 10px; cursor: pointer; }
         .logout-btn:hover { background: #dc3545; color: white; }
         
         /* Main Content Styles */
@@ -54,8 +49,6 @@
             background: #000;
             display: block;
         }
-
-      
 
         /* Fullscreen styles */
         .player-section:-webkit-full-screen #youtube-player {
@@ -110,11 +103,11 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
+        <!-- Sidebar with Navigation -->
         <div class="sidebar">
             <div class="sidebar-header">
                 <h2>CampusX ML</h2>
-                <p>Your Learning Progress</p>
+                <p>Your Learning Journey</p>
             </div>
             
             <div class="user-info">
@@ -125,16 +118,21 @@
                 </div>
             </div>
 
-            <div class="playlists-section">
-                <h3>Your Playlists</h3>
-                <div id="playlists-list">
-                    <div class="loading">Loading playlists...</div>
+            <!-- Navigation Menu -->
+            <div class="nav-menu">
+                <div class="nav-item active" onclick="window.location.href='/dashboard.html'">
+                    <span class="nav-icon">📺</span>
+                    <span class="nav-text">Dashboard</span>
+                </div>
+                <div class="nav-item" onclick="window.location.href='/analytics.html'">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Analytics</span>
+                </div>
+                <div class="nav-item" onclick="window.location.href='/profile.html'">
+                    <span class="nav-icon">👤</span>
+                    <span class="nav-text">Profile</span>
                 </div>
             </div>
-
-            <button class="import-btn" onclick="importPlaylist()">
-                <span>+</span> Import CampusX ML
-            </button>
 
             <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
@@ -144,7 +142,6 @@
             <!-- YouTube Player Section -->
             <div class="player-section" id="player-section" style="display: none;">
                 <div id="youtube-player"></div>
-              
             </div>
 
             <!-- Playlist View -->
@@ -162,6 +159,8 @@
         let currentPlaylist = null;
         let player = null;
         let currentVideoId = null;
+        let watchTimer = null;
+        let watchStartTime = null;
         
         // Load data when page loads
         window.onload = async function() {
@@ -315,7 +314,7 @@
                     </div>
                 </div>
                 
-                <div class="videos-list">
+                <div class="videos-list" id="playlists-list">
                     ${playlist.videos.map((video, index) => `
                         <div class="video-item ${video.completed ? 'completed' : ''} ${video.videoId === currentVideoId ? 'active' : ''}" 
                              onclick="playVideo('${video.videoId}', '${video.title.replace(/'/g, "\\'")}')">
@@ -357,11 +356,31 @@
         function onPlayerReady(event) {
             console.log('✅ Player ready');
             event.target.playVideo();
+            
+            // Start tracking watch time
+            watchStartTime = Date.now();
+            startWatchTimer();
         }
 
         function onPlayerStateChange(event) {
-            if (event.data === YT.PlayerState.ENDED) {
+            if (event.data === YT.PlayerState.PLAYING) {
+                console.log('Video playing');
+                watchStartTime = Date.now();
+                startWatchTimer();
+            } else if (event.data === YT.PlayerState.PAUSED) {
+                console.log('Video paused');
+                stopWatchTimer();
+            } else if (event.data === YT.PlayerState.ENDED) {
                 console.log('Video ended');
+                stopWatchTimer();
+                
+                // Track the watch time
+                if (watchStartTime) {
+                    const watchTimeMinutes = (Date.now() - watchStartTime) / 60000;
+                    trackWatchTime(currentVideoId, watchTimeMinutes);
+                }
+                
+                // Play next video
                 if (currentPlaylist && currentPlaylist.videos) {
                     const currentIndex = currentPlaylist.videos.findIndex(v => v.videoId === currentVideoId);
                     if (currentIndex >= 0 && currentIndex < currentPlaylist.videos.length - 1) {
@@ -379,22 +398,48 @@
             let errorMessage = 'Unknown error';
             
             switch(event.data) {
-                case 2:
-                    errorMessage = 'Invalid video ID';
-                    break;
-                case 5:
-                    errorMessage = 'HTML5 player error';
-                    break;
-                case 100:
-                    errorMessage = 'Video not found or removed';
-                    break;
-                case 101:
-                case 150:
-                    errorMessage = 'Video cannot be embedded';
-                    break;
+                case 2: errorMessage = 'Invalid video ID'; break;
+                case 5: errorMessage = 'HTML5 player error'; break;
+                case 100: errorMessage = 'Video not found or removed'; break;
+                case 101: case 150: errorMessage = 'Video cannot be embedded'; break;
             }
             
             alert('Error playing video: ' + errorMessage);
+        }
+
+        function startWatchTimer() {
+            if (watchTimer) clearInterval(watchTimer);
+            watchTimer = setInterval(() => {
+                // Update watch time every minute
+                if (watchStartTime) {
+                    const watchTimeMinutes = (Date.now() - watchStartTime) / 60000;
+                    if (watchTimeMinutes >= 1) {
+                        trackWatchTime(currentVideoId, Math.floor(watchTimeMinutes));
+                        watchStartTime = Date.now(); // Reset timer
+                    }
+                }
+            }, 60000); // Check every minute
+        }
+
+        function stopWatchTimer() {
+            if (watchTimer) {
+                clearInterval(watchTimer);
+                watchTimer = null;
+            }
+        }
+
+        function trackWatchTime(videoId, minutes) {
+            if (!videoId || minutes < 1) return;
+            
+            fetch('/api/analytics/track-watch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    videoId,
+                    watchTimeMinutes: minutes,
+                    playlistId: currentPlaylist?._id
+                })
+            }).catch(err => console.error('Error tracking watch time:', err));
         }
 
         function playVideo(videoId, videoTitle) {
@@ -407,8 +452,6 @@
             
             const playerSection = document.getElementById('player-section');
             playerSection.style.display = 'block';
-            
-    // document.getElementById('now-playing').textContent = videoTitle || 'Now playing';
             
             document.querySelectorAll('.video-item').forEach(item => {
                 item.classList.remove('active');
@@ -469,15 +512,6 @@
             currentVideoId = videoId;
         }
 
-        function toggleFullscreen() {
-            const playerSection = document.getElementById('player-section');
-            if (!document.fullscreenElement) {
-                playerSection.requestFullscreen();
-            } else {
-                document.exitFullscreen();
-            }
-        }
-
         // Import playlist
         async function importPlaylist() {
             try {
@@ -488,9 +522,7 @@
                 
                 const response = await fetch('/api/playlists/import', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
+                    headers: { 'Content-Type': 'application/json' }
                 });
                 
                 console.log('Import response status:', response.status);
@@ -540,9 +572,7 @@
             try {
                 await fetch(`/api/playlists/${currentPlaylist._id}/speed`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ speed: parseFloat(speed) })
                 });
             } catch (error) {
