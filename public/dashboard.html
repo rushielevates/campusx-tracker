@@ -570,22 +570,63 @@
         }
 
         // Toggle video completion
-        async function toggleVideoComplete(videoId) {
-            if (!currentPlaylist) return;
+       // Toggle video completion - UPDATED VERSION
+async function toggleVideoComplete(videoId) {
+    if (!currentPlaylist) return;
+    
+    try {
+        const response = await fetch(`/api/playlists/${currentPlaylist._id}/video/${videoId}/toggle`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Video toggled:', data);
             
-            try {
-                const response = await fetch(`/api/playlists/${currentPlaylist._id}/video/${videoId}/toggle`, {
-                    method: 'POST'
-                });
-                
-                if (response.ok) {
-                    await loadPlaylist(currentPlaylist._id);
-                    await loadPlaylists();
-                }
-            } catch (error) {
-                console.error('Error toggling video:', error);
+            // Immediately update the UI with new progress
+            if (data.progress) {
+                // Update stats in dashboard
+                updateDashboardStats(data.progress);
+            }
+            
+            // Reload playlist to show updated status
+            await loadPlaylist(currentPlaylist._id);
+            await loadPlaylists(); // Update sidebar
+            
+            // === NEW: Force analytics refresh ===
+            // Trigger analytics update in background
+            fetch('/api/analytics/refresh', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    videoId: videoId,
+                    completed: data.video.completed,
+                    playlistId: currentPlaylist._id
+                })
+            }).catch(err => console.error('Error refreshing analytics:', err));
+            
+            // If on analytics page, refresh it
+            if (window.location.pathname.includes('analytics')) {
+                setTimeout(() => {
+                    if (typeof loadAnalytics === 'function') {
+                        loadAnalytics(true);
+                    }
+                }, 500);
             }
         }
+    } catch (error) {
+        console.error('Error toggling video:', error);
+    }
+}
+
+// Helper function to update dashboard stats immediately
+function updateDashboardStats(progress) {
+    // Update any dashboard stats if needed
+    const completedElement = document.querySelector('.meta-item .meta-value');
+    if (completedElement && progress) {
+        // Stats are updated when playlist reloads
+    }
+}
 
         // Update playback speed
         async function updateSpeed(speed) {
