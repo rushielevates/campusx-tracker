@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Profile - CampusX ML Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: #f5f5f5; }
+        .app-container { display: flex; height: 100vh; }
+        
+        /* Sidebar Styles (same as dashboard) */
+        .sidebar { width: 300px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        .sidebar-header { padding: 30px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .sidebar-header h2 { font-size: 24px; margin-bottom: 5px; }
+        .sidebar-header p { opacity: 0.9; font-size: 14px; }
+        
+        .user-info { padding: 20px; display: flex; align-items: center; border-bottom: 1px solid #e0e0e0; }
+        .user-avatar { width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 15px; }
+        .user-details { display: flex; flex-direction: column; }
+        .user-details span:first-child { font-weight: 600; color: #333; }
+        .user-details span:last-child { font-size: 12px; color: #666; }
+        
+        /* Navigation Menu */
+        .nav-menu { padding: 20px; flex: 1; }
+        .nav-item { padding: 12px 15px; margin-bottom: 5px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.3s; color: #555; }
+        .nav-item:hover { background: #f0f0f0; transform: translateX(5px); }
+        .nav-item.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .nav-icon { font-size: 20px; width: 24px; text-align: center; }
+        .nav-text { font-size: 15px; font-weight: 500; }
+        
+        .logout-btn { margin: 20px; padding: 10px; background: none; border: 2px solid #dc3545; color: #dc3545; border-radius: 10px; cursor: pointer; }
+        .logout-btn:hover { background: #dc3545; color: white; }
+        
+        /* Main Content */
+        .main-content { flex: 1; padding: 30px; overflow-y: auto; background: #f5f5f5; }
+        
+        .profile-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        /* Profile Header */
+        .profile-header {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .profile-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            opacity: 0.1;
+        }
+        
+        .profile-avatar-large {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            margin: 0 auto 20px;
+            border: 4px solid white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            position: relative;
+        }
+        
+        .profile-name {
+            font-size: 32px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        
+        .profile-email {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+        
+        .profile-badge {
+            display: inline-block;
+            padding: 8px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 25px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+        }
+        
+        /* Profile Cards */
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+        
+        .profile-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+        
+        .profile-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: #666;
+            font-weight: 500;
+        }
+        
+        .info-value {
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .badge-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .badge {
+            padding: 6px 12px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .badge.achieved {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .loading { 
+            text-align: center; 
+            padding: 50px; 
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .error-message { 
+            text-align: center; 
+            padding: 20px; 
+            color: #dc3545; 
+            background: #fee; 
+            border-radius: 10px; 
+            margin: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar with Navigation -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>CampusX ML</h2>
+                <p>Your Learning Journey</p>
+            </div>
+            
+            <div class="user-info">
+                <div class="user-avatar">CX</div>
+                <div class="user-details">
+                    <span id="username">Loading...</span>
+                    <span id="user-email"></span>
+                </div>
+            </div>
+
+            <!-- Navigation Menu -->
+            <div class="nav-menu">
+                <div class="nav-item" onclick="window.location.href='/dashboard.html'">
+                    <span class="nav-icon">📺</span>
+                    <span class="nav-text">Dashboard</span>
+                </div>
+                <div class="nav-item" onclick="window.location.href='/analytics.html'">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Analytics</span>
+                </div>
+                <div class="nav-item active">
+                    <span class="nav-icon">👤</span>
+                    <span class="nav-text">Profile</span>
+                </div>
+            </div>
+
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="profile-container">
+                <!-- Profile Header -->
+                <div class="profile-header">
+                    <div class="profile-avatar-large" id="profile-avatar">CX</div>
+                    <div class="profile-name" id="profile-name">Loading...</div>
+                    <div class="profile-email" id="profile-email">loading...</div>
+                    <div class="profile-badge" id="profile-badge">🌟 ML Enthusiast</div>
+                </div>
+
+                <!-- Profile Details Grid -->
+                <div class="profile-grid">
+                    <!-- Personal Info Card -->
+                    <div class="profile-card">
+                        <div class="card-title">
+                            <span>📋</span> Personal Information
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Username</span>
+                            <span class="info-value" id="profile-username">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Member Since</span>
+                            <span class="info-value" id="member-since">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Last Active</span>
+                            <span class="info-value" id="last-active">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Account Status</span>
+                            <span class="info-value" style="color: #28a745;">✓ Active</span>
+                        </div>
+                    </div>
+
+                    <!-- Learning Stats Card -->
+                    <div class="profile-card">
+                        <div class="card-title">
+                            <span>📊</span> Learning Statistics
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Videos Watched</span>
+                            <span class="info-value" id="profile-videos">0</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Playlists</span>
+                            <span class="info-value" id="profile-playlists">0</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Current Streak</span>
+                            <span class="info-value" id="profile-streak">0 days</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Longest Streak</span>
+                            <span class="info-value" id="profile-longest-streak">0 days</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Watch Time</span>
+                            <span class="info-value" id="profile-watch-time">0 hours</span>
+                        </div>
+                    </div>
+
+                    <!-- Achievements Card -->
+                    <div class="profile-card">
+                        <div class="card-title">
+                            <span>🏆</span> Achievements
+                        </div>
+                        <div class="badge-container" id="achievements-container">
+                            <div class="badge">🌟 Beginner</div>
+                            <div class="badge">📺 10 Videos</div>
+                            <div class="badge">🔥 7 Day Streak</div>
+                            <div class="badge">🎯 25 Videos</div>
+                        </div>
+                    </div>
+
+                    <!-- Settings Card -->
+                    <div class="profile-card">
+                        <div class="card-title">
+                            <span>⚙️</span> Preferences
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Default Speed</span>
+                            <span class="info-value">1.0x</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Auto-play next</span>
+                            <span class="info-value">✓ On</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Email Updates</span>
+                            <span class="info-value">✗ Off</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Theme</span>
+                            <span class="info-value">Light</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load data when page loads
+        window.onload = async function() {
+            console.log('Profile page loaded');
+            await loadProfileData();
+        };
+
+        // Load profile data
+        async function loadProfileData() {
+            try {
+                console.log('Loading profile data...');
+                
+                // Try to get from analytics API
+                const response = await fetch('/api/analytics/profile');
+                
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = '/';
+                        return;
+                    }
+                    throw new Error('Failed to load profile');
+                }
+                
+                const data = await response.json();
+                console.log('Profile data loaded:', data);
+                
+                // Update UI with real data
+                updateProfileUI(data);
+                
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                // Fallback to mock data if API fails
+                loadMockData();
+            }
+        }
+
+        // Update UI with real data
+        function updateProfileUI(data) {
+            // Personal info
+            document.getElementById('username').textContent = data.username || 'CampusX Learner';
+            document.getElementById('user-email').textContent = data.email || 'learner@campusx.com';
+            document.getElementById('profile-name').textContent = data.username || 'CampusX Learner';
+            document.getElementById('profile-email').textContent = data.email || 'learner@campusx.com';
+            document.getElementById('profile-username').textContent = data.username || 'campusx_learner';
+            
+            // Format dates
+            const joinDate = data.createdAt ? new Date(data.createdAt) : new Date();
+            document.getElementById('member-since').textContent = joinDate.toLocaleDateString('en-US', { 
+                month: 'long', 
+                year: 'numeric' 
+            });
+            
+            document.getElementById('last-active').textContent = 'Today';
+            
+            // Stats
+            document.getElementById('profile-videos').textContent = data.stats?.totalWatched || 0;
+            document.getElementById('profile-playlists').textContent = data.stats?.totalPlaylists || 0;
+            document.getElementById('profile-streak').textContent = (data.stats?.currentStreak || 0) + ' days';
+            document.getElementById('profile-longest-streak').textContent = (data.stats?.longestStreak || 0) + ' days';
+            
+            const watchTimeHours = Math.floor((data.stats?.totalWatchTime || 0) / 60);
+            document.getElementById('profile-watch-time').textContent = watchTimeHours + ' hours';
+            
+            // Update avatar letters
+            const initials = (data.username || 'CampusX Learner')
+                .split(' ')
+                .map(word => word[0])
+                .join('')
+                .toUpperCase()
+                .substring(0, 2);
+            document.getElementById('profile-avatar').textContent = initials;
+            
+            // Update badge based on stats
+            updateAchievements(data.stats);
+        }
+
+        // Load mock data for testing
+        function loadMockData() {
+            console.log('Loading mock data...');
+            
+            document.getElementById('username').textContent = 'CampusX Learner';
+            document.getElementById('user-email').textContent = 'learner@campusx.com';
+            document.getElementById('profile-name').textContent = 'CampusX Learner';
+            document.getElementById('profile-email').textContent = 'learner@campusx.com';
+            document.getElementById('profile-username').textContent = 'campusx_learner';
+            document.getElementById('member-since').textContent = 'January 2026';
+            document.getElementById('last-active').textContent = 'Today';
+            document.getElementById('profile-videos').textContent = '89';
+            document.getElementById('profile-playlists').textContent = '2';
+            document.getElementById('profile-streak').textContent = '15 days';
+            document.getElementById('profile-longest-streak').textContent = '42 days';
+            document.getElementById('profile-watch-time').textContent = '42 hours';
+        }
+
+        // Update achievements based on stats
+        function updateAchievements(stats) {
+            const container = document.getElementById('achievements-container');
+            const achievements = [];
+            
+            // Basic achievements
+            achievements.push('<span class="badge achieved">🌟 Beginner</span>');
+            
+            if (stats?.totalWatched >= 10) {
+                achievements.push('<span class="badge achieved">📺 10 Videos</span>');
+            }
+            if (stats?.totalWatched >= 25) {
+                achievements.push('<span class="badge achieved">🎯 25 Videos</span>');
+            }
+            if (stats?.totalWatched >= 50) {
+                achievements.push('<span class="badge achieved">💪 50 Videos</span>');
+            }
+            if (stats?.totalWatched >= 100) {
+                achievements.push('<span class="badge achieved">🚀 100 Videos</span>');
+            }
+            
+            if (stats?.currentStreak >= 7) {
+                achievements.push('<span class="badge achieved">🔥 7 Day Streak</span>');
+            }
+            if (stats?.longestStreak >= 30) {
+                achievements.push('<span class="badge achieved">⚡ 30 Day Streak</span>');
+            }
+            
+            container.innerHTML = achievements.join(' ');
+        }
+
+        // Logout
+        async function logout() {
+            try {
+                await fetch('/api/auth/logout');
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Error logging out:', error);
+            }
+        }
+    </script>
+</body>
+</html>
