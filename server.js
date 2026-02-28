@@ -56,6 +56,7 @@ app.get('/api/test', (req, res) => {
 // ========== API ROUTES ==========
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/playlists', require('./routes/playlist'));
+app.use('/api/analytics', require('./routes/analytics')); 
 
 // ========== FRONTEND ROUTES ==========
 app.get('/', (req, res) => {
@@ -64,6 +65,14 @@ app.get('/', (req, res) => {
 
 app.get('/dashboard.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+app.get('/analytics.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'analytics.html'));
+});
+
+app.get('/profile.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'profile.html'));
 });
 
 // ========== HEALTH CHECK ==========
