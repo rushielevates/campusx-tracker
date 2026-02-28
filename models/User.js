@@ -6,7 +6,26 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     playlists: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Playlist' }],
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
+    // new analytics fields
+       learningActivity: [{
+        date: { type: Date, required: true },
+        videosWatched: { type: Number, default: 0 },
+        watchTimeMinutes: { type: Number, default: 0 },
+        videosCompleted: [{ type: String }] // videoIds watched on this day
+    }],
+    
+    streak: {
+        current: { type: Number, default: 0 },
+        longest: { type: Number, default: 0 },
+        lastActive: { type: Date }
+    },
+    
+    totalStats: {
+        totalVideosWatched: { type: Number, default: 0 },
+        totalWatchTimeMinutes: { type: Number, default: 0 },
+        totalActiveDays: { type: Number, default: 0 }
+    }
 });
 
 userSchema.pre('save', async function(next) {
