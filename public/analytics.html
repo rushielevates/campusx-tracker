@@ -74,100 +74,16 @@
             letter-spacing: 1px;
         }
         
-        .stat-update {
-            font-size: 12px;
-            color: #28a745;
-            margin-top: 5px;
-            display: none;
-        }
-        
-        /* Streak Cards */
-        .streak-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .streak-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            text-align: center;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-        }
-        
-        .streak-number {
-            font-size: 48px;
-            font-weight: bold;
-            margin: 10px 0;
-        }
-        
-        .streak-label {
-            font-size: 14px;
-            opacity: 0.9;
-        }
-        
-        .fire-icon {
-            font-size: 32px;
-            margin-bottom: 10px;
-        }
-        
-        /* Calendar Controls */
-        .calendar-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
-        
-        .calendar-nav {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .calendar-nav-btn {
-            padding: 8px 16px;
+        /* Learning Activity Section - Codolio Style */
+        .learning-activity {
             background: white;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            transition: all 0.3s;
-        }
-        
-        .calendar-nav-btn:hover {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-        
-        .calendar-nav-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .calendar-range {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
-        }
-        
-        /* Calendar Section */
-        .calendar-section {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
+            border-radius: 20px;
+            padding: 25px;
             margin-bottom: 30px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
-        .calendar-header {
+        .activity-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -176,10 +92,30 @@
             gap: 15px;
         }
         
-        .calendar-title {
-            font-size: 20px;
+        .activity-title {
+            font-size: 18px;
             font-weight: 600;
             color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .streak-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-left: 10px;
+        }
+        
+        .streak-badge i {
+            font-size: 16px;
         }
         
         .calendar-legend {
@@ -198,80 +134,168 @@
         }
         
         .legend-color {
-            width: 15px;
-            height: 15px;
+            width: 12px;
+            height: 12px;
             border-radius: 3px;
         }
         
+        /* Compact Streak Info inside Learning Activity */
+        .compact-streaks {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        
+        .compact-streak-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .compact-streak-icon {
+            font-size: 20px;
+        }
+        
+        .compact-streak-label {
+            font-size: 13px;
+            color: #666;
+        }
+        
+        .compact-streak-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-left: 5px;
+        }
+        
+        /* Calendar Navigation */
+        .calendar-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .nav-btn {
+            padding: 6px 12px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+        
+        .nav-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+        
+        .nav-btn.active {
+            background: #667eea;
+            color: white;
+        }
+        
+        /* Calendar Grid - Codolio Style */
         .calendar-wrapper {
             overflow-x: auto;
             padding: 10px 0;
-            position: relative;
+            margin-top: 10px;
         }
         
         .calendar-grid-container {
             min-width: 900px;
         }
         
-        .month-grid {
+        .months-row {
             display: flex;
-            gap: 2px;
+            margin-left: 40px; /* Align with day labels */
             margin-bottom: 5px;
         }
         
-        .month-label {
+        .month-block {
             flex: 1;
-            text-align: left;
-            font-size: 12px;
-            color: #666;
-            font-weight: 600;
-            padding-left: 30px;
-        }
-        
-        .calendar-grid {
-            display: grid;
-            grid-template-columns: 30px repeat(53, 1fr);
-            gap: 3px;
-        }
-        
-        .day-label {
             display: flex;
-            align-items: center;
-            font-size: 10px;
-            color: #666;
-            height: 20px;
-        }
-        
-        .calendar-cell {
-            width: 100%;
-            aspect-ratio: 1;
-            border-radius: 3px;
-            background: #ebedf0;
-            transition: transform 0.2s, box-shadow 0.2s;
-            cursor: pointer;
             position: relative;
         }
         
-        .calendar-cell:hover {
-            transform: scale(1.2);
+        .month-name {
+            font-size: 11px;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: absolute;
+            left: 2px;
+            top: -15px;
+            white-space: nowrap;
+        }
+        
+        .month-weeks {
+            display: flex;
+            gap: 3px;
+            flex: 1;
+        }
+        
+        .week-cell {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            background: #ebedf0;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+        
+        .week-cell:hover {
+            transform: scale(1.3);
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            z-index: 10;
         }
         
-        .calendar-cell[data-level="0"] { background: #ebedf0; }
-        .calendar-cell[data-level="1"] { background: #9be9a8; }
-        .calendar-cell[data-level="2"] { background: #40c463; }
-        .calendar-cell[data-level="3"] { background: #30a14e; }
-        .calendar-cell[data-level="4"] { background: #216e39; }
+        .week-cell[data-level="0"] { background: #ebedf0; }
+        .week-cell[data-level="1"] { background: #9be9a8; }
+        .week-cell[data-level="2"] { background: #40c463; }
+        .week-cell[data-level="3"] { background: #30a14e; }
+        .week-cell[data-level="4"] { background: #216e39; }
         
-        .calendar-cell[data-current="true"] {
+        .week-cell[data-today="true"] {
             outline: 2px solid #667eea;
-            outline-offset: 2px;
+            outline-offset: 1px;
         }
         
-        .month-separator {
-            border-left: 2px solid #667eea;
-            margin-left: -1px;
+        .days-row {
+            display: flex;
+            margin-top: 5px;
+        }
+        
+        .day-labels {
+            width: 40px;
+            font-size: 10px;
+            color: #999;
+            padding-top: 15px;
+        }
+        
+        .day-label-item {
+            height: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .weeks-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        
+        .week-row {
+            display: flex;
+            gap: 3px;
+            height: 15px;
         }
         
         /* Tooltip */
@@ -279,32 +303,42 @@
             position: absolute;
             background: rgba(0,0,0,0.8);
             color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
             pointer-events: none;
-            z-index: 100;
+            z-index: 1000;
             white-space: nowrap;
             transform: translate(-50%, -100%);
-            margin-top: -5px;
+            margin-top: -8px;
         }
         
         /* Recent Activity */
         .activity-section {
             background: white;
-            padding: 30px;
-            border-radius: 15px;
+            padding: 25px;
+            border-radius: 20px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
         .activity-list {
-            margin-top: 20px;
+            margin-top: 15px;
         }
         
         .activity-item {
             display: flex;
             align-items: center;
-            padding: 15px 0;
+            padding: 12px 0;
             border-bottom: 1px solid #f0f0f0;
         }
         
@@ -313,17 +347,18 @@
         }
         
         .activity-date {
-            width: 120px;
+            width: 100px;
             font-weight: 500;
             color: #333;
+            font-size: 14px;
         }
         
         .activity-bar-container {
             flex: 1;
-            height: 40px;
+            height: 36px;
             background: #f0f0f0;
-            border-radius: 20px;
-            margin: 0 20px;
+            border-radius: 18px;
+            margin: 0 15px;
             overflow: hidden;
             position: relative;
         }
@@ -331,22 +366,15 @@
         .activity-bar {
             height: 100%;
             background: linear-gradient(90deg, #667eea, #764ba2);
-            border-radius: 20px;
+            border-radius: 18px;
             transition: width 0.3s;
-            position: relative;
-            z-index: 1;
-        }
-        
-        .activity-bar-label {
-            position: absolute;
-            top: 50%;
-            left: 10px;
-            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            padding-left: 12px;
             color: white;
             font-size: 13px;
             font-weight: 500;
-            z-index: 2;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            white-space: nowrap;
         }
         
         .activity-count {
@@ -354,29 +382,38 @@
             text-align: right;
             font-weight: 600;
             color: #667eea;
+            font-size: 14px;
         }
         
         .activity-time {
             font-size: 12px;
             color: #999;
             margin-left: 5px;
+            font-weight: normal;
         }
         
         /* Refresh indicator */
-        .refresh-indicator {
-            display: inline-block;
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #28a745;
+            margin-left: 10px;
+        }
+        
+        .pulse-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
             background: #28a745;
-            margin-left: 5px;
             animation: pulse 2s infinite;
         }
         
         @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.3; }
-            100% { opacity: 1; }
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.3; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
         }
         
         .loading { 
@@ -448,48 +485,36 @@
                         <div class="stat-label">Videos Watched</div>
                         <div class="stat-value" id="videos-watched">0</div>
                         <div class="stat-label">of <span id="total-videos">0</span> total</div>
-                        <div class="stat-update" id="videos-update">✓ Updated</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Completion</div>
                         <div class="stat-value" id="completion">0%</div>
                         <div class="stat-label">Overall Progress</div>
-                        <div class="stat-update" id="completion-update">✓ Updated</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Watch Time</div>
                         <div class="stat-value" id="watch-time">0h</div>
                         <div class="stat-label">Total Learning</div>
-                        <div class="stat-update" id="watchtime-update">✓ Updated</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Active Days</div>
                         <div class="stat-value" id="active-days">0</div>
                         <div class="stat-label">Days Learning</div>
-                        <div class="stat-update" id="activedays-update">✓ Updated</div>
                     </div>
                 </div>
 
-                <!-- Streak Cards -->
-                <div class="streak-container">
-                    <div class="streak-card">
-                        <div class="fire-icon">🔥</div>
-                        <div class="streak-number" id="current-streak">0</div>
-                        <div class="streak-label">Current Streak</div>
-                    </div>
-                    <div class="streak-card">
-                        <div class="fire-icon">🏆</div>
-                        <div class="streak-number" id="longest-streak">0</div>
-                        <div class="streak-label">Longest Streak</div>
-                    </div>
-                </div>
-
-                <!-- Contribution Calendar with Navigation -->
-                <div class="calendar-section">
-                    <div class="calendar-header">
-                        <div class="calendar-title">
+                <!-- Learning Activity Section - Codolio Style -->
+                <div class="learning-activity">
+                    <div class="activity-header">
+                        <div class="activity-title">
                             📅 Learning Activity
-                            <span class="refresh-indicator" id="live-indicator" title="Live updates"></span>
+                            <span class="streak-badge">
+                                <span>🔥</span> <span id="current-streak">0</span> day streak
+                            </span>
+                            <span class="live-indicator">
+                                <span class="pulse-dot"></span>
+                                <span>Live</span>
+                            </span>
                         </div>
                         <div class="calendar-legend">
                             <div class="legend-item">
@@ -514,37 +539,45 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Calendar Navigation Controls -->
-                    <div class="calendar-controls">
-                        <div class="calendar-nav">
-                            <button class="calendar-nav-btn" onclick="scrollCalendar(-12)" id="prev-year-btn">
-                                ⬅️ Prev Year
-                            </button>
-                            <button class="calendar-nav-btn" onclick="scrollCalendar(-3)" id="prev-months-btn">
-                                ⬅️ Prev 3 Months
-                            </button>
-                            <button class="calendar-nav-btn" onclick="scrollCalendar(3)" id="next-months-btn">
-                                Next 3 Months ➡️
-                            </button>
-                            <button class="calendar-nav-btn" onclick="scrollCalendar(12)" id="next-year-btn">
-                                Next Year ➡️
-                            </button>
+
+                    <!-- Compact Streak Info -->
+                    <div class="compact-streaks">
+                        <div class="compact-streak-item">
+                            <span class="compact-streak-icon">🔥</span>
+                            <span class="compact-streak-label">Current streak:</span>
+                            <span class="compact-streak-value" id="compact-current-streak">0</span>
+                            <span>days</span>
                         </div>
-                        <button class="calendar-nav-btn" onclick="scrollToCurrent()" id="current-btn">
-                            📍 Current
-                        </button>
+                        <div class="compact-streak-item">
+                            <span class="compact-streak-icon">🏆</span>
+                            <span class="compact-streak-label">Longest streak:</span>
+                            <span class="compact-streak-value" id="compact-longest-streak">0</span>
+                            <span>days</span>
+                        </div>
                     </div>
-                    
-                    <!-- Calendar Container -->
+
+                    <!-- Calendar Navigation -->
+                    <div class="calendar-nav">
+                        <button class="nav-btn" onclick="navigateCalendar('prevYear')">⏪ Year</button>
+                        <button class="nav-btn" onclick="navigateCalendar('prevMonth')">◀ Month</button>
+                        <button class="nav-btn active" onclick="navigateCalendar('today')">Today</button>
+                        <button class="nav-btn" onclick="navigateCalendar('nextMonth')">Month ▶</button>
+                        <button class="nav-btn" onclick="navigateCalendar('nextYear')">Year ⏩</button>
+                    </div>
+
+                    <!-- Calendar Grid -->
                     <div class="calendar-wrapper" id="calendar-wrapper">
-                        <div id="calendar-container"></div>
+                        <div class="calendar-grid-container" id="calendar-container">
+                            <!-- Calendar will be generated here -->
+                        </div>
                     </div>
                 </div>
 
                 <!-- Recent Activity -->
                 <div class="activity-section">
-                    <div class="calendar-title">📊 Recent Activity (Last 7 Days)</div>
+                    <div class="section-title">
+                        <span>📊</span> Recent Activity
+                    </div>
                     <div class="activity-list" id="activity-list">
                         <div class="loading">Loading activity...</div>
                     </div>
@@ -558,7 +591,7 @@
         let analyticsData = null;
         let calendarWrapper = null;
         let autoRefreshInterval = null;
-        let lastUpdateTime = Date.now();
+        let currentScrollPosition = 0;
         
         // Load data when page loads
         window.onload = async function() {
@@ -569,6 +602,9 @@
             
             // Auto-refresh every 30 seconds
             autoRefreshInterval = setInterval(refreshAnalytics, 30000);
+            
+            // Scroll to current date after loading
+            setTimeout(scrollToToday, 500);
         };
 
         // Clean up on page unload
@@ -597,7 +633,6 @@
         // Load analytics data
         async function loadAnalytics(showUpdate = false) {
             try {
-                console.log('Loading analytics...');
                 const response = await fetch('/api/analytics/user-stats');
                 
                 if (!response.ok) {
@@ -609,45 +644,24 @@
                 }
                 
                 const newData = await response.json();
-                console.log('Analytics loaded:', newData);
                 
-                // Check if data changed
                 if (JSON.stringify(analyticsData) !== JSON.stringify(newData)) {
                     analyticsData = newData;
                     updateAllSections();
-                    
-                    if (showUpdate) {
-                        showUpdateIndicators();
-                        lastUpdateTime = Date.now();
-                    }
                 }
                 
             } catch (error) {
                 console.error('Error loading analytics:', error);
-                showError('Failed to load analytics data. Please refresh the page.');
+                showError('Failed to load analytics data');
             }
         }
 
         // Update all sections
         function updateAllSections() {
             updateStatsCards();
-            updateStreakCards();
+            updateStreaks();
             generateCalendar();
             updateRecentActivity();
-        }
-
-        // Show update indicators
-        function showUpdateIndicators() {
-            const updates = ['videos', 'completion', 'watchtime', 'activedays'];
-            updates.forEach(id => {
-                const el = document.getElementById(id + '-update');
-                if (el) {
-                    el.style.display = 'block';
-                    setTimeout(() => {
-                        el.style.display = 'none';
-                    }, 3000);
-                }
-            });
         }
 
         // Update stats cards
@@ -659,21 +673,25 @@
             document.getElementById('completion').textContent = analyticsData.totalStats.completionPercentage || '0';
             
             const watchTimeHours = Math.floor((analyticsData.totalStats.totalWatchTimeMinutes || 0) / 60);
-            const watchTimeMinutes = Math.floor((analyticsData.totalStats.totalWatchTimeMinutes || 0) % 60);
-            document.getElementById('watch-time').textContent = watchTimeHours + 'h ' + watchTimeMinutes + 'm';
+            document.getElementById('watch-time').textContent = watchTimeHours + 'h';
             
             document.getElementById('active-days').textContent = analyticsData.totalStats.totalActiveDays || 0;
         }
 
-        // Update streak cards
-        function updateStreakCards() {
+        // Update streak displays
+        function updateStreaks() {
             if (!analyticsData) return;
             
-            document.getElementById('current-streak').textContent = analyticsData.streak.current || 0;
-            document.getElementById('longest-streak').textContent = analyticsData.streak.longest || 0;
+            const currentStreak = analyticsData.streak.current || 0;
+            const longestStreak = analyticsData.streak.longest || 0;
+            
+            // Update all streak displays
+            document.getElementById('current-streak').textContent = currentStreak;
+            document.getElementById('compact-current-streak').textContent = currentStreak;
+            document.getElementById('compact-longest-streak').textContent = longestStreak;
         }
 
-        // Generate GitHub-style calendar with month separators
+        // Generate Codolio-style calendar
         function generateCalendar() {
             if (!analyticsData || !analyticsData.calendarData) {
                 document.getElementById('calendar-container').innerHTML = '<div class="no-data">No calendar data available</div>';
@@ -683,91 +701,126 @@
             const container = document.getElementById('calendar-container');
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             
-            // Get date range
-            const today = new Date();
-            let currentMonth = -1;
-            let monthStartIndices = [];
-            
-            // Find month boundaries
-            for (let i = 0; i < analyticsData.calendarData.length; i += 7) {
-                const dateStr = analyticsData.calendarData[i].date;
-                const date = new Date(dateStr);
-                const month = date.getMonth();
-                
-                if (month !== currentMonth) {
-                    monthStartIndices.push(i / 7);
-                    currentMonth = month;
-                }
-            }
-            
-            // Build month labels row
-            let monthLabels = '<div class="month-grid">';
-            monthLabels += '<div class="month-label" style="width: 30px;"></div>';
-            
+            // Group data by weeks (53 weeks, 7 days each)
+            const weeks = [];
             for (let week = 0; week < 53; week++) {
-                const isMonthStart = monthStartIndices.includes(week);
-                const monthIndex = Math.floor(week / 4.5) % 12;
-                const showLabel = week % 4 === 0;
-                
-                monthLabels += `<div class="month-label" style="${isMonthStart ? 'border-left: 2px solid #667eea; padding-left: 5px;' : ''}">
-                    ${showLabel ? months[monthIndex] : ''}
-                </div>`;
-            }
-            monthLabels += '</div>';
-            
-            // Day labels and calendar cells
-            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-            let calendar = '<div class="calendar-grid">';
-            
-            for (let day = 0; day < 7; day++) {
-                calendar += `<div class="day-label">${days[day]}</div>`;
-                
-                for (let week = 0; week < 53; week++) {
+                const weekDays = [];
+                for (let day = 0; day < 7; day++) {
                     const index = day * 53 + week;
-                    const isMonthStart = monthStartIndices.includes(week);
-                    
                     if (index < analyticsData.calendarData.length) {
-                        const dayData = analyticsData.calendarData[index];
-                        const date = new Date(dayData.date);
-                        const isToday = date.toDateString() === new Date().toDateString();
-                        
-                        calendar += `<div class="calendar-cell" 
-                            data-level="${dayData.intensity}" 
-                            data-date="${dayData.date}"
-                            data-count="${dayData.count}"
-                            ${isToday ? 'data-current="true"' : ''}
-                            style="${isMonthStart && day === 0 ? 'border-left: 2px solid #667eea;' : ''}"
-                            onmouseover="showTooltip(this, event)"
-                            onmouseout="hideTooltip()"
-                            onclick="showDateDetails('${dayData.date}', ${dayData.count})">
-                        </div>`;
-                    } else {
-                        calendar += '<div class="calendar-cell" data-level="0"></div>';
+                        weekDays.push(analyticsData.calendarData[index]);
+                    }
+                }
+                weeks.push(weekDays);
+            }
+            
+            // Calculate month boundaries
+            const monthBoundaries = [];
+            let currentMonth = -1;
+            
+            for (let week = 0; week < weeks.length; week++) {
+                if (weeks[week][0]) {
+                    const weekDate = new Date(weeks[week][0].date);
+                    const month = weekDate.getMonth();
+                    
+                    if (month !== currentMonth) {
+                        monthBoundaries.push({
+                            week: week,
+                            month: month,
+                            year: weekDate.getFullYear(),
+                            name: months[month]
+                        });
+                        currentMonth = month;
                     }
                 }
             }
             
-            calendar += '</div>';
-            container.innerHTML = monthLabels + calendar;
+            // Build months row
+            let monthsHtml = '<div class="months-row">';
+            monthsHtml += '<div class="day-labels"></div>';
+            
+            for (let i = 0; i < monthBoundaries.length; i++) {
+                const current = monthBoundaries[i];
+                const nextWeek = i < monthBoundaries.length - 1 ? monthBoundaries[i + 1].week : 53;
+                const weekCount = nextWeek - current.week;
+                
+                monthsHtml += `
+                    <div class="month-block" style="flex: ${weekCount};">
+                        <span class="month-name">${current.name} ${current.year}</span>
+                        <div class="month-weeks">
+                            ${Array(weekCount).fill(0).map((_, idx) => {
+                                const weekIndex = current.week + idx;
+                                const isCurrentMonth = true;
+                                return `<div class="week-cell" data-week="${weekIndex}" style="width: 12px;"></div>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            monthsHtml += '</div>';
+            
+            // Build days and weeks
+            const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+            let daysHtml = '<div class="days-row">';
+            daysHtml += '<div class="day-labels">' + 
+                days.map(day => `<div class="day-label-item">${day}</div>`).join('') + 
+            '</div>';
+            
+            daysHtml += '<div class="weeks-container">';
+            
+            // For each day of week
+            for (let day = 0; day < 7; day++) {
+                daysHtml += '<div class="week-row">';
+                
+                // For each week
+                for (let week = 0; week < 53; week++) {
+                    const index = day * 53 + week;
+                    if (index < analyticsData.calendarData.length) {
+                        const dayData = analyticsData.calendarData[index];
+                        const date = new Date(dayData.date);
+                        const isToday = date.toDateString() === new Date().toDateString();
+                        const formattedDate = date.toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                        });
+                        
+                        daysHtml += `<div class="week-cell" 
+                            data-level="${dayData.intensity}"
+                            data-date="${dayData.date}"
+                            data-count="${dayData.count}"
+                            data-today="${isToday}"
+                            data-week="${week}"
+                            data-day="${day}"
+                            onmouseover="showTooltip(this, '${formattedDate}', ${dayData.count})"
+                            onmouseout="hideTooltip()"
+                            onclick="showDateDetails('${formattedDate}', ${dayData.count})"
+                            style="background: ${getColorForLevel(dayData.intensity)};">
+                        </div>`;
+                    }
+                }
+                
+                daysHtml += '</div>';
+            }
+            
+            daysHtml += '</div></div>';
+            
+            container.innerHTML = monthsHtml + daysHtml;
         }
 
-        // Show tooltip on hover
-        function showTooltip(element, event) {
-            const date = element.getAttribute('data-date');
-            const count = element.getAttribute('data-count');
-            
-            if (!date) return;
-            
-            const formattedDate = new Date(date).toLocaleDateString('en-US', {
-                weekday: 'short',
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
-            
+        // Get color for intensity level
+        function getColorForLevel(level) {
+            const colors = ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39'];
+            return colors[level] || colors[0];
+        }
+
+        // Show tooltip
+        function showTooltip(element, date, count) {
             const tooltip = document.createElement('div');
             tooltip.className = 'calendar-tooltip';
-            tooltip.textContent = `${formattedDate}: ${count} video${count != 1 ? 's' : ''}`;
+            tooltip.textContent = `${date}: ${count} video${count !== 1 ? 's' : ''}`;
             tooltip.id = 'calendar-tooltip';
             
             document.body.appendChild(tooltip);
@@ -783,28 +836,45 @@
         }
 
         function showDateDetails(date, count) {
-            alert(`📅 ${new Date(date).toLocaleDateString()}\n📺 Videos watched: ${count}`);
+            alert(`📅 ${date}\n📺 Videos watched: ${count}`);
         }
 
         // Calendar navigation
-        function scrollCalendar(months) {
+        function navigateCalendar(direction) {
             if (!calendarWrapper) return;
             
-            const weekWidth = 20; // Approximate width of each week column
-            const scrollAmount = months * 4.5 * weekWidth; // 4.5 weeks per month on average
+            const scrollAmount = 300; // Approximate scroll amount
             
-            calendarWrapper.scrollBy({
-                left: scrollAmount,
-                behavior: 'smooth'
-            });
+            switch(direction) {
+                case 'prevYear':
+                    calendarWrapper.scrollBy({ left: -scrollAmount * 12, behavior: 'smooth' });
+                    break;
+                case 'prevMonth':
+                    calendarWrapper.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+                    break;
+                case 'today':
+                    scrollToToday();
+                    break;
+                case 'nextMonth':
+                    calendarWrapper.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                    break;
+                case 'nextYear':
+                    calendarWrapper.scrollBy({ left: scrollAmount * 12, behavior: 'smooth' });
+                    break;
+            }
         }
 
-        function scrollToCurrent() {
+        function scrollToToday() {
             if (!calendarWrapper || !analyticsData?.calendarData) return;
             
-            // Find current week (approximately 75% through the calendar)
-            const scrollPosition = calendarWrapper.scrollWidth * 0.75;
+            // Find current week (approximately week 45-50)
+            const today = new Date();
+            const startOfYear = new Date(today.getFullYear(), 0, 1);
+            const daysSinceStart = Math.floor((today - startOfYear) / (1000 * 60 * 60 * 24));
+            const currentWeek = Math.floor(daysSinceStart / 7);
             
+            // Scroll to current week (each week is about 15px wide)
+            const scrollPosition = currentWeek * 15;
             calendarWrapper.scrollTo({
                 left: scrollPosition,
                 behavior: 'smooth'
@@ -840,12 +910,12 @@
                     <div class="activity-item">
                         <div class="activity-date">${formattedDate}</div>
                         <div class="activity-bar-container">
-                            <div class="activity-bar" style="width: ${percentage}%"></div>
-                            <span class="activity-bar-label">${day.videosWatched} video${day.videosWatched !== 1 ? 's' : ''}</span>
+                            <div class="activity-bar" style="width: ${percentage}%">
+                                ${percentage > 30 ? `${day.videosWatched} videos` : ''}
+                            </div>
                         </div>
                         <div class="activity-count">
                             ${timeStr}
-                            <span class="activity-time">watched</span>
                         </div>
                     </div>
                 `;
@@ -866,11 +936,6 @@
             } catch (error) {
                 console.error('Error logging out:', error);
             }
-        }
-
-        // Manual refresh button (optional)
-        function manualRefresh() {
-            refreshAnalytics();
         }
     </script>
 </body>
