@@ -7,7 +7,7 @@
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: #f5f5f5; }
         .app-container { display: flex; height: 100vh; }
         
-        /* Sidebar Styles (same as dashboard) */
+        /* Sidebar Styles */
         .sidebar { width: 300px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
         .sidebar-header { padding: 30px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
         .sidebar-header h2 { font-size: 24px; margin-bottom: 5px; }
@@ -74,6 +74,13 @@
             letter-spacing: 1px;
         }
         
+        .stat-update {
+            font-size: 12px;
+            color: #28a745;
+            margin-top: 5px;
+            display: none;
+        }
+        
         /* Streak Cards */
         .streak-container {
             display: grid;
@@ -105,6 +112,50 @@
         .fire-icon {
             font-size: 32px;
             margin-bottom: 10px;
+        }
+        
+        /* Calendar Controls */
+        .calendar-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .calendar-nav {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .calendar-nav-btn {
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s;
+        }
+        
+        .calendar-nav-btn:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .calendar-nav-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .calendar-range {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
         }
         
         /* Calendar Section */
@@ -155,23 +206,32 @@
         .calendar-wrapper {
             overflow-x: auto;
             padding: 10px 0;
+            position: relative;
+        }
+        
+        .calendar-grid-container {
+            min-width: 900px;
+        }
+        
+        .month-grid {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 5px;
+        }
+        
+        .month-label {
+            flex: 1;
+            text-align: left;
+            font-size: 12px;
+            color: #666;
+            font-weight: 600;
+            padding-left: 30px;
         }
         
         .calendar-grid {
-            display: inline-grid;
-            grid-template-columns: 30px repeat(53, 1fr);
-            gap: 3px;
-            min-width: 800px;
-        }
-        
-        .month-labels {
             display: grid;
             grid-template-columns: 30px repeat(53, 1fr);
             gap: 3px;
-            margin-bottom: 5px;
-            font-size: 10px;
-            color: #666;
-            min-width: 800px;
         }
         
         .day-label {
@@ -187,13 +247,15 @@
             aspect-ratio: 1;
             border-radius: 3px;
             background: #ebedf0;
-            transition: transform 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s;
             cursor: pointer;
+            position: relative;
         }
         
         .calendar-cell:hover {
             transform: scale(1.2);
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            z-index: 10;
         }
         
         .calendar-cell[data-level="0"] { background: #ebedf0; }
@@ -201,6 +263,31 @@
         .calendar-cell[data-level="2"] { background: #40c463; }
         .calendar-cell[data-level="3"] { background: #30a14e; }
         .calendar-cell[data-level="4"] { background: #216e39; }
+        
+        .calendar-cell[data-current="true"] {
+            outline: 2px solid #667eea;
+            outline-offset: 2px;
+        }
+        
+        .month-separator {
+            border-left: 2px solid #667eea;
+            margin-left: -1px;
+        }
+        
+        /* Tooltip */
+        .calendar-tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            pointer-events: none;
+            z-index: 100;
+            white-space: nowrap;
+            transform: translate(-50%, -100%);
+            margin-top: -5px;
+        }
         
         /* Recent Activity */
         .activity-section {
@@ -226,16 +313,16 @@
         }
         
         .activity-date {
-            width: 100px;
+            width: 120px;
             font-weight: 500;
             color: #333;
         }
         
         .activity-bar-container {
             flex: 1;
-            height: 30px;
+            height: 40px;
             background: #f0f0f0;
-            border-radius: 15px;
+            border-radius: 20px;
             margin: 0 20px;
             overflow: hidden;
             position: relative;
@@ -244,7 +331,7 @@
         .activity-bar {
             height: 100%;
             background: linear-gradient(90deg, #667eea, #764ba2);
-            border-radius: 15px;
+            border-radius: 20px;
             transition: width 0.3s;
             position: relative;
             z-index: 1;
@@ -256,17 +343,40 @@
             left: 10px;
             transform: translateY(-50%);
             color: white;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 500;
             z-index: 2;
             text-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
         
         .activity-count {
-            width: 50px;
+            width: 100px;
             text-align: right;
             font-weight: 600;
             color: #667eea;
+        }
+        
+        .activity-time {
+            font-size: 12px;
+            color: #999;
+            margin-left: 5px;
+        }
+        
+        /* Refresh indicator */
+        .refresh-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #28a745;
+            margin-left: 5px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
         }
         
         .loading { 
@@ -316,7 +426,7 @@
                     <span class="nav-icon">📺</span>
                     <span class="nav-text">Dashboard</span>
                 </div>
-                <div class="nav-item active" onclick="window.location.href='/analytics.html'">
+                <div class="nav-item active">
                     <span class="nav-icon">📊</span>
                     <span class="nav-text">Analytics</span>
                 </div>
@@ -338,21 +448,25 @@
                         <div class="stat-label">Videos Watched</div>
                         <div class="stat-value" id="videos-watched">0</div>
                         <div class="stat-label">of <span id="total-videos">0</span> total</div>
+                        <div class="stat-update" id="videos-update">✓ Updated</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Completion</div>
                         <div class="stat-value" id="completion">0%</div>
                         <div class="stat-label">Overall Progress</div>
+                        <div class="stat-update" id="completion-update">✓ Updated</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Watch Time</div>
                         <div class="stat-value" id="watch-time">0h</div>
                         <div class="stat-label">Total Learning</div>
+                        <div class="stat-update" id="watchtime-update">✓ Updated</div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-label">Active Days</div>
                         <div class="stat-value" id="active-days">0</div>
                         <div class="stat-label">Days Learning</div>
+                        <div class="stat-update" id="activedays-update">✓ Updated</div>
                     </div>
                 </div>
 
@@ -370,10 +484,13 @@
                     </div>
                 </div>
 
-                <!-- Contribution Calendar -->
+                <!-- Contribution Calendar with Navigation -->
                 <div class="calendar-section">
                     <div class="calendar-header">
-                        <div class="calendar-title">📅 Learning Activity (Last 12 Months)</div>
+                        <div class="calendar-title">
+                            📅 Learning Activity
+                            <span class="refresh-indicator" id="live-indicator" title="Live updates"></span>
+                        </div>
                         <div class="calendar-legend">
                             <div class="legend-item">
                                 <div class="legend-color" style="background: #ebedf0"></div>
@@ -397,7 +514,30 @@
                             </div>
                         </div>
                     </div>
-                    <div class="calendar-wrapper">
+                    
+                    <!-- Calendar Navigation Controls -->
+                    <div class="calendar-controls">
+                        <div class="calendar-nav">
+                            <button class="calendar-nav-btn" onclick="scrollCalendar(-12)" id="prev-year-btn">
+                                ⬅️ Prev Year
+                            </button>
+                            <button class="calendar-nav-btn" onclick="scrollCalendar(-3)" id="prev-months-btn">
+                                ⬅️ Prev 3 Months
+                            </button>
+                            <button class="calendar-nav-btn" onclick="scrollCalendar(3)" id="next-months-btn">
+                                Next 3 Months ➡️
+                            </button>
+                            <button class="calendar-nav-btn" onclick="scrollCalendar(12)" id="next-year-btn">
+                                Next Year ➡️
+                            </button>
+                        </div>
+                        <button class="calendar-nav-btn" onclick="scrollToCurrent()" id="current-btn">
+                            📍 Current
+                        </button>
+                    </div>
+                    
+                    <!-- Calendar Container -->
+                    <div class="calendar-wrapper" id="calendar-wrapper">
                         <div id="calendar-container"></div>
                     </div>
                 </div>
@@ -416,18 +556,31 @@
     <script>
         // Global variables
         let analyticsData = null;
+        let calendarWrapper = null;
+        let autoRefreshInterval = null;
+        let lastUpdateTime = Date.now();
         
         // Load data when page loads
         window.onload = async function() {
             console.log('Analytics page loaded');
+            calendarWrapper = document.getElementById('calendar-wrapper');
             await loadUserInfo();
             await loadAnalytics();
+            
+            // Auto-refresh every 30 seconds
+            autoRefreshInterval = setInterval(refreshAnalytics, 30000);
+        };
+
+        // Clean up on page unload
+        window.onbeforeunload = function() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
         };
 
         // Load user info
         async function loadUserInfo() {
             try {
-                // Try to get from session (you can enhance this later)
                 document.getElementById('username').textContent = 'CampusX Learner';
                 document.getElementById('user-email').textContent = 'learner@campusx.com';
             } catch (error) {
@@ -435,8 +588,14 @@
             }
         }
 
+        // Refresh analytics data
+        async function refreshAnalytics() {
+            console.log('Refreshing analytics...');
+            await loadAnalytics(true);
+        }
+
         // Load analytics data
-        async function loadAnalytics() {
+        async function loadAnalytics(showUpdate = false) {
             try {
                 console.log('Loading analytics...');
                 const response = await fetch('/api/analytics/user-stats');
@@ -449,19 +608,46 @@
                     throw new Error('Failed to load analytics');
                 }
                 
-                analyticsData = await response.json();
-                console.log('Analytics loaded:', analyticsData);
+                const newData = await response.json();
+                console.log('Analytics loaded:', newData);
                 
-                // Update all sections
-                updateStatsCards();
-                updateStreakCards();
-                generateCalendar();
-                updateRecentActivity();
+                // Check if data changed
+                if (JSON.stringify(analyticsData) !== JSON.stringify(newData)) {
+                    analyticsData = newData;
+                    updateAllSections();
+                    
+                    if (showUpdate) {
+                        showUpdateIndicators();
+                        lastUpdateTime = Date.now();
+                    }
+                }
                 
             } catch (error) {
                 console.error('Error loading analytics:', error);
                 showError('Failed to load analytics data. Please refresh the page.');
             }
+        }
+
+        // Update all sections
+        function updateAllSections() {
+            updateStatsCards();
+            updateStreakCards();
+            generateCalendar();
+            updateRecentActivity();
+        }
+
+        // Show update indicators
+        function showUpdateIndicators() {
+            const updates = ['videos', 'completion', 'watchtime', 'activedays'];
+            updates.forEach(id => {
+                const el = document.getElementById(id + '-update');
+                if (el) {
+                    el.style.display = 'block';
+                    setTimeout(() => {
+                        el.style.display = 'none';
+                    }, 3000);
+                }
+            });
         }
 
         // Update stats cards
@@ -473,7 +659,8 @@
             document.getElementById('completion').textContent = analyticsData.totalStats.completionPercentage || '0';
             
             const watchTimeHours = Math.floor((analyticsData.totalStats.totalWatchTimeMinutes || 0) / 60);
-            document.getElementById('watch-time').textContent = watchTimeHours + 'h';
+            const watchTimeMinutes = Math.floor((analyticsData.totalStats.totalWatchTimeMinutes || 0) % 60);
+            document.getElementById('watch-time').textContent = watchTimeHours + 'h ' + watchTimeMinutes + 'm';
             
             document.getElementById('active-days').textContent = analyticsData.totalStats.totalActiveDays || 0;
         }
@@ -486,7 +673,7 @@
             document.getElementById('longest-streak').textContent = analyticsData.streak.longest || 0;
         }
 
-        // Generate GitHub-style calendar
+        // Generate GitHub-style calendar with month separators
         function generateCalendar() {
             if (!analyticsData || !analyticsData.calendarData) {
                 document.getElementById('calendar-container').innerHTML = '<div class="no-data">No calendar data available</div>';
@@ -496,11 +683,35 @@
             const container = document.getElementById('calendar-container');
             const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
             
-            // Generate month labels
-            let monthLabels = '<div class="month-labels"><div class="day-label"></div>';
+            // Get date range
+            const today = new Date();
+            let currentMonth = -1;
+            let monthStartIndices = [];
+            
+            // Find month boundaries
+            for (let i = 0; i < analyticsData.calendarData.length; i += 7) {
+                const dateStr = analyticsData.calendarData[i].date;
+                const date = new Date(dateStr);
+                const month = date.getMonth();
+                
+                if (month !== currentMonth) {
+                    monthStartIndices.push(i / 7);
+                    currentMonth = month;
+                }
+            }
+            
+            // Build month labels row
+            let monthLabels = '<div class="month-grid">';
+            monthLabels += '<div class="month-label" style="width: 30px;"></div>';
+            
             for (let week = 0; week < 53; week++) {
+                const isMonthStart = monthStartIndices.includes(week);
                 const monthIndex = Math.floor(week / 4.5) % 12;
-                monthLabels += `<div style="text-align: left;">${week % 4 === 0 ? months[monthIndex] : ''}</div>`;
+                const showLabel = week % 4 === 0;
+                
+                monthLabels += `<div class="month-label" style="${isMonthStart ? 'border-left: 2px solid #667eea; padding-left: 5px;' : ''}">
+                    ${showLabel ? months[monthIndex] : ''}
+                </div>`;
             }
             monthLabels += '</div>';
             
@@ -513,18 +724,91 @@
                 
                 for (let week = 0; week < 53; week++) {
                     const index = day * 53 + week;
+                    const isMonthStart = monthStartIndices.includes(week);
+                    
                     if (index < analyticsData.calendarData.length) {
                         const dayData = analyticsData.calendarData[index];
-                        calendar += `<div class="calendar-cell" data-level="${dayData.intensity}" 
-                                         title="${dayData.date}: ${dayData.count} video${dayData.count !== 1 ? 's' : ''}"></div>`;
+                        const date = new Date(dayData.date);
+                        const isToday = date.toDateString() === new Date().toDateString();
+                        
+                        calendar += `<div class="calendar-cell" 
+                            data-level="${dayData.intensity}" 
+                            data-date="${dayData.date}"
+                            data-count="${dayData.count}"
+                            ${isToday ? 'data-current="true"' : ''}
+                            style="${isMonthStart && day === 0 ? 'border-left: 2px solid #667eea;' : ''}"
+                            onmouseover="showTooltip(this, event)"
+                            onmouseout="hideTooltip()"
+                            onclick="showDateDetails('${dayData.date}', ${dayData.count})">
+                        </div>`;
                     } else {
-                        calendar += '<div class="calendar-cell" data-level="0" title="No data"></div>';
+                        calendar += '<div class="calendar-cell" data-level="0"></div>';
                     }
                 }
             }
             
             calendar += '</div>';
             container.innerHTML = monthLabels + calendar;
+        }
+
+        // Show tooltip on hover
+        function showTooltip(element, event) {
+            const date = element.getAttribute('data-date');
+            const count = element.getAttribute('data-count');
+            
+            if (!date) return;
+            
+            const formattedDate = new Date(date).toLocaleDateString('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric'
+            });
+            
+            const tooltip = document.createElement('div');
+            tooltip.className = 'calendar-tooltip';
+            tooltip.textContent = `${formattedDate}: ${count} video${count != 1 ? 's' : ''}`;
+            tooltip.id = 'calendar-tooltip';
+            
+            document.body.appendChild(tooltip);
+            
+            const rect = element.getBoundingClientRect();
+            tooltip.style.left = rect.left + rect.width / 2 + 'px';
+            tooltip.style.top = rect.top + 'px';
+        }
+
+        function hideTooltip() {
+            const tooltip = document.getElementById('calendar-tooltip');
+            if (tooltip) tooltip.remove();
+        }
+
+        function showDateDetails(date, count) {
+            alert(`📅 ${new Date(date).toLocaleDateString()}\n📺 Videos watched: ${count}`);
+        }
+
+        // Calendar navigation
+        function scrollCalendar(months) {
+            if (!calendarWrapper) return;
+            
+            const weekWidth = 20; // Approximate width of each week column
+            const scrollAmount = months * 4.5 * weekWidth; // 4.5 weeks per month on average
+            
+            calendarWrapper.scrollBy({
+                left: scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+
+        function scrollToCurrent() {
+            if (!calendarWrapper || !analyticsData?.calendarData) return;
+            
+            // Find current week (approximately 75% through the calendar)
+            const scrollPosition = calendarWrapper.scrollWidth * 0.75;
+            
+            calendarWrapper.scrollTo({
+                left: scrollPosition,
+                behavior: 'smooth'
+            });
         }
 
         // Update recent activity
@@ -547,6 +831,10 @@
                 });
                 
                 const percentage = maxVideos > 0 ? (day.videosWatched / maxVideos) * 100 : 0;
+                const watchTime = day.watchTimeMinutes || 0;
+                const hours = Math.floor(watchTime / 60);
+                const minutes = watchTime % 60;
+                const timeStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
                 
                 return `
                     <div class="activity-item">
@@ -555,7 +843,10 @@
                             <div class="activity-bar" style="width: ${percentage}%"></div>
                             <span class="activity-bar-label">${day.videosWatched} video${day.videosWatched !== 1 ? 's' : ''}</span>
                         </div>
-                        <div class="activity-count">${day.watchTimeMinutes || 0} min</div>
+                        <div class="activity-count">
+                            ${timeStr}
+                            <span class="activity-time">watched</span>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -577,8 +868,10 @@
             }
         }
 
-        // Auto-refresh data every 5 minutes
-        setInterval(loadAnalytics, 5 * 60 * 1000);
+        // Manual refresh button (optional)
+        function manualRefresh() {
+            refreshAnalytics();
+        }
     </script>
 </body>
 </html>
