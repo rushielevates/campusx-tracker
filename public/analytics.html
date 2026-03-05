@@ -657,6 +657,36 @@
             document.getElementById('yearLabel').textContent = selectedYear;
         };
         // Add this to your analytics.html script section
+        // Listen for video toggle updates from dashboard
+window.addEventListener('storage', (e) => {
+    if (e.key === 'analyticsUpdate') {
+        console.log('Received analytics update from storage:', e.newValue);
+        try {
+            const update = JSON.parse(e.newValue);
+            if (update.type === 'VIDEO_TOGGLED') {
+                // Force refresh analytics data
+                refreshAnalyticsData();
+            }
+        } catch (error) {
+            console.error('Error parsing storage update:', error);
+        }
+    }
+});
+
+// Also check sessionStorage periodically
+setInterval(() => {
+    const lastUpdate = sessionStorage.getItem('lastUpdate');
+    if (lastUpdate) {
+        const lastUpdateTime = parseInt(lastUpdate);
+        const timeSinceUpdate = Date.now() - lastUpdateTime;
+        
+        // If update happened in last 5 seconds, refresh
+        if (timeSinceUpdate < 5000 && timeSinceUpdate > 0) {
+            sessionStorage.removeItem('lastUpdate');
+            refreshAnalyticsData();
+        }
+    }
+}, 2000);
 // Function to refresh calendar data after video toggle
 async function refreshAnalyticsData() {
     try {
