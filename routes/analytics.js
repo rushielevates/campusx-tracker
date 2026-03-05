@@ -86,7 +86,7 @@ router.post('/refresh', auth, async (req, res) => {
         
         await user.save();
         
-        // Return updated stats for analytics page
+        // Get playlists for total stats
         const playlists = await Playlist.find({ userId: req.session.userId });
         let totalWatched = 0;
         let totalVideos = 0;
@@ -94,6 +94,12 @@ router.post('/refresh', auth, async (req, res) => {
             totalWatched += p.videos.filter(v => v.completed).length;
             totalVideos += p.videos.length;
         });
+        
+        // Generate fresh calendar data
+        const calendarData = generateCalendarData(user.learningActivity || []);
+        
+        // Recalculate streak to ensure consistency
+        const recalculatedStreak = calculateStreakWithReset(user.learningActivity || []);
         
         res.json({
             success: true,
@@ -104,11 +110,12 @@ router.post('/refresh', auth, async (req, res) => {
                 totalWatchTimeMinutes: user.totalStats.totalWatchTimeMinutes,
                 totalActiveDays: user.totalStats.totalActiveDays
             },
-            streak: user.streak,
+            streak: recalculatedStreak,
             todayActivity: {
                 date: today,
                 count: todayActivity.videosWatched
-            }
+            },
+            calendarData: calendarData
         });
         
     } catch (error) {
@@ -142,7 +149,7 @@ router.get('/user-stats', auth, async (req, res) => {
             await user.save();
         }
         
-        // Generate calendar data (last 365 days)
+        // Generate calendar data
         const calendarData = generateCalendarData(user.learningActivity || []);
         
         // Get recent activity (last 7 days)
@@ -301,7 +308,7 @@ function calculateStreakWithReset(learningActivity) {
             if (activeDateSet.has(checkStr)) {
                 currentStreak++;
             } else {
-                break; // Stop at first missing day
+                break;
             }
         }
     } else {
@@ -378,7 +385,10 @@ function generateCalendarData(activity) {
     const activityMap = new Map();
     activity.forEach(day => {
         const dateStr = new Date(day.date).toDateString();
-        activityMap.set(dateStr, day.videosWatched);
+        activityMap.set(dateStr, {
+            count: day.videosWatched,
+            watchTime: day.watchTimeMinutes || 0
+        });
     });
     
     // Generate last 52 weeks (364 days)
@@ -387,12 +397,20 @@ function generateCalendarData(activity) {
         date.setDate(date.getDate() - i);
         const dateStr = date.toDateString();
         
-        const count = activityMap.get(dateStr) || 0;
+        const dayData = activityMap.get(dateStr);
+        const count = dayData ? dayData.count : 0;
+        
+        // Intensity calculation (0-4 scale)
+        let intensity = 0;
+        if (count >= 7) intensity = 4;
+        else if (count >= 5) intensity = 3;
+        else if (count >= 3) intensity = 2;
+        else if (count >= 1) intensity = 1;
         
         calendar.push({
             date: date.toISOString().split('T')[0],
             count: count,
-            intensity: count > 0 ? Math.min(Math.ceil(count / 2), 4) : 0 // 0-4 scale
+            intensity: intensity
         });
     }
     
