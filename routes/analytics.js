@@ -40,11 +40,7 @@ router.post('/refresh', auth, async (req, res) => {
                 watchTimeMinutes: 0,
                 videosCompleted: []
             };
-            user.learningActivity.push(todayActivity);
-            console.log('activityData sample:', Object.entries(activityData).slice(0,3));
-const today = new Date();
-const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-console.log('Today key:', todayKey, 'count:', activityData[todayKey]);
+           
             // Update streak with reset logic
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
