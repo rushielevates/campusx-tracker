@@ -383,11 +383,18 @@ function generateCalendarData(activity) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Create a map for quick lookup
+    // Create a map for quick lookup using local date string
     const activityMap = new Map();
     activity.forEach(day => {
-        const dateStr = new Date(day.date).toDateString();
-        activityMap.set(dateStr, {
+        // Convert the stored date to local date string for consistent lookup
+        const activityDate = new Date(day.date);
+        // Format as YYYY/MM/DD to avoid timezone issues
+        const year = activityDate.getFullYear();
+        const month = String(activityDate.getMonth() + 1).padStart(2, '0');
+        const dayNum = String(activityDate.getDate()).padStart(2, '0');
+        const localDateStr = `${year}/${month}/${dayNum}`;
+        
+        activityMap.set(localDateStr, {
             count: day.videosWatched,
             watchTime: day.watchTimeMinutes || 0
         });
@@ -397,9 +404,14 @@ function generateCalendarData(activity) {
     for (let i = 363; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
-        const dateStr = date.toDateString();
         
-        const dayData = activityMap.get(dateStr);
+        // Format the current date as YYYY/MM/DD for lookup
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const dayNum = String(date.getDate()).padStart(2, '0');
+        const localDateStr = `${year}/${month}/${dayNum}`;
+        
+        const dayData = activityMap.get(localDateStr);
         const count = dayData ? dayData.count : 0;
         
         // Intensity calculation (0-4 scale)
@@ -410,7 +422,7 @@ function generateCalendarData(activity) {
         else if (count >= 1) intensity = 1;
         
         calendar.push({
-            date: date.toISOString().split('T')[0],
+            date: localDateStr,  // Send as YYYY/MM/DD format
             count: count,
             intensity: intensity
         });
