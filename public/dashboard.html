@@ -599,76 +599,143 @@ window.addEventListener('storage', (e) => {
         // Toggle video completion
        // Toggle video completion - UPDATED VERSION
 // Toggle video completion - UPDATED VERSION WITH COLOR UPDATE FIX
+// Toggle video completion - COMPLETELY REWRITTEN FOR RELIABILITY
 async function toggleVideoComplete(videoId) {
     if (!currentPlaylist) return;
     
-    // Find the current video to know its completion status before toggling
-    const videoItem = document.querySelector(`.video-item:has(input[onclick*="'${videoId}'"])`);
-    const wasChecked = videoItem ? videoItem.querySelector('input').checked : false;
+    // Get the checkbox and its current state
+    const checkbox = event.target;
+    const wasChecked = checkbox.checked;
+    const videoItem = checkbox.closest('.video-item');
+    
+    // Add visual feedback
+    if (videoItem) {
+        videoItem.style.opacity = '0.7';
+        videoItem.style.pointerEvents = 'none';
+    }
+    
+    console.log(`Toggling video ${videoId} from ${wasChecked ? 'completed' : 'incomplete'} to ${!wasChecked ? 'completed' : 'incomplete'}`);
     
     try {
-        const response = await fetch(`/api/playlists/${currentPlaylist._id}/video/${videoId}/toggle`, {
+        // First API call: Update playlist
+        const playlistResponse = await fetch(`/api/playlists/${currentPlaylist._id}/video/${videoId}/toggle`, {
             method: 'POST'
         });
         
-        if (response.ok) {
-            const data = await response.json();
-            console.log('Video toggled:', data);
-            
-            // Immediately update the UI with new progress
-            if (data.progress) {
-                updateDashboardStats(data.progress);
-            }
-            
-            // Reload playlist to show updated status
-            await loadPlaylist(currentPlaylist._id);
-            await loadPlaylists(); // Update sidebar
-            
-            // === FIX: Call analytics refresh and update calendar colors ===
-            try {
-                const refreshResponse = await fetch('/api/analytics/refresh', { 
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        videoId: videoId,
-                        completed: !wasChecked, // Toggle the status (opposite of what it was)
-                        playlistId: currentPlaylist._id
-                    })
-                });
-                
-                if (refreshResponse.ok) {
-                    const refreshData = await refreshResponse.json();
-                    console.log('Analytics refreshed:', refreshData);
-                    
-                    // Store the updated data in localStorage for analytics page to pick up
-                    localStorage.setItem('analyticsUpdated', JSON.stringify({
-                        timestamp: Date.now(),
-                        calendarData: refreshData.calendarData,
-                        streak: refreshData.streak
-                    }));
-                    
-                    // If analytics page is open in another tab, it will detect this via storage event
-                }
-            } catch (refreshError) {
-                console.error('Error refreshing analytics:', refreshError);
-            }
-            
-            // If we're on analytics page, directly refresh it
-            if (window.location.pathname.includes('analytics')) {
-                setTimeout(() => {
-                    if (typeof window.refreshAnalyticsData === 'function') {
-                        window.refreshAnalyticsData();
-                    } else {
-                        // Fallback: reload the page
-                        location.reload();
-                    }
-                }, 500);
-            }
+        if (!playlistResponse.ok) {
+            throw new Error('Failed to update playlist');
         }
+        
+        const playlistData = await playlistResponse.json();
+        console.log('Playlist updated:', playlistData);
+        
+        // Second API call: Update analytics with the NEW state (opposite of wasChecked)
+        const analyticsResponse = await fetch('/api/analytics/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                videoId: videoId,
+                completed: !wasChecked, // Send the NEW state
+                playlistId: currentPlaylist._id
+            })
+        });
+        
+        if (!analyticsResponse.ok) {
+            console.error('Analytics refresh failed but playlist was updated');
+        } else {
+            const analyticsData = await analyticsResponse.json();
+            console.log('Analytics refreshed with data:', analyticsData);
+            
+            // Store the updated data in localStorage for analytics page
+            const updateEvent = {
+                type: 'VIDEO_TOGGLED',
+                videoId: videoId,
+                completed: !wasChecked,
+                timestamp: Date.now(),
+                calendarData: analyticsData.calendarData,
+                streak: analyticsData.streak
+            };
+            
+            localStorage.setItem('analyticsUpdate', JSON.stringify(updateEvent));
+            sessionStorage.setItem('lastUpdate', Date.now().toString());
+            
+            // Show success feedback
+            showToast('Video status updated!');
+        }
+        
+        // Reload playlist to show updated status
+        const scrollPos = document.querySelector('.videos-list')?.scrollTop || 0;
+        await loadPlaylist(currentPlaylist._id);
+        await loadPlaylists(); // Update sidebar
+        
+        // Restore scroll position
+        setTimeout(() => {
+            const videoList = document.querySelector('.videos-list');
+            if (videoList) videoList.scrollTop = scrollPos;
+        }, 100);
+        
     } catch (error) {
         console.error('Error toggling video:', error);
+        
+        // Revert checkbox state on error
+        checkbox.checked = wasChecked;
+        
+        // Show error message
+        showToast('Failed to update video status', 'error');
+    } finally {
+        // Remove visual feedback
+        if (videoItem) {
+            videoItem.style.opacity = '1';
+            videoItem.style.pointerEvents = 'auto';
+        }
     }
 }
+        // Helper function to show toast notifications
+function showToast(message, type = 'success') {
+    // Remove any existing toast
+    const existingToast = document.querySelector('.toast-notification');
+    if (existingToast) existingToast.remove();
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#28a745' : '#dc3545'};
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        font-weight: 500;
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 2700);
+}
+
+// Add animation styles
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
 // Helper function to update dashboard stats immediately
 function updateDashboardStats(progress) {
     // Update any dashboard stats if needed
