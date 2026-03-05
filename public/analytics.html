@@ -699,8 +699,11 @@ async function refreshAnalyticsData() {
         if (data.calendarData) {
             activityData = {};
             data.calendarData.forEach(day => {
-                const date = new Date(day.date);
-                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                const parts = day.date.split('/');
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const dayNum = parseInt(parts[2], 10);
+                const key = `${year}-${String(month+1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
                 activityData[key] = day.count;
             });
         }
@@ -870,16 +873,19 @@ document.head.appendChild(style);
         }
 
         // Process activity data for easy lookup
-        function processActivityData() {
-            if (!analyticsData || !analyticsData.calendarData) return;
-            
-            activityData = {};
-            analyticsData.calendarData.forEach(day => {
-                const date = new Date(day.date);
-                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                activityData[key] = day.count;
-            });
-        }
+function processActivityData() {
+    if (!analyticsData || !analyticsData.calendarData) return;
+    
+    activityData = {};
+    analyticsData.calendarData.forEach(day => {
+        const parts = day.date.split('/');
+        const year = parseInt(parts[0], 10);
+        const month = parseInt(parts[1], 10) - 1;
+        const dayNum = parseInt(parts[2], 10);
+        const key = `${year}-${String(month+1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+        activityData[key] = day.count;
+    });
+}
 
         // Generate mock data for testing (remove when API works)
         function generateMockData() {
