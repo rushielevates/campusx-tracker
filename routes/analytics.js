@@ -40,7 +40,7 @@ router.post('/refresh', auth, async (req, res) => {
             };
             user.learningActivity.push(todayActivity);
             
-            // Update streak
+            // Update streak with reset logic
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
             
@@ -116,6 +116,7 @@ router.post('/refresh', auth, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
 // ===== GET USER STATS =====
 router.get('/user-stats', auth, async (req, res) => {
     try {
@@ -130,11 +131,27 @@ router.get('/user-stats', auth, async (req, res) => {
             totalVideos += p.videos.length;
         });
         
+        // Recalculate streak with proper reset logic
+        const recalculatedStreak = calculateStreakWithReset(user.learningActivity || []);
+        
+        // Update user's streak if it changed
+        if (!user.streak || 
+            recalculatedStreak.current !== user.streak.current || 
+            recalculatedStreak.longest !== user.streak.longest) {
+            user.streak = recalculatedStreak;
+            await user.save();
+        }
+        
         // Generate calendar data (last 365 days)
         const calendarData = generateCalendarData(user.learningActivity || []);
         
+        // Get recent activity (last 7 days)
+        const recentActivity = (user.learningActivity || [])
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 7);
+        
         res.json({
-            streak: user.streak || { current: 0, longest: 0 },
+            streak: recalculatedStreak,
             totalStats: {
                 totalWatched,
                 totalVideos,
@@ -143,9 +160,10 @@ router.get('/user-stats', auth, async (req, res) => {
                 totalActiveDays: user.totalStats?.totalActiveDays || 0
             },
             calendarData,
-            recentActivity: (user.learningActivity || []).slice(-7) // Last 7 days
+            recentActivity
         });
     } catch (error) {
+        console.error('Error in user-stats:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -161,7 +179,7 @@ router.post('/track-watch', auth, async (req, res) => {
         
         // Initialize arrays if they don't exist
         if (!user.learningActivity) user.learningActivity = [];
-        if (!user.streak) user.streak = { current: 0, longest: 0 };
+        if (!user.streak) user.streak = { current: 0, longest: 0, lastActive: null };
         if (!user.totalStats) user.totalStats = { totalVideosWatched: 0, totalWatchTimeMinutes: 0, totalActiveDays: 0 };
         
         // Find today's activity or create new
@@ -178,7 +196,7 @@ router.post('/track-watch', auth, async (req, res) => {
             };
             user.learningActivity.push(todayActivity);
             
-            // Update streak
+            // Update streak with reset logic
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
             
@@ -210,6 +228,7 @@ router.post('/track-watch', auth, async (req, res) => {
         await user.save();
         res.json({ success: true });
     } catch (error) {
+        console.error('Error in track-watch:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -226,6 +245,9 @@ router.get('/profile', auth, async (req, res) => {
             totalWatched += p.videos.filter(v => v.completed).length;
         });
         
+        // Recalculate streak for profile too
+        const recalculatedStreak = calculateStreakWithReset(user.learningActivity || []);
+        
         res.json({
             username: user.username,
             email: user.email,
@@ -233,35 +255,144 @@ router.get('/profile', auth, async (req, res) => {
             stats: {
                 totalWatched,
                 totalPlaylists: playlists.length,
-                currentStreak: user.streak?.current || 0,
-                longestStreak: user.streak?.longest || 0,
+                currentStreak: recalculatedStreak.current,
+                longestStreak: recalculatedStreak.longest,
                 totalWatchTime: user.totalStats?.totalWatchTimeMinutes || 0,
                 totalActiveDays: user.totalStats?.totalActiveDays || 0
             }
         });
     } catch (error) {
+        console.error('Error in profile:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Helper function to generate calendar data
+// ===== HELPER FUNCTION: Calculate streak with proper reset logic =====
+function calculateStreakWithReset(learningActivity) {
+    if (!learningActivity || learningActivity.length === 0) {
+        return { current: 0, longest: 0 };
+    }
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Create a Set of active date strings for O(1) lookup
+    const activeDateSet = new Set(
+        learningActivity.map(a => new Date(a.date).toDateString())
+    );
+    
+    // Check if user was active today
+    const todayStr = today.toDateString();
+    const activeToday = activeDateSet.has(todayStr);
+    
+    // STREAK CALCULATION LOGIC
+    let currentStreak = 0;
+    
+    if (activeToday) {
+        // User active today → streak at least 1
+        currentStreak = 1;
+        let checkDate = new Date(today);
+        
+        // Count backwards consecutive days
+        while (true) {
+            checkDate.setDate(checkDate.getDate() - 1);
+            const checkStr = checkDate.toDateString();
+            
+            if (activeDateSet.has(checkStr)) {
+                currentStreak++;
+            } else {
+                break; // Stop at first missing day
+            }
+        }
+    } else {
+        // Not active today, check if active yesterday
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        const yesterdayStr = yesterday.toDateString();
+        const activeYesterday = activeDateSet.has(yesterdayStr);
+        
+        if (activeYesterday) {
+            // Active yesterday but not today → streak counts from yesterday
+            currentStreak = 1;
+            let checkDate = new Date(yesterday);
+            
+            while (true) {
+                checkDate.setDate(checkDate.getDate() - 1);
+                const checkStr = checkDate.toDateString();
+                
+                if (activeDateSet.has(checkStr)) {
+                    currentStreak++;
+                } else {
+                    break;
+                }
+            }
+        } else {
+            // No activity today AND no activity yesterday → streak = 0
+            currentStreak = 0;
+        }
+    }
+    
+    // Calculate longest streak historically
+    let longestStreak = 0;
+    let tempStreak = 0;
+    
+    if (learningActivity.length > 0) {
+        // Get all dates in the activity range
+        const dates = learningActivity.map(a => new Date(a.date).setHours(0, 0, 0, 0));
+        const minDate = new Date(Math.min(...dates));
+        const maxDate = new Date(Math.max(...dates));
+        
+        let currentDate = new Date(minDate);
+        
+        while (currentDate <= maxDate) {
+            const dateStr = currentDate.toDateString();
+            
+            if (activeDateSet.has(dateStr)) {
+                tempStreak++;
+                longestStreak = Math.max(longestStreak, tempStreak);
+            } else {
+                tempStreak = 0;
+            }
+            
+            // Move to next day
+            currentDate.setDate(currentDate.getDate() + 1);
+        }
+    }
+    
+    // Also check if current streak is longer than historical
+    longestStreak = Math.max(longestStreak, currentStreak);
+    
+    return {
+        current: currentStreak,
+        longest: longestStreak
+    };
+}
+
+// ===== HELPER FUNCTION: Generate calendar data =====
 function generateCalendarData(activity) {
     const calendar = [];
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Create a map for quick lookup
+    const activityMap = new Map();
+    activity.forEach(day => {
+        const dateStr = new Date(day.date).toDateString();
+        activityMap.set(dateStr, day.videosWatched);
+    });
     
     // Generate last 52 weeks (364 days)
     for (let i = 363; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
+        const dateStr = date.toDateString();
         
-        const dayActivity = activity.find(
-            a => new Date(a.date).toDateString() === date.toDateString()
-        );
+        const count = activityMap.get(dateStr) || 0;
         
         calendar.push({
             date: date.toISOString().split('T')[0],
-            count: dayActivity ? dayActivity.videosWatched : 0,
-            intensity: dayActivity ? Math.min(dayActivity.videosWatched, 4) : 0 // 0-4 scale
+            count: count,
+            intensity: count > 0 ? Math.min(Math.ceil(count / 2), 4) : 0 // 0-4 scale
         });
     }
     
