@@ -12,6 +12,7 @@ const auth = async (req, res, next) => {
 };
 
 // ===== REFRESH ANALYTICS AFTER VIDEO TOGGLE =====
+// ===== REFRESH ANALYTICS AFTER VIDEO TOGGLE =====
 router.post('/refresh', auth, async (req, res) => {
     try {
         const { videoId, completed, playlistId } = req.body;
@@ -98,9 +99,10 @@ router.post('/refresh', auth, async (req, res) => {
         // Generate fresh calendar data
         const calendarData = generateCalendarData(user.learningActivity || []);
         
-        // Recalculate streak to ensure consistency
+        // Recalculate streak
         const recalculatedStreak = calculateStreakWithReset(user.learningActivity || []);
         
+        // Return ALL data needed for updates
         res.json({
             success: true,
             totalStats: {
@@ -115,7 +117,7 @@ router.post('/refresh', auth, async (req, res) => {
                 date: today,
                 count: todayActivity.videosWatched
             },
-            calendarData: calendarData
+            calendarData: calendarData  // This is crucial for color updates
         });
         
     } catch (error) {
