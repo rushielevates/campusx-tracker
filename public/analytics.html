@@ -700,7 +700,7 @@ async function refreshAnalyticsData() {
             activityData = {};
             data.calendarData.forEach(day => {
                 const date = new Date(day.date);
-                const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                 activityData[key] = day.count;
             });
         }
@@ -876,7 +876,7 @@ document.head.appendChild(style);
             activityData = {};
             analyticsData.calendarData.forEach(day => {
                 const date = new Date(day.date);
-                const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+                const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                 activityData[key] = day.count;
             });
         }
@@ -890,7 +890,7 @@ document.head.appendChild(style);
             for (let i = 0; i < 90; i++) {
                 const date = new Date(today);
                 date.setDate(date.getDate() - i);
-                const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+               const key = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
                 activityData[key] = Math.floor(Math.random() * 8); // Random 0-7 videos
             }
             
@@ -1001,7 +1001,7 @@ function generateCalendar() {
             dayCell.className = "day-cell";
 
             // Get activity level
-            const key = `${currentDate.getFullYear()}-${currentDate.getMonth()}-${currentDate.getDate()}`;
+           const key = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
             const count = activityData[key] || 0;
 
             // Determine level
