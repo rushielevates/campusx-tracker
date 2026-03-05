@@ -729,6 +729,11 @@ async function refreshAnalyticsData() {
     } catch (error) {
         console.error('Error refreshing analytics:', error);
     }
+     user.learningActivity.push(todayActivity);
+            console.log('activityData sample:', Object.entries(activityData).slice(0,3));
+const today = new Date();
+const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+console.log('Today key:', todayKey, 'count:', activityData[todayKey]);
 }
 
 // Listen for storage events (when video toggled from another tab)
