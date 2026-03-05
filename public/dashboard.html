@@ -80,7 +80,15 @@
             height: 100vh;
             width: 100vw;
         }
-        
+        /* Add to your style section */
+.video-item.just-toggled {
+    animation: highlight 1s ease;
+}
+
+@keyframes highlight {
+    0% { background-color: rgba(102, 126, 234, 0.3); }
+    100% { background-color: transparent; }
+}
         /* Playlist View */
         .playlist-view { background: white; border-radius: 15px; padding: 20px; margin-top: 20px; }
         
@@ -189,6 +197,22 @@
         let currentVideoId = null;
         let watchTimer = null;
         let watchStartTime = null;
+
+        // Check if current page is analytics
+function isAnalyticsPage() {
+    return window.location.pathname.includes('analytics.html') || 
+           window.location.pathname.includes('/analytics');
+}
+
+// Listen for storage events (when analytics page is open in another tab)
+window.addEventListener('storage', (e) => {
+    if (e.key === 'analyticsUpdated' && isAnalyticsPage()) {
+        console.log('Analytics data updated from another tab');
+        if (typeof window.refreshAnalyticsData === 'function') {
+            window.refreshAnalyticsData();
+        }
+    }
+});
         
         // Load data when page loads
         window.onload = async function() {
@@ -287,6 +311,9 @@
                 
                 currentPlaylist = playlist;
                 displayPlaylist(playlist);
+                if (isAnalyticsPage() && typeof window.refreshAnalyticsData === 'function') {
+    setTimeout(window.refreshAnalyticsData, 100);
+}
                 
                 if (playlist.lastWatched && playlist.lastWatched.videoId) {
                     playVideo(playlist.lastWatched.videoId, playlist.lastWatched.title);
@@ -571,8 +598,13 @@
 
         // Toggle video completion
        // Toggle video completion - UPDATED VERSION
+// Toggle video completion - UPDATED VERSION WITH COLOR UPDATE FIX
 async function toggleVideoComplete(videoId) {
     if (!currentPlaylist) return;
+    
+    // Find the current video to know its completion status before toggling
+    const videoItem = document.querySelector(`.video-item:has(input[onclick*="'${videoId}'"])`);
+    const wasChecked = videoItem ? videoItem.querySelector('input').checked : false;
     
     try {
         const response = await fetch(`/api/playlists/${currentPlaylist._id}/video/${videoId}/toggle`, {
@@ -585,7 +617,6 @@ async function toggleVideoComplete(videoId) {
             
             // Immediately update the UI with new progress
             if (data.progress) {
-                // Update stats in dashboard
                 updateDashboardStats(data.progress);
             }
             
@@ -593,23 +624,43 @@ async function toggleVideoComplete(videoId) {
             await loadPlaylist(currentPlaylist._id);
             await loadPlaylists(); // Update sidebar
             
-            // === NEW: Force analytics refresh ===
-            // Trigger analytics update in background
-            fetch('/api/analytics/refresh', { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    videoId: videoId,
-                    completed: data.video.completed,
-                    playlistId: currentPlaylist._id
-                })
-            }).catch(err => console.error('Error refreshing analytics:', err));
+            // === FIX: Call analytics refresh and update calendar colors ===
+            try {
+                const refreshResponse = await fetch('/api/analytics/refresh', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        videoId: videoId,
+                        completed: !wasChecked, // Toggle the status (opposite of what it was)
+                        playlistId: currentPlaylist._id
+                    })
+                });
+                
+                if (refreshResponse.ok) {
+                    const refreshData = await refreshResponse.json();
+                    console.log('Analytics refreshed:', refreshData);
+                    
+                    // Store the updated data in localStorage for analytics page to pick up
+                    localStorage.setItem('analyticsUpdated', JSON.stringify({
+                        timestamp: Date.now(),
+                        calendarData: refreshData.calendarData,
+                        streak: refreshData.streak
+                    }));
+                    
+                    // If analytics page is open in another tab, it will detect this via storage event
+                }
+            } catch (refreshError) {
+                console.error('Error refreshing analytics:', refreshError);
+            }
             
-            // If on analytics page, refresh it
+            // If we're on analytics page, directly refresh it
             if (window.location.pathname.includes('analytics')) {
                 setTimeout(() => {
-                    if (typeof loadAnalytics === 'function') {
-                        loadAnalytics(true);
+                    if (typeof window.refreshAnalyticsData === 'function') {
+                        window.refreshAnalyticsData();
+                    } else {
+                        // Fallback: reload the page
+                        location.reload();
                     }
                 }, 500);
             }
@@ -618,7 +669,6 @@ async function toggleVideoComplete(videoId) {
         console.error('Error toggling video:', error);
     }
 }
-
 // Helper function to update dashboard stats immediately
 function updateDashboardStats(progress) {
     // Update any dashboard stats if needed
@@ -667,3 +717,4 @@ function updateDashboardStats(progress) {
     </script>
 </body>
 </html>
+
