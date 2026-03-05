@@ -657,7 +657,56 @@
             document.getElementById('yearLabel').textContent = selectedYear;
         };
         // Add this to your analytics.html script section
+// Function to refresh calendar data after video toggle
+async function refreshAnalyticsData() {
+    try {
+        const response = await fetch('/api/analytics/user-stats');
+        if (!response.ok) throw new Error('Failed to fetch');
+        
+        const data = await response.json();
+        
+        // Update activityData with new calendar data
+        if (data.calendarData) {
+            activityData = {};
+            data.calendarData.forEach(day => {
+                const date = new Date(day.date);
+                const key = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+                activityData[key] = day.count;
+            });
+        }
+        
+        // Update streak displays
+        if (data.streak) {
+            document.getElementById('current-streak').textContent = data.streak.current;
+            document.getElementById('compact-current-streak').textContent = data.streak.current;
+            document.getElementById('compact-longest-streak').textContent = data.streak.longest;
+        }
+        
+        // Update stats
+        if (data.totalStats) {
+            document.getElementById('videos-watched').textContent = data.totalStats.totalWatched;
+            document.getElementById('completion').textContent = data.totalStats.completionPercentage;
+            document.getElementById('watch-time').textContent = Math.floor(data.totalStats.totalWatchTimeMinutes / 60) + 'h';
+            document.getElementById('active-days').textContent = data.totalStats.totalActiveDays;
+        }
+        
+        // Regenerate calendar with new colors
+        generateCalendar();
+        
+    } catch (error) {
+        console.error('Error refreshing analytics:', error);
+    }
+}
 
+// Listen for storage events (when video toggled from another tab)
+window.addEventListener('storage', (e) => {
+    if (e.key === 'videoToggled') {
+        refreshAnalyticsData();
+    }
+});
+
+// Periodically check for updates (every 30 seconds)
+setInterval(refreshAnalyticsData, 30000);
 // Check for updates when page becomes visible
 document.addEventListener('visibilitychange', function() {
     if (!document.hidden) {
