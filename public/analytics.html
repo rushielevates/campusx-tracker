@@ -844,81 +844,98 @@ async function refreshAnalyticsData() {
         generateCalendar();
     }
 
-    function generateCalendar() {
-        const calendarGrid = document.getElementById("calendarGrid");
-        if (!calendarGrid) return;
-        calendarGrid.innerHTML = "";
+function generateCalendar() {
+    const calendarGrid = document.getElementById("calendarGrid");
+    if (!calendarGrid) return;
 
-        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    calendarGrid.innerHTML = "";
 
-        for (let month = 0; month < 12; month++) {
-            const monthBlock = document.createElement("div");
-            monthBlock.className = "month-block";
-            const monthName = document.createElement("div");
-            monthName.className = "month-name";
-            monthName.textContent = months[month];
+    const months = [
+        "Jan","Feb","Mar","Apr","May","Jun",
+        "Jul","Aug","Sep","Oct","Nov","Dec"
+    ];
 
-            const firstDay = new Date(selectedYear, month, 1);
-            const daysInMonth = new Date(selectedYear, month + 1, 0).getDate();
+    for (let month = 0; month < 12; month++) {
+        const monthBlock = document.createElement("div");
+        monthBlock.className = "month-block";
+        const monthName = document.createElement("div");
+        monthName.className = "month-name";
+        monthName.textContent = months[month];
 
-            let startDay = firstDay.getDay(); // 0 = Sunday
-            startDay = startDay === 0 ? 6 : startDay - 1; // 0 = Monday
+        // Get first day of month (0 = Sunday) and days in month
+        const firstDay = new Date(selectedYear, month, 1);
+        const daysInMonth = new Date(selectedYear, month + 1, 0).getDate();
 
-            const totalDays = daysInMonth + startDay;
-            const numWeeks = Math.ceil(totalDays / 7);
+        // Convert to Monday-based index: 0 = Monday, 6 = Sunday
+        let startDay = firstDay.getDay();          // 0 = Sunday
+        startDay = startDay === 0 ? 6 : startDay - 1; // now 0 = Monday, 6 = Sunday
 
-            const grid = document.createElement("div");
-            grid.className = "month-grid";
-            grid.style.display = "grid";
-            grid.style.gridTemplateRows = "repeat(7, 10px)";
-            grid.style.gridTemplateColumns = `repeat(${numWeeks}, 10px)`;
-            grid.style.gap = "2px";
+        // Calculate number of weeks (columns) needed for this month
+        const totalDays = daysInMonth + startDay;
+        const numWeeks = Math.ceil(totalDays / 7);
 
-            for (let day = 1; day <= daysInMonth; day++) {
-                const currentDate = new Date(selectedYear, month, day);
-                const dayCell = document.createElement("div");
-                dayCell.className = "day-cell";
+        // Create the grid container
+        const grid = document.createElement("div");
+        grid.className = "month-grid";
+        grid.style.display = "grid";
+        grid.style.gridTemplateRows = "repeat(7, 10px)";      // 7 rows for days
+        grid.style.gridTemplateColumns = `repeat(${numWeeks}, 10px)`;
+        grid.style.gap = "2px";
 
-                const key = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
-                const count = activityData[key] || 0;
+        // Add day cells for each date of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+            const currentDate = new Date(selectedYear, month, day);
+            const dayCell = document.createElement("div");
+            dayCell.className = "day-cell";
 
-                if (currentDate.toDateString() === new Date().toDateString()) {
-    console.log(`📍 TODAY'S CELL - Date: ${currentDate.toDateString()}, Key: ${key}, Count: ${count}, Level: ${level > 0 ? level : 'none'}`);
-}
+            // Get activity level
+            const key = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+            const count = activityData[key] || 0;
 
-                let level = 0;
-                if (count >= 7) level = 4;
-                else if (count >= 5) level = 3;
-                else if (count >= 3) level = 2;
-                else if (count >= 1) level = 1;
-                if (level > 0) dayCell.classList.add("level-" + level);
-
-                const today = new Date();
-                if (currentDate.toDateString() === today.toDateString()) {
-                    dayCell.classList.add("today");
-                }
-
-                dayCell.setAttribute('data-date', currentDate.toLocaleDateString());
-                dayCell.setAttribute('data-count', count);
-
-                dayCell.addEventListener('mouseover', (e) => showTooltip(e, currentDate, count));
-                dayCell.addEventListener('mouseout', hideTooltip);
-                dayCell.addEventListener('click', () => showDateDetails(currentDate, count));
-
-                const dayOffset = startDay + day - 1;
-                const row = dayOffset % 7;
-                const col = Math.floor(dayOffset / 7);
-                dayCell.style.gridRow = (row + 1).toString();
-                dayCell.style.gridColumn = (col + 1).toString();
-
-                grid.appendChild(dayCell);
+            // Determine level - FIXED: Define level BEFORE using it
+            let level = 0;  // This must be defined first
+            if (count >= 7) level = 4;
+            else if (count >= 5) level = 3;
+            else if (count >= 3) level = 2;
+            else if (count >= 1) level = 1;
+            
+            // Apply level class if needed
+            if (level > 0) {
+                dayCell.classList.add("level-" + level);
             }
 
-            monthBlock.appendChild(monthName);
-            monthBlock.appendChild(grid);
-            calendarGrid.appendChild(monthBlock);
+            // Highlight today
+            const today = new Date();
+            if (currentDate.toDateString() === today.toDateString()) {
+                dayCell.classList.add("today");
+            }
+
+            // Tooltip data
+            dayCell.setAttribute('data-date', currentDate.toLocaleDateString());
+            dayCell.setAttribute('data-count', count);
+
+            // Events
+            dayCell.addEventListener('mouseover', (e) => showTooltip(e, currentDate, count));
+            dayCell.addEventListener('mouseout', hideTooltip);
+            dayCell.addEventListener('click', () => showDateDetails(currentDate, count));
+
+            // Calculate grid position
+            const dayOffset = startDay + day - 1;         // total offset from first Monday
+            const row = dayOffset % 7;                     // 0 = Monday ... 6 = Sunday
+            const col = Math.floor(dayOffset / 7);         // week column
+
+            // Place in grid
+            dayCell.style.gridRow = (row + 1).toString();
+            dayCell.style.gridColumn = (col + 1).toString();
+
+            grid.appendChild(dayCell);
         }
+
+        monthBlock.appendChild(monthName);
+        monthBlock.appendChild(grid);
+        calendarGrid.appendChild(monthBlock);
     }
+}
 
     function showTooltip(event, date, count) {
         const tooltip = document.createElement('div');
@@ -970,26 +987,34 @@ async function refreshAnalyticsData() {
     }
 
     // ----- Mock data (for testing) -----
-    function generateMockData() {
-        activityData = {};
-        const today = new Date();
-        for (let i = 0; i < 90; i++) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
-            const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-            activityData[key] = Math.floor(Math.random() * 8);
-        }
-        document.getElementById('current-streak').textContent = '7';
-        document.getElementById('compact-current-streak').textContent = '7';
-        document.getElementById('compact-longest-streak').textContent = '15';
-        document.getElementById('videos-watched').textContent = '89';
-        document.getElementById('total-videos').textContent = '134';
-        document.getElementById('completion').textContent = '66';
-        document.getElementById('watch-time').textContent = '42h';
-        document.getElementById('active-days').textContent = '45';
-        generateCalendar();
-        updateRecentActivity();
+function generateMockData() {
+    activityData = {};
+    const today = new Date();
+    
+    // Generate random data for last 90 days
+    for (let i = 0; i < 90; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        // FIXED: Changed currentDate to date
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        activityData[key] = Math.floor(Math.random() * 8); // Random 0-7 videos
     }
+    
+    // Update streaks with mock data
+    document.getElementById('current-streak').textContent = '7';
+    document.getElementById('compact-current-streak').textContent = '7';
+    document.getElementById('compact-longest-streak').textContent = '15';
+    
+    // Update stats with mock data
+    document.getElementById('videos-watched').textContent = '89';
+    document.getElementById('total-videos').textContent = '134';
+    document.getElementById('completion').textContent = '66';
+    document.getElementById('watch-time').textContent = '42h';
+    document.getElementById('active-days').textContent = '45';
+    
+    generateCalendar();
+    updateRecentActivity();
+}
 
     // ----- Toast feedback -----
     function showRefreshFeedback() {
