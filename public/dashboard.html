@@ -3,6 +3,7 @@
 <head>
     <title>Dashboard - CampusX ML Tracker</title>
     <style>
+        /* ALL YOUR EXISTING STYLES REMAIN THE SAME */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: #f5f5f5; }
         .app-container { display: flex; height: 100vh; }
@@ -27,6 +28,7 @@
         .nav-icon { font-size: 20px; width: 24px; text-align: center; }
         .nav-text { font-size: 15px; font-weight: 500; }
         
+        /* Playlists Section in Sidebar */
         .playlists-section { padding: 20px; border-top: 1px solid #e0e0e0; flex: 1; overflow-y: auto; }
         .playlists-section h3 { margin-bottom: 15px; color: #333; font-size: 16px; }
         .playlist-item { padding: 15px; background: #f8f9fa; border-radius: 10px; margin-bottom: 10px; cursor: pointer; transition: all 0.3s; }
@@ -78,7 +80,15 @@
             height: 100vh;
             width: 100vw;
         }
-        
+        /* Add to your style section */
+.video-item.just-toggled {
+    animation: highlight 1s ease;
+}
+
+@keyframes highlight {
+    0% { background-color: rgba(102, 126, 234, 0.3); }
+    100% { background-color: transparent; }
+}
         /* Playlist View */
         .playlist-view { background: white; border-radius: 15px; padding: 20px; margin-top: 20px; }
         
@@ -112,36 +122,6 @@
         
         .loading { text-align: center; padding: 50px; color: #666; }
         .error-message { text-align: center; padding: 20px; color: #dc3545; background: #fee; border-radius: 5px; margin: 20px; }
-        
-        /* Toast Notification */
-        .toast {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #28a745;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            z-index: 1000;
-            animation: slideIn 0.3s ease, fadeOut 0.3s ease 2s;
-            font-size: 14px;
-            font-weight: 500;
-        }
-        
-        .toast.error {
-            background: #dc3545;
-        }
-        
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-        }
     </style>
 </head>
 <body>
@@ -177,7 +157,7 @@
                 </div>
             </div>
 
-            <!-- Playlists Section -->
+            <!-- Playlists Section - THIS WAS MISSING! -->
             <div class="playlists-section">
                 <h3>Your Playlists</h3>
                 <div id="playlists-list">
@@ -199,7 +179,7 @@
                 <div id="youtube-player"></div>
             </div>
 
-            <!-- Playlist View -->
+            <!-- Playlist View (Video List) -->
             <div id="playlist-view" class="playlist-view">
                 <div class="loading">Select a playlist to start tracking</div>
             </div>
@@ -210,41 +190,40 @@
     <script src="https://www.youtube.com/iframe_api"></script>
     
     <script>
+        // ALL YOUR EXISTING JAVASCRIPT REMAINS THE SAME
         // Global variables
         let currentPlaylist = null;
         let player = null;
         let currentVideoId = null;
         let watchTimer = null;
         let watchStartTime = null;
+
+        // Check if current page is analytics
+function isAnalyticsPage() {
+    return window.location.pathname.includes('analytics.html') || 
+           window.location.pathname.includes('/analytics');
+}
+
+// Listen for storage events (when analytics page is open in another tab)
+window.addEventListener('storage', (e) => {
+    if (e.key === 'analyticsUpdated' && isAnalyticsPage()) {
+        console.log('Analytics data updated from another tab');
+        if (typeof window.refreshAnalyticsData === 'function') {
+            window.refreshAnalyticsData();
+        }
+    }
+});
         
         // Load data when page loads
         window.onload = async function() {
             console.log('Dashboard loaded');
             await loadUserInfo();
             await loadPlaylists();
-            
-            // Add toast styles if not present
-            if (!document.querySelector('#toast-styles')) {
-                const style = document.createElement('style');
-                style.id = 'toast-styles';
-                style.textContent = `
-                    @keyframes slideIn {
-                        from { transform: translateX(100%); opacity: 0; }
-                        to { transform: translateX(0); opacity: 1; }
-                    }
-                    @keyframes fadeOut {
-                        from { opacity: 1; }
-                        to { opacity: 0; }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
         };
 
         // Load user info
         async function loadUserInfo() {
             try {
-                // You can fetch this from an API later
                 document.getElementById('username').textContent = 'CampusX Learner';
                 document.getElementById('user-email').textContent = 'learner@campusx.com';
             } catch (error) {
@@ -257,6 +236,7 @@
             try {
                 console.log('Loading playlists...');
                 const response = await fetch('/api/playlists/user-playlists');
+                console.log('Response status:', response.status);
                 
                 if (!response.ok) {
                     if (response.status === 401) {
@@ -267,6 +247,7 @@
                 }
                 
                 const playlists = await response.json();
+                console.log('Playlists loaded:', playlists);
                 
                 const playlistsList = document.getElementById('playlists-list');
                 
@@ -326,8 +307,13 @@
                 }
                 
                 const playlist = await response.json();
+                console.log('Playlist loaded:', playlist);
+                
                 currentPlaylist = playlist;
                 displayPlaylist(playlist);
+                if (isAnalyticsPage() && typeof window.refreshAnalyticsData === 'function') {
+    setTimeout(window.refreshAnalyticsData, 100);
+}
                 
                 if (playlist.lastWatched && playlist.lastWatched.videoId) {
                     playVideo(playlist.lastWatched.videoId, playlist.lastWatched.title);
@@ -350,6 +336,8 @@
             const completed = playlist.videos.filter(v => v.completed).length;
             const total = playlist.videos.length;
             const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+            
+            const remainingTime = 'Calculating...';
             
             view.innerHTML = `
                 <div class="playlist-header">
@@ -377,7 +365,7 @@
                         <span class="speed-value" id="speed-display">${playlist.playlistSpeed || 1}x</span>
                     </div>
                     <div class="remaining-time" id="remaining-time">
-                        ⏱️ Remaining time: Calculating...
+                        ⏱️ Remaining time: ${remainingTime}
                     </div>
                 </div>
                 
@@ -401,12 +389,14 @@
             `;
         }
 
-        // Format duration
+        // Format duration from seconds to MM:SS or HH:MM:SS
         function formatDuration(seconds) {
             if (!seconds) return '00:00';
+            
             const hours = Math.floor(seconds / 3600);
             const minutes = Math.floor((seconds % 3600) / 60);
             const secs = seconds % 60;
+            
             if (hours > 0) {
                 return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
             }
@@ -421,23 +411,28 @@
         function onPlayerReady(event) {
             console.log('✅ Player ready');
             event.target.playVideo();
+            
             watchStartTime = Date.now();
             startWatchTimer();
         }
 
         function onPlayerStateChange(event) {
             if (event.data === YT.PlayerState.PLAYING) {
+                console.log('Video playing');
                 watchStartTime = Date.now();
                 startWatchTimer();
             } else if (event.data === YT.PlayerState.PAUSED) {
+                console.log('Video paused');
                 stopWatchTimer();
             } else if (event.data === YT.PlayerState.ENDED) {
+                console.log('Video ended');
                 stopWatchTimer();
+                
                 if (watchStartTime) {
                     const watchTimeMinutes = (Date.now() - watchStartTime) / 60000;
                     trackWatchTime(currentVideoId, watchTimeMinutes);
                 }
-                // Play next video
+                
                 if (currentPlaylist && currentPlaylist.videos) {
                     const currentIndex = currentPlaylist.videos.findIndex(v => v.videoId === currentVideoId);
                     if (currentIndex >= 0 && currentIndex < currentPlaylist.videos.length - 1) {
@@ -452,6 +447,16 @@
 
         function onPlayerError(event) {
             console.error('❌ Player error:', event.data);
+            let errorMessage = 'Unknown error';
+            
+            switch(event.data) {
+                case 2: errorMessage = 'Invalid video ID'; break;
+                case 5: errorMessage = 'HTML5 player error'; break;
+                case 100: errorMessage = 'Video not found or removed'; break;
+                case 101: case 150: errorMessage = 'Video cannot be embedded'; break;
+            }
+            
+            alert('Error playing video: ' + errorMessage);
         }
 
         function startWatchTimer() {
@@ -476,23 +481,32 @@
 
         function trackWatchTime(videoId, minutes) {
             if (!videoId || minutes < 1) return;
+            
             fetch('/api/analytics/track-watch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    videoId, 
-                    watchTimeMinutes: minutes, 
-                    playlistId: currentPlaylist?._id 
+                body: JSON.stringify({
+                    videoId,
+                    watchTimeMinutes: minutes,
+                    playlistId: currentPlaylist?._id
                 })
             }).catch(err => console.error('Error tracking watch time:', err));
         }
 
         function playVideo(videoId, videoTitle) {
-            if (!videoId) return;
+            console.log('Playing video:', videoId);
             
-            document.getElementById('player-section').style.display = 'block';
+            if (!videoId) {
+                console.error('No video ID provided');
+                return;
+            }
             
-            document.querySelectorAll('.video-item').forEach(item => item.classList.remove('active'));
+            const playerSection = document.getElementById('player-section');
+            playerSection.style.display = 'block';
+            
+            document.querySelectorAll('.video-item').forEach(item => {
+                item.classList.remove('active');
+            });
             
             const videoItems = document.querySelectorAll('.video-item');
             for (let item of videoItems) {
@@ -504,135 +518,77 @@
             }
             
             if (!player) {
+                console.log('Creating new YouTube player...');
+                
                 try {
                     player = new YT.Player('youtube-player', {
-                        height: '100%', 
-                        width: '100%', 
+                        height: '100%',
+                        width: '100%',
                         videoId: videoId,
-                        playerVars: { 
-                            autoplay: 1, 
-                            controls: 2, 
-                            rel: 0, 
-                            modestbranding: 1 
+                        playerVars: {
+                            autoplay: 1,
+                            controls: 2,
+                            rel: 0,
+                            modestbranding: 1,
+                            iv_load_policy: 3,
+                            cc_load_policy: 0,
+                            fs: 1,
+                            playsinline: 1,
+                            disablekb: 0,
+                            enablejsapi: 1,
+                            origin: window.location.origin,
+                            color: 'red',
+                            autohide: 0,
+                            theme: 'dark'
                         },
-                        events: { 
-                            'onReady': onPlayerReady, 
-                            'onStateChange': onPlayerStateChange, 
-                            'onError': onPlayerError 
+                        events: {
+                            'onReady': onPlayerReady,
+                            'onStateChange': onPlayerStateChange,
+                            'onError': onPlayerError
                         }
                     });
-                } catch (e) { 
-                    console.error('Error creating player:', e); 
+                    console.log('Player creation initiated');
+                } catch (e) {
+                    console.error('Error creating player:', e);
                 }
             } else {
-                try { 
-                    player.loadVideoById(videoId); 
-                } catch (e) { 
-                    console.error('Error loading video:', e); 
+                console.log('Loading video in existing player');
+                try {
+                    player.loadVideoById(videoId);
+                } catch (e) {
+                    console.error('Error loading video:', e);
                 }
             }
+            
             currentVideoId = videoId;
-        }
-
-        // ===== FIXED: Toggle video completion with correct analytics =====
-        async function toggleVideoComplete(videoId) {
-            if (!currentPlaylist) return;
-            
-            const checkbox = event?.target;
-            const originalChecked = checkbox?.checked; // State BEFORE clicking
-            
-            try {
-                console.log('\n========== TOGGLE VIDEO ==========');
-                console.log('Video ID:', videoId);
-                console.log('Original state (before click):', originalChecked);
-                
-                const response = await fetch(`/api/playlists/${currentPlaylist._id}/video/${videoId}/toggle`, {
-                    method: 'POST'
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('New state from server (after click):', data.video.completed);
-                    
-                    // Determine what action just happened
-                    const wasCompletion = !originalChecked && data.video.completed; // false → true (ticked)
-                    const wasUncompletion = originalChecked && !data.video.completed; // true → false (unticked)
-                    
-                    console.log('Was this a completion? (ticked)', wasCompletion);
-                    console.log('Was this an uncompletion? (unticked)', wasUncompletion);
-                    
-                    // Immediately refresh playlist view
-                    await loadPlaylist(currentPlaylist._id);
-                    await loadPlaylists();
-                    
-                    // Refresh analytics - send based on actual action
-                    if (wasCompletion || wasUncompletion) {
-                        console.log('Sending to analytics - completed:', wasCompletion);
-                        
-                        const refreshResponse = await fetch('/api/analytics/refresh', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ 
-                                videoId: videoId,
-                                completed: wasCompletion, // true only for completions, false for uncompletions
-                                playlistId: currentPlaylist._id
-                            })
-                        });
-                        
-                        if (refreshResponse.ok) {
-                            const refreshData = await refreshResponse.json();
-                            console.log('Analytics updated. Today count:', refreshData.todayActivity.count);
-                            showToast('Analytics updated! ✓');
-                            localStorage.setItem('analytics-refresh', Date.now().toString());
-                        } else {
-                            const errorText = await refreshResponse.text();
-                            console.error('Analytics refresh failed:', errorText);
-                            showToast('Analytics update failed', 'error');
-                        }
-                    }
-                }
-            } catch (error) {
-                console.error('Error in toggle:', error);
-                if (checkbox) checkbox.checked = originalChecked;
-                showToast('Error updating. Please try again.', 'error');
-            }
-        }
-
-        // Show toast notification
-        function showToast(message, type = 'success') {
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            if (type === 'error') {
-                toast.classList.add('error');
-            }
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => {
-                toast.remove();
-            }, 2300);
         }
 
         // Import playlist
         async function importPlaylist() {
             try {
+                console.log('Importing playlist...');
                 const button = document.querySelector('.import-btn');
                 button.disabled = true;
                 button.innerHTML = '⏳ Importing...';
                 
-                const response = await fetch('/api/playlists/import', { method: 'POST' });
+                const response = await fetch('/api/playlists/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                console.log('Import response status:', response.status);
                 
                 if (response.ok) {
                     const data = await response.json();
-                    alert(`✅ Playlist imported! ${data.playlist.videoCount} videos found.`);
+                    alert(`✅ Playlist imported successfully! ${data.playlist.videoCount} videos found.`);
                     await loadPlaylists();
                 } else {
                     const error = await response.json();
-                    alert('❌ Failed: ' + (error.error || error.message));
+                    alert('❌ Failed to import: ' + (error.error || error.message || 'Unknown error'));
                 }
             } catch (error) {
                 console.error('Error importing:', error);
-                alert('❌ Error importing playlist');
+                alert('❌ Error importing playlist. Please try again.');
             } finally {
                 const button = document.querySelector('.import-btn');
                 button.disabled = false;
@@ -640,31 +596,187 @@
             }
         }
 
+        // Toggle video completion
+       // Toggle video completion - UPDATED VERSION
+// Toggle video completion - UPDATED VERSION WITH COLOR UPDATE FIX
+// Toggle video completion - COMPLETELY REWRITTEN FOR RELIABILITY
+async function toggleVideoComplete(videoId) {
+    if (!currentPlaylist) return;
+    
+    // Get the checkbox and its current state
+    const checkbox = event.target;
+    const wasChecked = checkbox.checked;
+    const videoItem = checkbox.closest('.video-item');
+    
+    // Add visual feedback
+    if (videoItem) {
+        videoItem.style.opacity = '0.7';
+        videoItem.style.pointerEvents = 'none';
+    }
+    
+    console.log(`Toggling video ${videoId} from ${wasChecked ? 'completed' : 'incomplete'} to ${!wasChecked ? 'completed' : 'incomplete'}`);
+    
+    try {
+        // First API call: Update playlist
+        const playlistResponse = await fetch(`/api/playlists/${currentPlaylist._id}/video/${videoId}/toggle`, {
+            method: 'POST'
+        });
+        
+        if (!playlistResponse.ok) {
+            throw new Error('Failed to update playlist');
+        }
+        
+        const playlistData = await playlistResponse.json();
+        console.log('Playlist updated:', playlistData);
+        
+        // Second API call: Update analytics with the NEW state (opposite of wasChecked)
+        const analyticsResponse = await fetch('/api/analytics/refresh', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                videoId: videoId,
+                completed: !wasChecked, // Send the NEW state
+                playlistId: currentPlaylist._id
+            })
+        });
+        
+        if (!analyticsResponse.ok) {
+            console.error('Analytics refresh failed but playlist was updated');
+        } else {
+            const analyticsData = await analyticsResponse.json();
+            console.log('Analytics refreshed with data:', analyticsData);
+            
+            // Store the updated data in localStorage for analytics page
+            const updateEvent = {
+                type: 'VIDEO_TOGGLED',
+                videoId: videoId,
+                completed: !wasChecked,
+                timestamp: Date.now(),
+                calendarData: analyticsData.calendarData,
+                streak: analyticsData.streak
+            };
+            
+            localStorage.setItem('analyticsUpdate', JSON.stringify(updateEvent));
+            sessionStorage.setItem('lastUpdate', Date.now().toString());
+            
+            // Show success feedback
+            showToast('Video status updated!');
+        }
+        
+        // Reload playlist to show updated status
+        const scrollPos = document.querySelector('.videos-list')?.scrollTop || 0;
+        await loadPlaylist(currentPlaylist._id);
+        await loadPlaylists(); // Update sidebar
+        
+        // Restore scroll position
+        setTimeout(() => {
+            const videoList = document.querySelector('.videos-list');
+            if (videoList) videoList.scrollTop = scrollPos;
+        }, 100);
+        
+    } catch (error) {
+        console.error('Error toggling video:', error);
+        
+        // Revert checkbox state on error
+        checkbox.checked = wasChecked;
+        
+        // Show error message
+        showToast('Failed to update video status', 'error');
+    } finally {
+        // Remove visual feedback
+        if (videoItem) {
+            videoItem.style.opacity = '1';
+            videoItem.style.pointerEvents = 'auto';
+        }
+    }
+}
+        // Helper function to show toast notifications
+function showToast(message, type = 'success') {
+    // Remove any existing toast
+    const existingToast = document.querySelector('.toast-notification');
+    if (existingToast) existingToast.remove();
+    
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? '#28a745' : '#dc3545'};
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        font-weight: 500;
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 2700);
+}
+
+// Add animation styles
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
+// Helper function to update dashboard stats immediately
+function updateDashboardStats(progress) {
+    // Update any dashboard stats if needed
+    const completedElement = document.querySelector('.meta-item .meta-value');
+    if (completedElement && progress) {
+        // Stats are updated when playlist reloads
+    }
+}
+
         // Update playback speed
         async function updateSpeed(speed) {
             document.getElementById('speed-display').textContent = speed + 'x';
+            
             if (!currentPlaylist) return;
+            
             try {
                 await fetch(`/api/playlists/${currentPlaylist._id}/speed`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ speed: parseFloat(speed) })
                 });
-            } catch (error) { 
-                console.error('Error updating speed:', error); 
+            } catch (error) {
+                console.error('Error updating speed:', error);
             }
         }
 
         // Logout
         async function logout() {
-            await fetch('/api/auth/logout');
-            window.location.href = '/';
+            try {
+                await fetch('/api/auth/logout');
+                window.location.href = '/';
+            } catch (error) {
+                console.error('Error logging out:', error);
+            }
         }
 
         // Check if YouTube API loaded
         setTimeout(function() {
             if (typeof YT === 'undefined' || !YT.Player) {
                 console.error('❌ YouTube API failed to load');
+                alert('YouTube player failed to load. Please refresh the page.');
             } else {
                 console.log('✅ YouTube API is available');
             }
@@ -672,4 +784,5 @@
     </script>
 </body>
 </html>
+
 
