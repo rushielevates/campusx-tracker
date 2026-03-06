@@ -642,503 +642,360 @@
     </div>
 
     <script>
-        // Global variables
-        let analyticsData = null;
-        let selectedYear = new Date().getFullYear();
-        let activityData = {}; // Will store real activity data
-        
-        // Load data when page loads
-        window.onload = async function() {
-            console.log('Analytics page loaded');
-            await loadUserInfo();
-            await loadAnalytics();
-            
-            // Set up year label
-            document.getElementById('yearLabel').textContent = selectedYear;
-        };
-        // Add this to your analytics.html script section
-        // Listen for video toggle updates from dashboard
-window.addEventListener('storage', (e) => {
-    if (e.key === 'analyticsUpdate') {
-        console.log('Received analytics update from storage:', e.newValue);
-        try {
-            const update = JSON.parse(e.newValue);
-            if (update.type === 'VIDEO_TOGGLED') {
-                // Force refresh analytics data
-                refreshAnalyticsData();
-            }
-        } catch (error) {
-            console.error('Error parsing storage update:', error);
-        }
-    }
-});
+    // Global variables
+    let analyticsData = null;
+    let selectedYear = new Date().getFullYear();
+    let activityData = {}; // Will store real activity data
 
-// Also check sessionStorage periodically
-setInterval(() => {
-    const lastUpdate = sessionStorage.getItem('lastUpdate');
-    if (lastUpdate) {
-        const lastUpdateTime = parseInt(lastUpdate);
-        const timeSinceUpdate = Date.now() - lastUpdateTime;
-        
-        // If update happened in last 5 seconds, refresh
-        if (timeSinceUpdate < 5000 && timeSinceUpdate > 0) {
-            sessionStorage.removeItem('lastUpdate');
+    // Load data when page loads
+    window.onload = async function() {
+        console.log('Analytics page loaded');
+        await loadUserInfo();
+        await loadAnalytics();
+        document.getElementById('yearLabel').textContent = selectedYear;
+    };
+
+    // ----- Listen for updates from dashboard -----
+    window.addEventListener('storage', (e) => {
+        if (e.key === 'analyticsUpdate') {
+            console.log('Received analytics update from storage');
             refreshAnalyticsData();
         }
-    }
-}, 2000);
-// Function to refresh calendar data after video toggle
-async function refreshAnalyticsData() {
-    try {
-        const response = await fetch('/api/analytics/user-stats');
-        if (!response.ok) throw new Error('Failed to fetch');
-        
-        const data = await response.json();
-        
-        // Update activityData with new calendar data
-        if (data.calendarData) {
-            activityData = {};
-            data.calendarData.forEach(day => {
-                const parts = day.date.split('/');
-                const year = parseInt(parts[0], 10);
-                const month = parseInt(parts[1], 10) - 1;
-                const dayNum = parseInt(parts[2], 10);
-                const key = `${year}-${String(month+1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-                activityData[key] = day.count;
-            });
-        }
-        
-        // Update streak displays
-        if (data.streak) {
-            document.getElementById('current-streak').textContent = data.streak.current;
-            document.getElementById('compact-current-streak').textContent = data.streak.current;
-            document.getElementById('compact-longest-streak').textContent = data.streak.longest;
-        }
-        
-        // Update stats
-        if (data.totalStats) {
-            document.getElementById('videos-watched').textContent = data.totalStats.totalWatched;
-            document.getElementById('completion').textContent = data.totalStats.completionPercentage;
-            document.getElementById('watch-time').textContent = Math.floor(data.totalStats.totalWatchTimeMinutes / 60) + 'h';
-            document.getElementById('active-days').textContent = data.totalStats.totalActiveDays;
-        }
-        
-        // Regenerate calendar with new colors
-        generateCalendar();
-        
-    } catch (error) {
-        console.error('Error refreshing analytics:', error);
-    }
-     user.learningActivity.push(todayActivity);
-            console.log('activityData sample:', Object.entries(activityData).slice(0,3));
-const today = new Date();
-const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-console.log('Today key:', todayKey, 'count:', activityData[todayKey]);
-}
+    });
 
-// Listen for storage events (when video toggled from another tab)
-window.addEventListener('storage', (e) => {
-    if (e.key === 'videoToggled') {
-        refreshAnalyticsData();
-    }
-});
+    // Also check sessionStorage periodically (fallback)
+    setInterval(() => {
+        const lastUpdate = sessionStorage.getItem('lastUpdate');
+        if (lastUpdate) {
+            const lastUpdateTime = parseInt(lastUpdate);
+            const timeSinceUpdate = Date.now() - lastUpdateTime;
+            if (timeSinceUpdate < 5000 && timeSinceUpdate > 0) {
+                sessionStorage.removeItem('lastUpdate');
+                refreshAnalyticsData();
+            }
+        }
+    }, 2000);
 
-// Periodically check for updates (every 30 seconds)
-setInterval(refreshAnalyticsData, 30000);
-// Check for updates when page becomes visible
-document.addEventListener('visibilitychange', function() {
-    if (!document.hidden) {
-        console.log('Analytics page visible, refreshing data...');
+    // Refresh on page visibility / focus
+    document.addEventListener('visibilitychange', function() {
+        if (!document.hidden) {
+            console.log('Analytics page visible, refreshing...');
+            loadAnalytics(true);
+        }
+    });
+    window.addEventListener('focus', function() {
+        console.log('Window focused, refreshing analytics...');
         loadAnalytics(true);
-    }
-});
+    });
 
-// Also refresh when coming back from dashboard
-window.addEventListener('focus', function() {
-    console.log('Window focused, refreshing analytics...');
-    loadAnalytics(true);
-});
+    // Periodic refresh every 30 seconds
+    setInterval(refreshAnalyticsData, 30000);
 
-// Modify loadAnalytics to show visual feedback
-async function loadAnalytics(showFeedback = false) {
-    try {
-        if (showFeedback) {
-            // Show loading indicator
-            const container = document.querySelector('.learning-activity');
-            const originalOpacity = container.style.opacity;
-            container.style.opacity = '0.5';
-        }
-        
-        const response = await fetch('/api/analytics/user-stats');
-        
-        if (!response.ok) {
-            if (response.status === 401) {
-                window.location.href = '/';
-                return;
+    // ----- Core functions -----
+    async function refreshAnalyticsData() {
+        try {
+            const response = await fetch('/api/analytics/user-stats');
+            if (!response.ok) throw new Error('Failed to fetch');
+            const data = await response.json();
+
+            // Update activityData with new calendar data
+            if (data.calendarData) {
+                activityData = {};
+                data.calendarData.forEach(day => {
+                    const parts = day.date.split('/');
+                    const year = parseInt(parts[0], 10);
+                    const month = parseInt(parts[1], 10) - 1;
+                    const dayNum = parseInt(parts[2], 10);
+                    const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                    activityData[key] = day.count;
+                });
             }
-            throw new Error('Failed to load analytics');
+
+            // Update streak displays
+            if (data.streak) {
+                document.getElementById('current-streak').textContent = data.streak.current;
+                document.getElementById('compact-current-streak').textContent = data.streak.current;
+                document.getElementById('compact-longest-streak').textContent = data.streak.longest;
+            }
+
+            // Update stats cards
+            if (data.totalStats) {
+                document.getElementById('videos-watched').textContent = data.totalStats.totalWatched;
+                document.getElementById('completion').textContent = data.totalStats.completionPercentage;
+                document.getElementById('watch-time').textContent = Math.floor(data.totalStats.totalWatchTimeMinutes / 60) + 'h';
+                document.getElementById('active-days').textContent = data.totalStats.totalActiveDays;
+            }
+
+            // Regenerate calendar with new colors
+            generateCalendar();
+        } catch (error) {
+            console.error('Error refreshing analytics:', error);
         }
-        
-        const newData = await response.json();
-        
-        if (JSON.stringify(analyticsData) !== JSON.stringify(newData)) {
-            analyticsData = newData;
-            processActivityData();
-            updateAllSections();
-            
+    }
+
+    async function loadAnalytics(showFeedback = false) {
+        try {
             if (showFeedback) {
-                // Show success feedback
-                showRefreshFeedback();
+                document.querySelector('.learning-activity').style.opacity = '0.5';
             }
-        }
-        
-        // Reset opacity
-        if (showFeedback) {
-            const container = document.querySelector('.learning-activity');
-            container.style.opacity = '1';
-        }
-        
-    } catch (error) {
-        console.error('Error loading analytics:', error);
-    }
-}
-
-// Add visual feedback for refresh
-function showRefreshFeedback() {
-    const indicator = document.createElement('div');
-    indicator.className = 'refresh-toast';
-    indicator.textContent = '✓ Analytics Updated';
-    indicator.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #28a745;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 5px;
-        z-index: 1000;
-        animation: slideIn 0.3s, fadeOut 0.3s 2s;
-    `;
-    document.body.appendChild(indicator);
-    
-    setTimeout(() => {
-        indicator.remove();
-    }, 2300);
-}
-
-// Add keyframe animation
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-    @keyframes fadeOut {
-        from { opacity: 1; }
-        to { opacity: 0; }
-    }
-`;
-document.head.appendChild(style);
-
-        // Load user info
-        async function loadUserInfo() {
-            try {
-                document.getElementById('username').textContent = 'CampusX Learner';
-                document.getElementById('user-email').textContent = 'learner@campusx.com';
-            } catch (error) {
-                console.error('Error loading user info:', error);
-            }
-        }
-
-        // Load analytics data
-        async function loadAnalytics() {
-            try {
-                const response = await fetch('/api/analytics/user-stats');
-                
-                if (!response.ok) {
-                    if (response.status === 401) {
-                        window.location.href = '/';
-                        return;
-                    }
-                    throw new Error('Failed to load analytics');
+            const response = await fetch('/api/analytics/user-stats');
+            if (!response.ok) {
+                if (response.status === 401) {
+                    window.location.href = '/';
+                    return;
                 }
-                
-                analyticsData = await response.json();
-                console.log('Analytics loaded:', analyticsData);
-                
-                // Process activity data for calendar
+                throw new Error('Failed to load analytics');
+            }
+            const newData = await response.json();
+
+            if (JSON.stringify(analyticsData) !== JSON.stringify(newData)) {
+                analyticsData = newData;
                 processActivityData();
                 updateAllSections();
-                
-            } catch (error) {
-                console.error('Error loading analytics:', error);
-                // Generate mock data for testing
-                generateMockData();
-            }
-        }
-
-        // Process activity data for easy lookup
-function processActivityData() {
-    if (!analyticsData || !analyticsData.calendarData) return;
-    
-    activityData = {};
-    analyticsData.calendarData.forEach(day => {
-        const parts = day.date.split('/');
-        const year = parseInt(parts[0], 10);
-        const month = parseInt(parts[1], 10) - 1;
-        const dayNum = parseInt(parts[2], 10);
-        const key = `${year}-${String(month+1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-        activityData[key] = day.count;
-    });
-}
-
-        // Generate mock data for testing (remove when API works)
-        function generateMockData() {
-            activityData = {};
-            const today = new Date();
-            
-            // Generate random data for last 90 days
-            for (let i = 0; i < 90; i++) {
-                const date = new Date(today);
-                date.setDate(date.getDate() - i);
-               const key = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
-                activityData[key] = Math.floor(Math.random() * 8); // Random 0-7 videos
-            }
-            
-            // Update streaks with mock data
-            document.getElementById('current-streak').textContent = '7';
-            document.getElementById('compact-current-streak').textContent = '7';
-            document.getElementById('compact-longest-streak').textContent = '15';
-            
-            // Update stats with mock data
-            document.getElementById('videos-watched').textContent = '89';
-            document.getElementById('total-videos').textContent = '134';
-            document.getElementById('completion').textContent = '66';
-            document.getElementById('watch-time').textContent = '42h';
-            document.getElementById('active-days').textContent = '45';
-            
-            generateCalendar();
-            updateRecentActivity();
-        }
-
-        // Update all sections
-        function updateAllSections() {
-            updateStatsCards();
-            updateStreaks();
-            generateCalendar();
-            updateRecentActivity();
-        }
-
-        // Update stats cards
-        function updateStatsCards() {
-            if (!analyticsData) return;
-            
-            document.getElementById('videos-watched').textContent = analyticsData.totalStats.totalWatched || 0;
-            document.getElementById('total-videos').textContent = analyticsData.totalStats.totalVideos || 0;
-            document.getElementById('completion').textContent = analyticsData.totalStats.completionPercentage || '0';
-            
-            const watchTimeHours = Math.floor((analyticsData.totalStats.totalWatchTimeMinutes || 0) / 60);
-            document.getElementById('watch-time').textContent = watchTimeHours + 'h';
-            
-            document.getElementById('active-days').textContent = analyticsData.totalStats.totalActiveDays || 0;
-        }
-
-        // Update streak displays
-        function updateStreaks() {
-            if (!analyticsData) return;
-            
-            const currentStreak = analyticsData.streak.current || 0;
-            const longestStreak = analyticsData.streak.longest || 0;
-            
-            document.getElementById('current-streak').textContent = currentStreak;
-            document.getElementById('compact-current-streak').textContent = currentStreak;
-            document.getElementById('compact-longest-streak').textContent = longestStreak;
-        }
-
-        // Change year (from reference)
-        function changeYear(offset) {
-            selectedYear += offset;
-            document.getElementById('yearLabel').textContent = selectedYear;
-             const oldYearLabel = document.querySelector('.year-label');
-             if (oldYearLabel) oldYearLabel.textContent = selectedYear;
-            generateCalendar();
-        }
-
-        // Generate calendar (from reference, with real data)
-        // Generate calendar with proper month alignment
-       // Generate calendar with proper month alignment – NO extra empty boxes
-function generateCalendar() {
-    const calendarGrid = document.getElementById("calendarGrid");
-    if (!calendarGrid) return;
-
-    calendarGrid.innerHTML = "";
-
-    const months = [
-        "Jan","Feb","Mar","Apr","May","Jun",
-        "Jul","Aug","Sep","Oct","Nov","Dec"
-    ];
-
-    for (let month = 0; month < 12; month++) {
-        const monthBlock = document.createElement("div");
-        monthBlock.className = "month-block";
-        const monthName = document.createElement("div");
-        monthName.className = "month-name";
-        monthName.textContent = months[month];
-
-        // Get first day of month (0 = Sunday) and days in month
-        const firstDay = new Date(selectedYear, month, 1);
-        const daysInMonth = new Date(selectedYear, month + 1, 0).getDate();
-
-        // Convert to Monday-based index: 0 = Monday, 6 = Sunday
-        let startDay = firstDay.getDay();          // 0 = Sunday
-        startDay = startDay === 0 ? 6 : startDay - 1; // now 0 = Monday, 6 = Sunday
-
-        // Calculate number of weeks (columns) needed for this month
-        const totalDays = daysInMonth + startDay;
-        const numWeeks = Math.ceil(totalDays / 7);
-
-        // Create the grid container
-        const grid = document.createElement("div");
-        grid.className = "month-grid";
-        grid.style.display = "grid";
-        grid.style.gridTemplateRows = "repeat(7, 10px)";      // 7 rows for days
-        grid.style.gridTemplateColumns = `repeat(${numWeeks}, 10px)`;
-        grid.style.gap = "2px";
-
-        // Add day cells for each date of the month
-        for (let day = 1; day <= daysInMonth; day++) {
-            const currentDate = new Date(selectedYear, month, day);
-            const dayCell = document.createElement("div");
-            dayCell.className = "day-cell";
-
-            // Get activity level
-           const key = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
-            const count = activityData[key] || 0;
-
-            // Determine level
-            let level = 0;
-            if (count >= 7) level = 4;
-            else if (count >= 5) level = 3;
-            else if (count >= 3) level = 2;
-            else if (count >= 1) level = 1;
-            if (level > 0) dayCell.classList.add("level-" + level);
-
-            // Highlight today
-            const today = new Date();
-            if (currentDate.toDateString() === today.toDateString()) {
-                dayCell.classList.add("today");
+                if (showFeedback) showRefreshFeedback();
             }
 
-            // Tooltip data
-            dayCell.setAttribute('data-date', currentDate.toLocaleDateString());
-            dayCell.setAttribute('data-count', count);
-
-            // Events
-            dayCell.addEventListener('mouseover', (e) => showTooltip(e, currentDate, count));
-            dayCell.addEventListener('mouseout', hideTooltip);
-            dayCell.addEventListener('click', () => showDateDetails(currentDate, count));
-
-            // Calculate grid position
-            const dayOffset = startDay + day - 1;         // total offset from first Monday
-            const row = dayOffset % 7;                     // 0 = Monday ... 6 = Sunday
-            const col = Math.floor(dayOffset / 7);         // week column
-
-            // Place in grid
-            dayCell.style.gridRow = (row + 1).toString();
-            dayCell.style.gridColumn = (col + 1).toString();
-
-            grid.appendChild(dayCell);
+            if (showFeedback) {
+                document.querySelector('.learning-activity').style.opacity = '1';
+            }
+        } catch (error) {
+            console.error('Error loading analytics:', error);
+            generateMockData(); // fallback for testing
         }
-
-        monthBlock.appendChild(monthName);
-        monthBlock.appendChild(grid);
-        calendarGrid.appendChild(monthBlock);
     }
-}
-        // Show tooltip
-        function showTooltip(event, date, count) {
-            const tooltip = document.createElement('div');
-            tooltip.className = 'calendar-tooltip';
-            tooltip.textContent = `${date.toLocaleDateString('en-US', { 
-                weekday: 'short', 
-                month: 'short', 
-                day: 'numeric',
-                year: 'numeric'
-            })}: ${count} video${count !== 1 ? 's' : ''}`;
-            tooltip.id = 'calendar-tooltip';
-            
-            document.body.appendChild(tooltip);
-            
-            const rect = event.target.getBoundingClientRect();
-            tooltip.style.left = rect.left + rect.width / 2 + 'px';
-            tooltip.style.top = rect.top + 'px';
-        }
 
-        function hideTooltip() {
-            const tooltip = document.getElementById('calendar-tooltip');
-            if (tooltip) tooltip.remove();
-        }
+    function processActivityData() {
+        if (!analyticsData || !analyticsData.calendarData) return;
+        activityData = {};
+        analyticsData.calendarData.forEach(day => {
+            const parts = day.date.split('/');
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const dayNum = parseInt(parts[2], 10);
+            const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+            activityData[key] = day.count;
+        });
+    }
 
-        function showDateDetails(date, count) {
-            alert(`📅 ${date.toLocaleDateString('en-US', { 
-                weekday: 'long', 
-                month: 'long', 
-                day: 'numeric',
-                year: 'numeric'
-            })}\n📺 Videos watched: ${count}`);
-        }
+    function updateAllSections() {
+        updateStatsCards();
+        updateStreaks();
+        generateCalendar();
+        updateRecentActivity();
+    }
 
-        // Update recent activity
-        function updateRecentActivity() {
-            const list = document.getElementById('activity-list');
-            
-            if (!analyticsData || !analyticsData.recentActivity || analyticsData.recentActivity.length === 0) {
-                list.innerHTML = '<div class="no-data">No recent activity</div>';
-                return;
+    function updateStatsCards() {
+        if (!analyticsData) return;
+        document.getElementById('videos-watched').textContent = analyticsData.totalStats.totalWatched || 0;
+        document.getElementById('total-videos').textContent = analyticsData.totalStats.totalVideos || 0;
+        document.getElementById('completion').textContent = analyticsData.totalStats.completionPercentage || '0';
+        const watchTimeHours = Math.floor((analyticsData.totalStats.totalWatchTimeMinutes || 0) / 60);
+        document.getElementById('watch-time').textContent = watchTimeHours + 'h';
+        document.getElementById('active-days').textContent = analyticsData.totalStats.totalActiveDays || 0;
+    }
+
+    function updateStreaks() {
+        if (!analyticsData) return;
+        const currentStreak = analyticsData.streak.current || 0;
+        const longestStreak = analyticsData.streak.longest || 0;
+        document.getElementById('current-streak').textContent = currentStreak;
+        document.getElementById('compact-current-streak').textContent = currentStreak;
+        document.getElementById('compact-longest-streak').textContent = longestStreak;
+    }
+
+    function changeYear(offset) {
+        selectedYear += offset;
+        document.getElementById('yearLabel').textContent = selectedYear;
+        generateCalendar();
+    }
+
+    function generateCalendar() {
+        const calendarGrid = document.getElementById("calendarGrid");
+        if (!calendarGrid) return;
+        calendarGrid.innerHTML = "";
+
+        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+        for (let month = 0; month < 12; month++) {
+            const monthBlock = document.createElement("div");
+            monthBlock.className = "month-block";
+            const monthName = document.createElement("div");
+            monthName.className = "month-name";
+            monthName.textContent = months[month];
+
+            const firstDay = new Date(selectedYear, month, 1);
+            const daysInMonth = new Date(selectedYear, month + 1, 0).getDate();
+
+            let startDay = firstDay.getDay(); // 0 = Sunday
+            startDay = startDay === 0 ? 6 : startDay - 1; // 0 = Monday
+
+            const totalDays = daysInMonth + startDay;
+            const numWeeks = Math.ceil(totalDays / 7);
+
+            const grid = document.createElement("div");
+            grid.className = "month-grid";
+            grid.style.display = "grid";
+            grid.style.gridTemplateRows = "repeat(7, 10px)";
+            grid.style.gridTemplateColumns = `repeat(${numWeeks}, 10px)`;
+            grid.style.gap = "2px";
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const currentDate = new Date(selectedYear, month, day);
+                const dayCell = document.createElement("div");
+                dayCell.className = "day-cell";
+
+                const key = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+                const count = activityData[key] || 0;
+
+                let level = 0;
+                if (count >= 7) level = 4;
+                else if (count >= 5) level = 3;
+                else if (count >= 3) level = 2;
+                else if (count >= 1) level = 1;
+                if (level > 0) dayCell.classList.add("level-" + level);
+
+                const today = new Date();
+                if (currentDate.toDateString() === today.toDateString()) {
+                    dayCell.classList.add("today");
+                }
+
+                dayCell.setAttribute('data-date', currentDate.toLocaleDateString());
+                dayCell.setAttribute('data-count', count);
+
+                dayCell.addEventListener('mouseover', (e) => showTooltip(e, currentDate, count));
+                dayCell.addEventListener('mouseout', hideTooltip);
+                dayCell.addEventListener('click', () => showDateDetails(currentDate, count));
+
+                const dayOffset = startDay + day - 1;
+                const row = dayOffset % 7;
+                const col = Math.floor(dayOffset / 7);
+                dayCell.style.gridRow = (row + 1).toString();
+                dayCell.style.gridColumn = (col + 1).toString();
+
+                grid.appendChild(dayCell);
             }
-            
-            const maxVideos = Math.max(...analyticsData.recentActivity.map(d => d.videosWatched), 5);
-            
-            list.innerHTML = analyticsData.recentActivity.reverse().map(day => {
-                const date = new Date(day.date);
-                const formattedDate = date.toLocaleDateString('en-US', { 
-                    weekday: 'short', 
-                    month: 'short', 
-                    day: 'numeric' 
-                });
-                
-                const percentage = maxVideos > 0 ? (day.videosWatched / maxVideos) * 100 : 0;
-                const watchTime = day.watchTimeMinutes || 0;
-                const hours = Math.floor(watchTime / 60);
-                const minutes = watchTime % 60;
-                const timeStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-                
-                return `
-                    <div class="activity-item">
-                        <div class="activity-date">${formattedDate}</div>
-                        <div class="activity-bar-container">
-                            <div class="activity-bar" style="width: ${percentage}%">
-                                ${percentage > 30 ? `${day.videosWatched} videos` : ''}
-                            </div>
-                        </div>
-                        <div class="activity-count">
-                            ${timeStr}
+
+            monthBlock.appendChild(monthName);
+            monthBlock.appendChild(grid);
+            calendarGrid.appendChild(monthBlock);
+        }
+    }
+
+    function showTooltip(event, date, count) {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'calendar-tooltip';
+        tooltip.textContent = `${date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}: ${count} video${count !== 1 ? 's' : ''}`;
+        tooltip.id = 'calendar-tooltip';
+        document.body.appendChild(tooltip);
+        const rect = event.target.getBoundingClientRect();
+        tooltip.style.left = rect.left + rect.width / 2 + 'px';
+        tooltip.style.top = rect.top + 'px';
+    }
+
+    function hideTooltip() {
+        const tooltip = document.getElementById('calendar-tooltip');
+        if (tooltip) tooltip.remove();
+    }
+
+    function showDateDetails(date, count) {
+        alert(`📅 ${date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}\n📺 Videos watched: ${count}`);
+    }
+
+    function updateRecentActivity() {
+        const list = document.getElementById('activity-list');
+        if (!analyticsData || !analyticsData.recentActivity || analyticsData.recentActivity.length === 0) {
+            list.innerHTML = '<div class="no-data">No recent activity</div>';
+            return;
+        }
+        const maxVideos = Math.max(...analyticsData.recentActivity.map(d => d.videosWatched), 5);
+        list.innerHTML = analyticsData.recentActivity.reverse().map(day => {
+            const date = new Date(day.date);
+            const formattedDate = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+            const percentage = maxVideos > 0 ? (day.videosWatched / maxVideos) * 100 : 0;
+            const watchTime = day.watchTimeMinutes || 0;
+            const hours = Math.floor(watchTime / 60);
+            const minutes = watchTime % 60;
+            const timeStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+            return `
+                <div class="activity-item">
+                    <div class="activity-date">${formattedDate}</div>
+                    <div class="activity-bar-container">
+                        <div class="activity-bar" style="width: ${percentage}%">
+                            ${percentage > 30 ? `${day.videosWatched} videos` : ''}
                         </div>
                     </div>
-                `;
-            }).join('');
-        }
+                    <div class="activity-count">${timeStr}</div>
+                </div>
+            `;
+        }).join('');
+    }
 
-        // Logout
-        async function logout() {
-            try {
-                await fetch('/api/auth/logout');
-                window.location.href = '/';
-            } catch (error) {
-                console.error('Error logging out:', error);
-            }
+    // ----- Mock data (for testing) -----
+    function generateMockData() {
+        activityData = {};
+        const today = new Date();
+        for (let i = 0; i < 90; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            activityData[key] = Math.floor(Math.random() * 8);
         }
-    </script>
+        document.getElementById('current-streak').textContent = '7';
+        document.getElementById('compact-current-streak').textContent = '7';
+        document.getElementById('compact-longest-streak').textContent = '15';
+        document.getElementById('videos-watched').textContent = '89';
+        document.getElementById('total-videos').textContent = '134';
+        document.getElementById('completion').textContent = '66';
+        document.getElementById('watch-time').textContent = '42h';
+        document.getElementById('active-days').textContent = '45';
+        generateCalendar();
+        updateRecentActivity();
+    }
+
+    // ----- Toast feedback -----
+    function showRefreshFeedback() {
+        const indicator = document.createElement('div');
+        indicator.className = 'refresh-toast';
+        indicator.textContent = '✓ Analytics Updated';
+        indicator.style.cssText = `
+            position: fixed; top: 20px; right: 20px; background: #28a745; color: white;
+            padding: 12px 24px; border-radius: 8px; z-index: 10000;
+            animation: slideIn 0.3s ease; font-weight: 500;
+        `;
+        document.body.appendChild(indicator);
+        setTimeout(() => {
+            indicator.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => indicator.remove(), 300);
+        }, 2700);
+    }
+
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+    `;
+    document.head.appendChild(style);
+
+    // ----- User info -----
+    async function loadUserInfo() {
+        try {
+            document.getElementById('username').textContent = 'CampusX Learner';
+            document.getElementById('user-email').textContent = 'learner@campusx.com';
+        } catch (error) {
+            console.error('Error loading user info:', error);
+        }
+    }
+
+    // ----- Logout -----
+    async function logout() {
+        try {
+            await fetch('/api/auth/logout');
+            window.location.href = '/';
+        } catch (error) {
+            console.error('Error logging out:', error);
+        }
+    }
+</script>
 </body>
 </html>
 
