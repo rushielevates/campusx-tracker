@@ -47,11 +47,17 @@ router.get('/user-stats', auth, async (req, res) => {
 });
 
 // ===== REFRESH ANALYTICS AFTER VIDEO TOGGLE =====
+// ===== REFRESH ANALYTICS AFTER VIDEO TOGGLE =====
 router.post('/refresh', auth, async (req, res) => {
     try {
         const { videoId, completed, playlistId } = req.body;
+        console.log('\n========== ANALYTICS REFRESH ==========');
+        console.log('Video ID:', videoId);
+        console.log('Completed:', completed);
+        
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        console.log('Today date:', today);
         
         const user = await User.findById(req.session.userId);
         
@@ -61,12 +67,15 @@ router.post('/refresh', auth, async (req, res) => {
         if (!user.totalStats) user.totalStats = { totalVideosWatched: 0, totalWatchTimeMinutes: 0, totalActiveDays: 0 };
         
         // Find today's activity
-        let todayActivity = user.learningActivity.find(
-            a => new Date(a.date).toDateString() === today.toDateString()
-        );
+        let todayActivity = user.learningActivity.find(activity => {
+            const activityDate = new Date(activity.date);
+            activityDate.setHours(0, 0, 0, 0);
+            return activityDate.getTime() === today.getTime();
+        });
         
+        // If no activity today, create it
         if (!todayActivity) {
-            // First activity today
+            console.log('No activity for today, creating new entry');
             todayActivity = {
                 date: today,
                 videosWatched: 0,
@@ -79,9 +88,11 @@ router.post('/refresh', auth, async (req, res) => {
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
             
-            const wasActiveYesterday = user.learningActivity.some(
-                a => new Date(a.date).toDateString() === yesterday.toDateString()
-            );
+            const wasActiveYesterday = user.learningActivity.some(activity => {
+                const activityDate = new Date(activity.date);
+                activityDate.setHours(0, 0, 0, 0);
+                return activityDate.getTime() === yesterday.getTime();
+            });
             
             if (wasActiveYesterday) {
                 user.streak.current += 1;
@@ -94,34 +105,32 @@ router.post('/refresh', auth, async (req, res) => {
             user.totalStats.totalActiveDays += 1;
         }
         
-        // Update today's activity based on completion status
+        // Update the count based on completion status
+        const videoIndex = todayActivity.videosCompleted.indexOf(videoId);
+        
         if (completed) {
-            // Video was marked complete
-            if (!todayActivity.videosCompleted.includes(videoId)) {
-                todayActivity.videosWatched += 1;
+            // Video marked as complete
+            if (videoIndex === -1) {
                 todayActivity.videosCompleted.push(videoId);
+                todayActivity.videosWatched = todayActivity.videosCompleted.length;
                 user.totalStats.totalVideosWatched += 1;
+                console.log(`Video added. New count: ${todayActivity.videosWatched}`);
             }
         } else {
-            // Video was marked incomplete
-            const index = todayActivity.videosCompleted.indexOf(videoId);
-            if (index > -1) {
-                todayActivity.videosCompleted.splice(index, 1);
-                todayActivity.videosWatched = Math.max(0, todayActivity.videosWatched - 1);
+            // Video marked as incomplete
+            if (videoIndex > -1) {
+                todayActivity.videosCompleted.splice(videoIndex, 1);
+                todayActivity.videosWatched = todayActivity.videosCompleted.length;
                 user.totalStats.totalVideosWatched = Math.max(0, user.totalStats.totalVideosWatched - 1);
+                console.log(`Video removed. New count: ${todayActivity.videosWatched}`);
             }
         }
         
-        // Clean up old activity data (keep last 365 days)
-        const oneYearAgo = new Date();
-        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-        user.learningActivity = user.learningActivity.filter(
-            a => new Date(a.date) >= oneYearAgo
-        );
-        
+        // Save to database
         await user.save();
+        console.log('User saved. Today\'s final count:', todayActivity.videosWatched);
         
-        // Get updated playlist stats
+        // Get playlist stats for response
         const playlists = await Playlist.find({ userId: req.session.userId });
         let totalWatched = 0;
         let totalVideos = 0;
@@ -130,8 +139,42 @@ router.post('/refresh', auth, async (req, res) => {
             totalVideos += p.videos.length;
         });
         
-        // Generate fresh calendar data
-        const calendarData = generateCalendarData(user.learningActivity);
+        // Generate calendar data
+        const calendarData = [];
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+        
+        // Create a map of activity dates for quick lookup
+        const activityMap = new Map();
+        user.learningActivity.forEach(activity => {
+            const date = new Date(activity.date);
+            date.setHours(0, 0, 0, 0);
+            activityMap.set(date.getTime(), activity.videosWatched);
+        });
+        
+        // Generate last 365 days
+        for (let i = 364; i >= 0; i--) {
+            const date = new Date();
+            date.setDate(date.getDate() - i);
+            date.setHours(0, 0, 0, 0);
+            
+            const count = activityMap.get(date.getTime()) || 0;
+            
+            let intensity = 0;
+            if (count >= 7) intensity = 4;
+            else if (count >= 5) intensity = 3;
+            else if (count >= 3) intensity = 2;
+            else if (count >= 1) intensity = 1;
+            
+            calendarData.push({
+                date: date.toISOString().split('T')[0],
+                count: count,
+                intensity: intensity
+            });
+        }
+        
+        console.log('Today\'s count in response:', todayActivity.videosWatched);
+        console.log('=====================================\n');
         
         res.json({
             success: true,
@@ -190,8 +233,17 @@ router.get('/profile', auth, async (req, res) => {
 
 // Helper function to generate calendar data
 function generateCalendarData(activity) {
+    console.log('Generating calendar data from activity:', activity.length, 'entries');
     const calendar = [];
     const today = new Date();
+    
+    // Log today's activity specifically
+    const todayStr = today.toISOString().split('T')[0];
+    const todayActivity = activity.find(a => {
+        const aDate = new Date(a.date);
+        return aDate.toDateString() === today.toDateString();
+    });
+    console.log('Today activity in calendar generation:', todayActivity);
     
     // Generate last 365 days
     for (let i = 364; i >= 0; i--) {
@@ -221,6 +273,8 @@ function generateCalendarData(activity) {
         });
     }
     
+    console.log('Calendar data generated. First entry:', calendar[0]);
+    console.log('Last entry (today):', calendar[calendar.length - 1]);
     return calendar;
 }
 
