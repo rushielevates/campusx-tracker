@@ -605,7 +605,7 @@ async function toggleVideoComplete(videoId) {
     
     // Get the checkbox and its current state
     const checkbox = event.target;
-    const wasChecked = checkbox.checked;
+    const wasChecked = !checkbox.checked;
     const videoItem = checkbox.closest('.video-item');
     
     // Add visual feedback
