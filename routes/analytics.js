@@ -384,36 +384,53 @@ function calculateStreakWithReset(learningActivity) {
 }
 
 // ===== HELPER FUNCTION: Generate calendar data =====
+// ===== HELPER FUNCTION: Generate calendar data =====
 function generateCalendarData(activity) {
+    console.log('[CALENDAR] Generating calendar data from', activity.length, 'activities');
     const calendar = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
+    
+    // Create a map for quick lookup using local date string (YYYY/MM/DD)
     const activityMap = new Map();
     activity.forEach(day => {
-        const d = new Date(day.date);
-        const localDateStr = `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+        // day.date should now be YYYY-MM-DD string
+        const [year, month, dayNum] = day.date.split('-');
+        const localDateStr = `${year}/${month}/${dayNum}`;
         activityMap.set(localDateStr, {
             count: day.videosWatched,
             watchTime: day.watchTimeMinutes || 0
         });
     });
-
+    console.log('[CALENDAR] Activity map size:', activityMap.size);
+    
+    // Generate last 52 weeks (364 days)
     for (let i = 363; i >= 0; i--) {
         const date = new Date(today);
         date.setDate(date.getDate() - i);
-        const localDateStr = `${date.getFullYear()}/${String(date.getMonth()+1).padStart(2,'0')}/${String(date.getDate()).padStart(2,'0')}`;
+        
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const dayNum = String(date.getDate()).padStart(2, '0');
+        const localDateStr = `${year}/${month}/${dayNum}`;
+        
         const dayData = activityMap.get(localDateStr);
         const count = dayData ? dayData.count : 0;
-
+        
         let intensity = 0;
         if (count >= 7) intensity = 4;
         else if (count >= 5) intensity = 3;
         else if (count >= 3) intensity = 2;
         else if (count >= 1) intensity = 1;
-
-        calendar.push({ date: localDateStr, count, intensity });
+        
+        calendar.push({
+            date: localDateStr,
+            count: count,
+            intensity: intensity
+        });
     }
+    
+    console.log('[CALENDAR] Sample entries:', calendar.slice(0, 3));
     return calendar;
 }
 
