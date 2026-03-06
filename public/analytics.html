@@ -692,46 +692,81 @@
     setInterval(refreshAnalyticsData, 30000);
 
     // ----- Core functions -----
-    async function refreshAnalyticsData() {
-        try {
-            const response = await fetch('/api/analytics/user-stats');
-            if (!response.ok) throw new Error('Failed to fetch');
-            const data = await response.json();
-
-            // Update activityData with new calendar data
-            if (data.calendarData) {
-                activityData = {};
-                data.calendarData.forEach(day => {
-                    const parts = day.date.split('/');
-                    const year = parseInt(parts[0], 10);
-                    const month = parseInt(parts[1], 10) - 1;
-                    const dayNum = parseInt(parts[2], 10);
-                    const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
-                    activityData[key] = day.count;
-                });
-            }
-
-            // Update streak displays
-            if (data.streak) {
-                document.getElementById('current-streak').textContent = data.streak.current;
-                document.getElementById('compact-current-streak').textContent = data.streak.current;
-                document.getElementById('compact-longest-streak').textContent = data.streak.longest;
-            }
-
-            // Update stats cards
-            if (data.totalStats) {
-                document.getElementById('videos-watched').textContent = data.totalStats.totalWatched;
-                document.getElementById('completion').textContent = data.totalStats.completionPercentage;
-                document.getElementById('watch-time').textContent = Math.floor(data.totalStats.totalWatchTimeMinutes / 60) + 'h';
-                document.getElementById('active-days').textContent = data.totalStats.totalActiveDays;
-            }
-
-            // Regenerate calendar with new colors
-            generateCalendar();
-        } catch (error) {
-            console.error('Error refreshing analytics:', error);
+async function refreshAnalyticsData() {
+    console.log('🔄 ===== REFRESH ANALYTICS STARTED =====');
+    console.log('1. Fetching from /api/analytics/user-stats...');
+    
+    try {
+        const response = await fetch('/api/analytics/user-stats');
+        console.log('2. Response status:', response.status);
+        
+        if (!response.ok) throw new Error('Failed to fetch');
+        
+        const data = await response.json();
+        console.log('3. Raw data received:', data);
+        
+        // Check calendar data
+        console.log('4. Calendar data length:', data.calendarData?.length);
+        if (data.calendarData && data.calendarData.length > 0) {
+            console.log('5. First calendar entry:', data.calendarData[0]);
+            console.log('6. Last calendar entry:', data.calendarData[data.calendarData.length - 1]);
         }
+        
+        // Update activityData with new calendar data
+        if (data.calendarData) {
+            console.log('7. Processing calendar data into activityData...');
+            activityData = {};
+            data.calendarData.forEach((day, index) => {
+                const parts = day.date.split('/');
+                const year = parseInt(parts[0], 10);
+                const month = parseInt(parts[1], 10) - 1;
+                const dayNum = parseInt(parts[2], 10);
+                const key = `${year}-${String(month+1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                activityData[key] = day.count;
+                
+                // Log first 3 entries for verification
+                if (index < 3) {
+                    console.log(`   Entry ${index}: date=${day.date}, key=${key}, count=${day.count}`);
+                }
+            });
+            console.log('8. Total activityData entries:', Object.keys(activityData).length);
+        }
+        
+        // Update streak displays
+        if (data.streak) {
+            console.log('9. Updating streak:', data.streak);
+            document.getElementById('current-streak').textContent = data.streak.current;
+            document.getElementById('compact-current-streak').textContent = data.streak.current;
+            document.getElementById('compact-longest-streak').textContent = data.streak.longest;
+        }
+        
+        // Update stats
+        if (data.totalStats) {
+            console.log('10. Updating stats:', data.totalStats);
+            document.getElementById('videos-watched').textContent = data.totalStats.totalWatched;
+            document.getElementById('completion').textContent = data.totalStats.completionPercentage;
+            document.getElementById('watch-time').textContent = Math.floor(data.totalStats.totalWatchTimeMinutes / 60) + 'h';
+            document.getElementById('active-days').textContent = data.totalStats.totalActiveDays;
+        }
+        
+        // Check today's data specifically
+        const today = new Date();
+        const todayKey = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+        console.log('11. Today\'s key:', todayKey);
+        console.log('12. Today\'s count in activityData:', activityData[todayKey]);
+        
+        // Regenerate calendar
+        console.log('13. Regenerating calendar...');
+        generateCalendar();
+        console.log('14. Calendar regenerated');
+        
+        console.log('✅ ===== REFRESH ANALYTICS COMPLETED =====\n');
+        
+    } catch (error) {
+        console.error('❌ ERROR in refreshAnalyticsData:', error);
+        console.error('Error stack:', error.stack);
     }
+}
 
     async function loadAnalytics(showFeedback = false) {
         try {
@@ -846,6 +881,10 @@
 
                 const key = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
                 const count = activityData[key] || 0;
+
+                if (currentDate.toDateString() === new Date().toDateString()) {
+    console.log(`📍 TODAY'S CELL - Date: ${currentDate.toDateString()}, Key: ${key}, Count: ${count}, Level: ${level > 0 ? level : 'none'}`);
+}
 
                 let level = 0;
                 if (count >= 7) level = 4;
