@@ -27,9 +27,12 @@ router.post('/refresh', auth, async (req, res) => {
         if (!user.totalStats) user.totalStats = { totalVideosWatched: 0, totalWatchTimeMinutes: 0, totalActiveDays: 0 };
         
         // Find today's activity
-        let todayActivity = user.learningActivity.find(
-            a => new Date(a.date).toDateString() === today.toDateString()
-        );
+const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+// Find today's activity by comparing strings directly
+let todayActivity = user.learningActivity.find(
+    a => a.date === todayStr
+);
         
         if (!todayActivity) {
             // First activity today
@@ -45,9 +48,10 @@ router.post('/refresh', auth, async (req, res) => {
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
             
-            const wasActiveYesterday = user.learningActivity.some(
-                a => new Date(a.date).toDateString() === yesterday.toDateString()
-            );
+const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+const wasActiveYesterday = user.learningActivity.some(
+    a => a.date === yesterdayStr
+);
             
             if (wasActiveYesterday) {
                 user.streak.current += 1;
@@ -192,9 +196,10 @@ router.post('/track-watch', auth, async (req, res) => {
         if (!user.totalStats) user.totalStats = { totalVideosWatched: 0, totalWatchTimeMinutes: 0, totalActiveDays: 0 };
         
         // Find today's activity or create new
-        let todayActivity = user.learningActivity.find(
-            a => new Date(a.date).toDateString() === today.toDateString()
-        );
+const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+let todayActivity = user.learningActivity.find(
+    a => a.date === todayStr
+);
         
         if (!todayActivity) {
             const localDateStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
@@ -287,9 +292,9 @@ function calculateStreakWithReset(learningActivity) {
     today.setHours(0, 0, 0, 0);
     
     // Create a Set of active date strings for O(1) lookup
-    const activeDateSet = new Set(
-        learningActivity.map(a => new Date(a.date).toDateString())
-    );
+const activeDateSet = new Set(
+    learningActivity.map(a => a.date)  // Use the stored string directly
+);
     
     // Check if user was active today
     const todayStr = today.toDateString();
