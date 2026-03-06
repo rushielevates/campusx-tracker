@@ -20,110 +20,139 @@ const toDateString = (dateInput) => {
 };
 
 // ===== REFRESH ANALYTICS AFTER VIDEO TOGGLE =====
+// ===== REFRESH ANALYTICS AFTER VIDEO TOGGLE =====
 router.post('/refresh', auth, async (req, res) => {
     console.log('\n========== [REFRESH] ==========');
     console.log('Request body:', req.body);
     const { videoId, completed, playlistId } = req.body;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const todayStr = toDateString(today);
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
     console.log('Today date string:', todayStr);
-
+    
     try {
         const user = await User.findById(req.session.userId);
         console.log('User found:', user._id);
-
-        // Initialize arrays if needed
-        if (!user.learningActivity) user.learningActivity = [];
-        if (!user.streak) user.streak = { current: 0, longest: 0, lastActive: null };
-        if (!user.totalStats) user.totalStats = { totalVideosWatched: 0, totalWatchTimeMinutes: 0, totalActiveDays: 0 };
-
-        // --- Find today's activity (handle both Date and string) ---
-        let todayActivity = null;
-        for (let act of user.learningActivity) {
-            const actDateStr = toDateString(act.date); // normalize to string
-            if (actDateStr === todayStr) {
-                todayActivity = act;
-                break;
-            }
+        
+        // Initialize arrays if they don't exist
+        if (!user.learningActivity) {
+            console.log('Initializing learningActivity');
+            user.learningActivity = [];
         }
+        if (!user.streak) {
+            console.log('Initializing streak');
+            user.streak = { current: 0, longest: 0, lastActive: null };
+        }
+        if (!user.totalStats) {
+            console.log('Initializing totalStats');
+            user.totalStats = { totalVideosWatched: 0, totalWatchTimeMinutes: 0, totalActiveDays: 0 };
+        }
+        
+        // Find today's activity by string comparison
+        console.log('Searching for today activity with date:', todayStr);
+        let todayActivity = user.learningActivity.find(a => a.date === todayStr);
         console.log('Today activity found?', todayActivity ? 'Yes' : 'No');
-
+        
         if (!todayActivity) {
             console.log('Creating new activity for today');
             todayActivity = {
-                date: todayStr, // store as string
+                date: todayStr,
                 videosWatched: 0,
                 watchTimeMinutes: 0,
                 videosCompleted: []
             };
-            user.learningActivity.push(todayActivity);
-
-            // Update streak
+            user.learningActivity.push(todayActivity);  // ← THIS WAS MISSING!
+            console.log('Activity pushed. Total activities:', user.learningActivity.length);
+            
+            // Update streak with reset logic
             const yesterday = new Date(today);
             yesterday.setDate(yesterday.getDate() - 1);
-            const yesterdayStr = toDateString(yesterday);
-            const wasActiveYesterday = user.learningActivity.some(act => toDateString(act.date) === yesterdayStr);
+            const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,'0')}-${String(yesterday.getDate()).padStart(2,'0')}`;
+            console.log('Checking yesterday activity:', yesterdayStr);
+            
+            const wasActiveYesterday = user.learningActivity.some(a => a.date === yesterdayStr);
             console.log('Was active yesterday?', wasActiveYesterday);
-
+            
             if (wasActiveYesterday) {
                 user.streak.current += 1;
+                console.log('Streak incremented to', user.streak.current);
             } else {
                 user.streak.current = 1;
+                console.log('Streak reset to 1 (new streak)');
             }
+            
             user.streak.longest = Math.max(user.streak.longest, user.streak.current);
             user.streak.lastActive = today;
             user.totalStats.totalActiveDays += 1;
             console.log('Updated streak:', user.streak);
+            console.log('Total active days:', user.totalStats.totalActiveDays);
         } else {
             console.log('Existing today activity:', todayActivity);
         }
-
-        // --- Update count based on completion status ---
+        
+        // Update today's activity based on completion status
         console.log('Updating activity. Completed?', completed);
+        console.log('Before update - videosWatched:', todayActivity.videosWatched);
+        console.log('Before update - videosCompleted:', todayActivity.videosCompleted);
+        
         if (completed) {
+            // Video was marked complete
             if (!todayActivity.videosCompleted.includes(videoId)) {
                 todayActivity.videosWatched += 1;
                 todayActivity.videosCompleted.push(videoId);
                 user.totalStats.totalVideosWatched += 1;
                 console.log('Video marked complete. New videosWatched:', todayActivity.videosWatched);
+                console.log('Videos completed now:', todayActivity.videosCompleted);
             } else {
                 console.log('Video already completed, no change');
             }
         } else {
+            // Video was marked incomplete
             const index = todayActivity.videosCompleted.indexOf(videoId);
             if (index > -1) {
                 todayActivity.videosCompleted.splice(index, 1);
                 todayActivity.videosWatched = Math.max(0, todayActivity.videosWatched - 1);
                 user.totalStats.totalVideosWatched = Math.max(0, user.totalStats.totalVideosWatched - 1);
                 console.log('Video marked incomplete. New videosWatched:', todayActivity.videosWatched);
+                console.log('Videos completed now:', todayActivity.videosCompleted);
             } else {
                 console.log('Video was not completed, no change');
             }
         }
-
-        // Clean up old data (keep last 365 days)
+        
+        console.log('After update - videosWatched:', todayActivity.videosWatched);
+        
+        // Clean up old activity data (keep last 365 days)
         const oneYearAgo = new Date();
         oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
         const originalLength = user.learningActivity.length;
-        user.learningActivity = user.learningActivity.filter(act => new Date(act.date) >= oneYearAgo);
+        user.learningActivity = user.learningActivity.filter(a => new Date(a.date) >= oneYearAgo);
         console.log(`Cleaned up learningActivity: ${originalLength} -> ${user.learningActivity.length}`);
-
+        
         await user.save();
         console.log('User saved successfully');
-
-        // Get playlist totals
+        
+        // Get playlists for total stats
         const playlists = await Playlist.find({ userId: req.session.userId });
         let totalWatched = 0, totalVideos = 0;
         playlists.forEach(p => {
             totalWatched += p.videos.filter(v => v.completed).length;
             totalVideos += p.videos.length;
         });
-
-        // Generate calendar data
+        console.log('Playlist totals - watched:', totalWatched, 'total:', totalVideos);
+        
+        // Generate fresh calendar data
         const calendarData = generateCalendarData(user.learningActivity || []);
+        console.log('Generated calendar data length:', calendarData.length);
+        if (calendarData.length > 0) {
+            console.log('Sample calendar entry:', calendarData[0]);
+        }
+        
+        // Recalculate streak
         const recalculatedStreak = calculateStreakWithReset(user.learningActivity || []);
-
+        console.log('Recalculated streak:', recalculatedStreak);
+        
+        // Prepare response
         const response = {
             success: true,
             totalStats: {
@@ -136,13 +165,13 @@ router.post('/refresh', auth, async (req, res) => {
             streak: recalculatedStreak,
             todayActivity: {
                 date: today,
-                count: todayActivity.videosWatched
+                count: todayActivity.videosWatched  // This should now be >0
             },
-            calendarData
+            calendarData: calendarData
         };
-        console.log('Sending response');
+        console.log('Sending response - today count:', todayActivity.videosWatched);
         res.json(response);
-
+        
     } catch (error) {
         console.error('[REFRESH ERROR]', error);
         res.status(500).json({ error: error.message });
