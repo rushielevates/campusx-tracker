@@ -171,17 +171,19 @@ function updateTimerDisplay() {
 }
 
 // ===== WEEKLY BAR CHART =====
+// ===== WEEKLY BAR CHART =====
 async function loadWeeklyStats() {
     try {
         console.log('Loading weekly stats...');
         const response = await fetch('/api/deepwork/weekly-stats', {
             credentials: 'include'
         });
-                if (response.status === 401) {
-            // Not logged in, redirect to login
+        
+        if (response.status === 401) {
             window.location.href = '/';
             return;
         }
+        
         if (!response.ok) {
             throw new Error('Failed to load stats');
         }
@@ -189,47 +191,48 @@ async function loadWeeklyStats() {
         const stats = await response.json();
         console.log('Weekly stats:', stats);
         renderBarChart(stats);
-        const chart = document.getElementById('barChart');
-        chart.innerHTML = '';
-        
-        // If no data, show message
-        if (!stats || stats.length === 0) {
-            chart.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No data yet. Start a timer to see your stats!</p>';
-            return;
-        }
-        
-        const maxMinutes = Math.max(...stats.map(s => s.minutes), 1);
-        
-        stats.forEach(day => {
-            const height = maxMinutes > 0 ? (day.minutes / maxMinutes) * 180 : 0;
-            
-            const barContainer = document.createElement('div');
-            barContainer.className = 'bar-container';
-            
-            const bar = document.createElement('div');
-            bar.className = 'bar';
-            bar.style.height = height + 'px';
-            bar.setAttribute('data-tooltip', `${day.hours}h (${day.sessions} sessions, ${day.focusScore}% focus)`);
-            
-            const label = document.createElement('div');
-            label.className = 'bar-label';
-            label.textContent = day.day;
-            
-            const value = document.createElement('div');
-            value.className = 'bar-value';
-            value.textContent = day.hours + 'h';
-            
-            barContainer.appendChild(bar);
-            barContainer.appendChild(label);
-            barContainer.appendChild(value);
-            chart.appendChild(barContainer);
-        });
         
     } catch (error) {
         console.error('Error loading weekly stats:', error);
-        // Show mock data for testing
         showMockChart();
     }
+}
+
+function renderBarChart(stats) {
+    const chart = document.getElementById('barChart');
+    chart.innerHTML = '';
+    
+    if (!stats || stats.length === 0) {
+        chart.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No data yet. Start a timer to see your stats!</p>';
+        return;
+    }
+    
+    const maxMinutes = Math.max(...stats.map(s => s.minutes), 1);
+    
+    stats.forEach(day => {
+        const height = maxMinutes > 0 ? (day.minutes / maxMinutes) * 180 : 0;
+        
+        const barContainer = document.createElement('div');
+        barContainer.className = 'bar-container';
+        
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = height + 'px';
+        bar.setAttribute('data-tooltip', `${day.hours}h (${day.sessions} sessions, ${day.focusScore}% focus)`);
+        
+        const label = document.createElement('div');
+        label.className = 'bar-label';
+        label.textContent = day.day;
+        
+        const value = document.createElement('div');
+        value.className = 'bar-value';
+        value.textContent = day.hours + 'h';
+        
+        barContainer.appendChild(bar);
+        barContainer.appendChild(label);
+        barContainer.appendChild(value);
+        chart.appendChild(barContainer);
+    });
 }
 
 // Temporary function for testing - REMOVE when backend is ready
