@@ -23,31 +23,68 @@ mongoose.connection.on('error', (err) => {
 
 const app = express();
 
-// Middleware
-app.use(cors({ origin: 'https://campusx-tracker.onrender.com', credentials: true }));
+// ===== 1. CORS FIRST =====
+const corsOptions = {
+    origin: 'https://campusx-tracker.onrender.com',
+    credentials: true,
+    optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
+
+// ===== 2. JSON and URL encoded parsers =====
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
-// Add this line with your other routes
-app.use('/api/deepwork', require('./routes/deepwork'));
-// Session configuration
+
+// ===== 3. Session middleware =====
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
+    name: 'campusx.sid',
     cookie: { 
         secure: true, 
         httpOnly: true,
-        sameSite: 'lax', // Important for cross-origin requests
-        maxAge: 24 * 60 * 60 * 1000 
+        sameSite: 'lax',
+        maxAge: 24 * 60 * 60 * 1000
     }
 }));
 
-// ========== TEST ROUTE ==========
+// ===== 4. Debug middleware to log all requests =====
+app.use((req, res, next) => {
+    console.log('=== INCOMING REQUEST ===');
+    console.log('Path:', req.path);
+    console.log('Method:', req.method);
+    console.log('Session ID:', req.session?.id);
+    console.log('User ID:', req.session?.userId);
+    console.log('Cookie header:', req.headers.cookie);
+    console.log('========================');
+    next();
+});
+
+// ===== 5. Static files =====
+app.use(express.static(path.join(__dirname, 'public')));
+
+// ===== 6. DEBUG ROUTES (put these BEFORE your API routes) =====
+app.get('/debug-session', (req, res) => {
+    console.log('=== DEBUG SESSION ENDPOINT HIT ===');
+    res.json({
+        sessionExists: !!req.session,
+        sessionId: req.session?.id || 'no-session',
+        userId: req.session?.userId || null,
+        cookie: req.session?.cookie,
+        headers: {
+            cookie: req.headers.cookie ? 'present' : 'missing',
+            origin: req.headers.origin
+        }
+    });
+});
+
 app.get('/api/test', (req, res) => {
     res.json({ 
         message: '✅ API is working!', 
         timestamp: new Date().toISOString(),
+        sessionId: req.session?.id || 'no-session',
+        userId: req.session?.userId || null,
         env: {
             hasMongoDB: !!process.env.MONGODB_URI,
             hasYouTubeKey: !!process.env.YOUTUBE_API_KEY
@@ -55,12 +92,13 @@ app.get('/api/test', (req, res) => {
     });
 });
 
-// ========== API ROUTES ==========
+// ===== 7. API ROUTES =====
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/playlists', require('./routes/playlist'));
-app.use('/api/analytics', require('./routes/analytics')); 
+app.use('/api/analytics', require('./routes/analytics'));
+app.use('/api/deepwork', require('./routes/deepwork'));
 
-// ========== FRONTEND ROUTES ==========
+// ===== 8. FRONTEND ROUTES =====
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -77,7 +115,7 @@ app.get('/profile.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'profile.html'));
 });
 
-// ========== HEALTH CHECK ==========
+// ===== 9. HEALTH CHECK =====
 app.get('/health', (req, res) => {
     res.status(200).json({ 
         status: 'OK', 
@@ -86,12 +124,12 @@ app.get('/health', (req, res) => {
     });
 });
 
-// ========== 404 HANDLER ==========
+// ===== 10. 404 HANDLER =====
 app.use((req, res) => {
     res.status(404).json({ error: 'Route not found', path: req.path });
 });
 
-// ========== ERROR HANDLER ==========
+// ===== 11. ERROR HANDLER =====
 app.use((err, req, res, next) => {
     console.error('Server error:', err.stack);
     res.status(500).json({ error: 'Something went wrong!' });
@@ -103,4 +141,5 @@ app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📍 Health check: http://localhost:${PORT}/health`);
     console.log(`📍 Test API: http://localhost:${PORT}/api/test`);
+    console.log(`📍 Debug session: http://localhost:${PORT}/debug-session`);
 });
