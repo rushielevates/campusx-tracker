@@ -57,7 +57,9 @@ router.post('/login', async (req, res) => {
             
             console.log('✅ Session saved successfully');
             console.log('Verifying session - userId:', req.session.userId);
-            
+
+             // ←←← ADD THIS LINE HERE ←←←
+    res.setHeader('Set-Cookie', `connect.sid=${req.session.id}; Path=/; HttpOnly; Secure; SameSite=None`);
             // Send success response
             res.json({ 
                 success: true,
