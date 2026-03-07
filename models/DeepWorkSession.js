@@ -30,7 +30,7 @@ const deepWorkSessionSchema = new mongoose.Schema({
     type: Boolean,
     default: false
 },
-lastPingTime: { type: Date } // To detect crashes
+lastPingTime: { type: Date }, // To detect crashes
     createdAt: { type: Date, default: Date.now }
 });
 
