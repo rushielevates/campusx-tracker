@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 const connectDB = require('./config/database');
 const cors = require('cors');
 const mongoose = require('mongoose');
-
+const MongoStore = require('connect-mongo');
 // Load environment variables
 dotenv.config();
 
@@ -41,6 +41,11 @@ app.use(session({
     resave: true,
     saveUninitialized: false,
     name: 'connect.sid',
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI,
+        collectionName: 'sessions',
+        ttl: 24 * 60 * 60 // 1 day in seconds
+    }),
     cookie: { 
         secure: false, 
         httpOnly: true,
