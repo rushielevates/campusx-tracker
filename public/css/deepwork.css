@@ -1,25 +1,153 @@
- .sidebar { width: 300px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
-        .sidebar-header { padding: 30px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-        .sidebar-header h2 { font-size: 24px; margin-bottom: 5px; }
-        .sidebar-header p { opacity: 0.9; font-size: 14px; }
-        
-        .user-info { padding: 20px; display: flex; align-items: center; border-bottom: 1px solid #e0e0e0; }
-        .user-avatar { width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 15px; }
-        .user-details { display: flex; flex-direction: column; }
-        .user-details span:first-child { font-weight: 600; color: #333; }
-        .user-details span:last-child { font-size: 12px; color: #666; }
-        
-        /* Navigation Menu */
-        .nav-menu { padding: 20px; flex: 1; }
-        .nav-item { padding: 12px 15px; margin-bottom: 5px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.3s; color: #555; }
-        .nav-item:hover { background: #f0f0f0; transform: translateX(5px); }
-        .nav-item.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-        .nav-icon { font-size: 20px; width: 24px; text-align: center; }
-        .nav-text { font-size: 15px; font-weight: 500; }
-        
-        .logout-btn { margin: 20px; padding: 10px; background: none; border: 2px solid #dc3545; color: #dc3545; border-radius: 10px; cursor: pointer; }
-        .logout-btn:hover { background: #dc3545; color: white; }
-/* Timer Section */
+/* ===== RESET & BASE ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+    background: #f5f5f5;
+    overflow: hidden;
+}
+
+/* ===== APP CONTAINER ===== */
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+}
+
+/* ===== SIDEBAR STYLES ===== */
+.sidebar {
+    width: 300px;
+    background: white;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: fixed;
+    left: 0;
+    top: 0;
+}
+
+.sidebar-header {
+    padding: 30px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.sidebar-header h2 {
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+.sidebar-header p {
+    opacity: 0.9;
+    font-size: 14px;
+}
+
+.user-info {
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.user-avatar {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    margin-right: 15px;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-details span:first-child {
+    font-weight: 600;
+    color: #333;
+}
+
+.user-details span:last-child {
+    font-size: 12px;
+    color: #666;
+}
+
+/* Navigation Menu */
+.nav-menu {
+    padding: 20px;
+    flex: 1;
+}
+
+.nav-item {
+    padding: 12px 15px;
+    margin-bottom: 5px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.3s;
+    color: #555;
+}
+
+.nav-item:hover {
+    background: #f0f0f0;
+    transform: translateX(5px);
+}
+
+.nav-item.active {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.nav-icon {
+    font-size: 20px;
+    width: 24px;
+    text-align: center;
+}
+
+.nav-text {
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.logout-btn {
+    margin: 20px;
+    padding: 10px;
+    background: none;
+    border: 2px solid #dc3545;
+    color: #dc3545;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.logout-btn:hover {
+    background: #dc3545;
+    color: white;
+}
+
+/* ===== MAIN CONTENT ===== */
+.main-content {
+    flex: 1;
+    margin-left: 300px; /* This creates space for the fixed sidebar */
+    padding: 30px;
+    overflow-y: auto;
+    background: #f5f5f5;
+    height: 100vh;
+    width: calc(100% - 300px);
+}
+
+/* ===== TIMER SECTION ===== */
 .timer-section {
     background: white;
     border-radius: 20px;
@@ -95,7 +223,7 @@
     background: white;
 }
 
-/* Chart Section */
+/* ===== CHART SECTION ===== */
 .chart-section {
     background: white;
     border-radius: 20px;
@@ -159,7 +287,7 @@
     color: #999;
 }
 
-/* Summary Section */
+/* ===== SUMMARY SECTION ===== */
 .summary-section {
     background: white;
     border-radius: 20px;
@@ -194,7 +322,7 @@
     color: #666;
 }
 
-/* Goal Section */
+/* ===== GOAL SECTION ===== */
 .goal-section {
     background: white;
     border-radius: 20px;
@@ -247,7 +375,7 @@
     transform: translateY(-2px);
 }
 
-/* Modal */
+/* ===== MODAL ===== */
 .modal {
     display: none;
     position: fixed;
