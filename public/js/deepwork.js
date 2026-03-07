@@ -1,24 +1,3 @@
-// At the very top of deepwork.js
-async function checkAuth() {
-    try {
-        const response = await fetch('/api/auth/check', {
-            credentials: 'include'
-        });
-        if (!response.ok) {
-            window.location.href = '/';
-        }
-    } catch (error) {
-        window.location.href = '/';
-    }
-}
-
-// Call this first in window.onload
-window.onload = async function() {
-    await checkAuth();
-    await loadUserInfo();
-    await loadWeeklyStats();
-    await loadWeeklyReport();
-};
 // Global variables
 let currentSessionId = null;
 let timerInterval = null;
@@ -32,13 +11,11 @@ window.onload = async function() {
     await loadUserInfo();
     await loadWeeklyStats();
     await loadWeeklyReport();
-    // await loadGoal(); // Comment out until implemented
 };
 
 // Load user info
 async function loadUserInfo() {
     try {
-        // Try to get real user data
         const response = await fetch('/api/auth/user', {
             credentials: 'include'
         });
@@ -53,7 +30,6 @@ async function loadUserInfo() {
         }
     } catch (error) {
         console.error('Error loading user info:', error);
-        // Fallback to mock data
         document.getElementById('username').textContent = 'CampusX Learner';
         document.getElementById('user-email').textContent = 'learner@campusx.com';
     }
@@ -89,13 +65,11 @@ function startTimer() {
         seconds = 0;
         updateTimerDisplay();
         
-        // Start timer
         timerInterval = setInterval(() => {
             seconds++;
             updateTimerDisplay();
         }, 1000);
         
-        // Update UI
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('pauseBtn').style.display = 'inline-block';
         document.getElementById('stopBtn').style.display = 'inline-block';
@@ -124,9 +98,8 @@ function stopTimer() {
     
     clearInterval(timerInterval);
     
-    // Calculate focus score based on interruptions (simplified)
-    const focusScore = 100; // You can add interruption tracking later
-    const durationMinutes = Math.max(1, Math.floor(seconds / 60)); // At least 1 minute
+    const focusScore = 100;
+    const durationMinutes = Math.max(1, Math.floor(seconds / 60));
     
     console.log('Stopping timer:', { sessionId: currentSessionId, durationMinutes });
     
@@ -148,9 +121,7 @@ function stopTimer() {
     })
     .then(data => {
         console.log('Session ended:', data);
-        // Reset UI
         resetTimer();
-        // Refresh stats
         return Promise.all([
             loadWeeklyStats(),
             loadWeeklyReport()
@@ -192,18 +163,12 @@ function updateTimerDisplay() {
 }
 
 // ===== WEEKLY BAR CHART =====
-// ===== WEEKLY BAR CHART =====
 async function loadWeeklyStats() {
     try {
         console.log('Loading weekly stats...');
         const response = await fetch('/api/deepwork/weekly-stats', {
             credentials: 'include'
         });
-        
-        if (response.status === 401) {
-            window.location.href = '/';
-            return;
-        }
         
         if (!response.ok) {
             throw new Error('Failed to load stats');
@@ -256,7 +221,6 @@ function renderBarChart(stats) {
     });
 }
 
-// Temporary function for testing - REMOVE when backend is ready
 function showMockChart() {
     const chart = document.getElementById('barChart');
     chart.innerHTML = '';
@@ -322,15 +286,13 @@ async function loadWeeklyReport() {
         document.getElementById('weeklySessions').textContent = report.sessionsCount || '0';
         document.getElementById('weeklyFocus').textContent = (report.avgFocusScore || '0') + '%';
         
-        // Update goal progress
-        const goalMinutes = 1200; // 20 hours default
+        const goalMinutes = 1200;
         const goalProgress = ((report.totalMinutes || 0) / goalMinutes) * 100;
         document.getElementById('goalBar').style.width = Math.min(goalProgress, 100) + '%';
         document.getElementById('goalCurrent').textContent = report.totalHours || '0h';
         
     } catch (error) {
         console.error('Error loading weekly report:', error);
-        // Show mock data for testing
         document.getElementById('weeklyTotal').textContent = '12.5h';
         document.getElementById('weeklyAvg').textContent = '1.8h';
         document.getElementById('weeklySessions').textContent = '18';
@@ -354,17 +316,7 @@ function setGoal() {
     const hours = parseInt(document.getElementById('goalInput').value);
     if (hours > 0 && hours <= 100) {
         document.getElementById('goalTarget').textContent = hours + 'h';
-        // Save to user preferences (you'll need a backend endpoint)
         console.log('Setting goal to:', hours);
-        
-        // You can add API call here later
-        // fetch('/api/deepwork/set-goal', {
-        //     method: 'POST',
-        //     headers: { 'Content-Type': 'application/json' },
-        //     credentials: 'include',
-        //     body: JSON.stringify({ weeklyGoal: hours * 60 })
-        // });
-        
         closeGoalModal();
     } else {
         alert('Please enter a valid goal (1-100 hours)');
