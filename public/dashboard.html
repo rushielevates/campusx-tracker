@@ -122,6 +122,170 @@
         
         .loading { text-align: center; padding: 50px; color: #666; }
         .error-message { text-align: center; padding: 20px; color: #dc3545; background: #fee; border-radius: 5px; margin: 20px; }
+        /* ===== NEW STYLES TO ADD ===== */
+
+/* Breadcrumb */
+.breadcrumb {
+    padding: 0 0 20px 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.breadcrumb span:first-child {
+    color: #667eea;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.breadcrumb span:first-child:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb .separator {
+    margin: 0 8px;
+    color: #999;
+}
+
+.breadcrumb .current {
+    color: #333;
+    font-weight: 500;
+}
+
+/* Gallery View */
+.gallery-view h2 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.playlist-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.playlist-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.playlist-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.playlist-card h3 {
+    font-size: 18px;
+    margin-bottom: 4px;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.playlist-card p {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+.playlist-card .progress-bar {
+    height: 6px;
+    background: #f0f0f0;
+    border-radius: 3px;
+    overflow: hidden;
+    margin: 15px 0 8px;
+}
+
+.playlist-card .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    transition: width 0.3s;
+}
+
+.playlist-card .video-count {
+    font-size: 13px;
+    color: #888;
+    text-align: right;
+}
+
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    width: 400px;
+    margin: 100px auto;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+}
+
+.modal-content h3 {
+    margin-bottom: 10px;
+    color: #333;
+}
+
+.modal-content p {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 15px;
+}
+
+.modal-content input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0 20px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.modal-content input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.modal-buttons button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.modal-buttons button:first-child {
+    background: #f0f0f0;
+    color: #666;
+}
+
+.modal-buttons button.primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+/* Hide gallery/player views as needed */
+.player-view {
+    /* No additional styles needed */
+}
     </style>
 </head>
 <body>
@@ -157,33 +321,57 @@
                 </div>
             </div>
 
-            <!-- Playlists Section - THIS WAS MISSING! -->
-            <div class="playlists-section">
-                <h3>Your Playlists</h3>
-                <div id="playlists-list">
-                    <div class="loading">Loading playlists...</div>
-                </div>
-            </div>
-
-            <button class="import-btn" onclick="importPlaylist()">
-                <span>+</span> Import CampusX ML
+            <button class="import-btn" onclick="showImportModal()">
+                <span>+</span> IMPORT NEW PLAYLIST
             </button>
 
             <button class="logout-btn" onclick="logout()">Logout</button>
         </div>
 
         <!-- Main Content -->
-        <div class="main-content">
-            <!-- YouTube Player Section -->
-            <div class="player-section" id="player-section" style="display: none;">
-                <div id="youtube-player"></div>
-            </div>
-
-            <!-- Playlist View (Video List) -->
-            <div id="playlist-view" class="playlist-view">
-                <div class="loading">Select a playlist to start tracking</div>
-            </div>
+       <!-- Main Content - REPLACE ENTIRE SECTION -->
+<div class="main-content">
+    <!-- Breadcrumb - NEW -->
+    <div class="breadcrumb" id="breadcrumb">
+        <span onclick="showGallery()">Dashboard</span>
+        <span class="separator">></span>
+        <span class="current" id="breadcrumb-current">Playlists</span>
+    </div>
+    
+    <!-- Gallery View - NEW (shows playlist cards) -->
+    <div id="gallery-view" class="gallery-view">
+        <h2>My Playlists</h2>
+        <div class="playlist-grid" id="playlistGrid">
+            <div class="loading">Loading playlists...</div>
         </div>
+    </div>
+    
+    <!-- Player View - KEEP your existing player section but wrap it -->
+    <div id="player-view" class="player-view" style="display: none;">
+        <!-- Your existing player section - KEEP exactly as is -->
+        <div class="player-section" id="player-section" style="display: none;">
+            <div id="youtube-player"></div>
+        </div>
+        
+        <!-- Your existing playlist view - KEEP exactly as is -->
+        <div id="playlist-view" class="playlist-view">
+            <div class="loading">Select a playlist to start tracking</div>
+        </div>
+    </div>
+</div>
+
+<!-- Import Modal - NEW (add at bottom, before </body>) -->
+<div class="modal" id="importModal">
+    <div class="modal-content">
+        <h3>Import YouTube Playlist</h3>
+        <p>Paste YouTube playlist URL or ID:</p>
+        <input type="text" id="playlistUrl" placeholder="https://youtube.com/playlist?list=...">
+        <div class="modal-buttons">
+            <button onclick="closeModal()">Cancel</button>
+            <button onclick="importFromUrl()" class="primary">Import</button>
+        </div>
+    </div>
+</div>
     </div>
 
     <!-- YouTube IFrame API -->
@@ -197,6 +385,121 @@
         let currentVideoId = null;
         let watchTimer = null;
         let watchStartTime = null;
+
+        // ===== NEW: Gallery/Player Mode Management =====
+let currentMode = 'gallery'; // 'gallery' or 'player'
+let activePlaylistId = null;
+let allPlaylists = []; // Store for reference
+
+// Show gallery (playlist cards)
+function showGallery() {
+    currentMode = 'gallery';
+    document.getElementById('gallery-view').style.display = 'block';
+    document.getElementById('player-view').style.display = 'none';
+    document.getElementById('breadcrumb-current').textContent = 'Playlists';
+    loadPlaylistCards(); // Refresh cards
+}
+
+// Show player for specific playlist
+function showPlayer(playlistId) {
+    currentMode = 'player';
+    activePlaylistId = playlistId;
+    document.getElementById('gallery-view').style.display = 'none';
+    document.getElementById('player-view').style.display = 'block';
+    
+    // Find playlist name from stored data
+    const playlist = allPlaylists.find(p => p._id === playlistId);
+    if (playlist) {
+        document.getElementById('breadcrumb-current').textContent = playlist.title;
+    }
+    
+    // Load the playlist (your existing function)
+    loadPlaylist(playlistId);
+}
+
+// ===== NEW: Load playlist cards =====
+async function loadPlaylistCards() {
+    try {
+        const response = await fetch('/api/playlists/user-playlists');
+        const playlists = await response.json();
+        allPlaylists = playlists; // Store for reference
+        
+        const grid = document.getElementById('playlistGrid');
+        if (!playlists || playlists.length === 0) {
+            grid.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No playlists yet. Click "Import New Playlist" to get started!</p>';
+            return;
+        }
+        
+        grid.innerHTML = playlists.map(playlist => {
+            const completed = playlist.videos ? playlist.videos.filter(v => v.completed).length : 0;
+            const total = playlist.videos ? playlist.videos.length : 0;
+            const percentage = total > 0 ? (completed / total) * 100 : 0;
+            
+            return `
+                <div class="playlist-card" onclick="showPlayer('${playlist._id}')">
+                    <h3>${playlist.title}</h3>
+                    <p>${total} videos</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${percentage}%"></div>
+                    </div>
+                    <div class="video-count">${completed}/${total}</div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (error) {
+        console.error('Error loading playlist cards:', error);
+        document.getElementById('playlistGrid').innerHTML = '<div class="error-message">Error loading playlists</div>';
+    }
+}
+
+// ===== NEW: Import modal functions =====
+function showImportModal() {
+    document.getElementById('importModal').style.display = 'block';
+    document.getElementById('playlistUrl').value = '';
+}
+
+function closeModal() {
+    document.getElementById('importModal').style.display = 'none';
+}
+
+// Import from URL
+async function importFromUrl() {
+    const url = document.getElementById('playlistUrl').value.trim();
+    if (!url) {
+        alert('Please enter a YouTube playlist URL');
+        return;
+    }
+    
+    const button = document.querySelector('.modal-buttons button.primary');
+    const originalText = button.textContent;
+    button.textContent = 'Importing...';
+    button.disabled = true;
+    
+    try {
+        const response = await fetch('/api/playlists/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playlistUrl: url }) // Send URL, backend will parse
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            alert(`✅ Playlist "${data.playlist.title}" imported successfully!`);
+            closeModal();
+            await loadPlaylistCards(); // Refresh the grid
+        } else {
+            const error = await response.json();
+            alert('❌ Failed to import: ' + (error.error || 'Unknown error'));
+        }
+    } catch (error) {
+        console.error('Error importing:', error);
+        alert('❌ Error importing playlist');
+    } finally {
+        button.textContent = originalText;
+        button.disabled = false;
+    }
+}
 
         // Check if current page is analytics
 function isAnalyticsPage() {
@@ -215,11 +518,13 @@ window.addEventListener('storage', (e) => {
 });
         
         // Load data when page loads
-        window.onload = async function() {
-            console.log('Dashboard loaded');
-            await loadUserInfo();
-            await loadPlaylists();
-        };
+// REPLACE your existing window.onload with this:
+window.onload = async function() {
+    console.log('Dashboard loaded');
+    await loadUserInfo();
+    await loadPlaylistCards(); // Load cards first
+    showGallery(); // Start in gallery mode
+};
 
         // Load user info
         async function loadUserInfo() {
@@ -564,37 +869,7 @@ window.addEventListener('storage', (e) => {
         }
 
         // Import playlist
-        async function importPlaylist() {
-            try {
-                console.log('Importing playlist...');
-                const button = document.querySelector('.import-btn');
-                button.disabled = true;
-                button.innerHTML = '⏳ Importing...';
-                
-                const response = await fetch('/api/playlists/import', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                console.log('Import response status:', response.status);
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    alert(`✅ Playlist imported successfully! ${data.playlist.videoCount} videos found.`);
-                    await loadPlaylists();
-                } else {
-                    const error = await response.json();
-                    alert('❌ Failed to import: ' + (error.error || error.message || 'Unknown error'));
-                }
-            } catch (error) {
-                console.error('Error importing:', error);
-                alert('❌ Error importing playlist. Please try again.');
-            } finally {
-                const button = document.querySelector('.import-btn');
-                button.disabled = false;
-                button.innerHTML = '<span>+</span> Import CampusX ML';
-            }
-        }
+
 
         // Toggle video completion
        // Toggle video completion - UPDATED VERSION
@@ -689,6 +964,9 @@ async function toggleVideoComplete(videoId) {
             videoItem.style.pointerEvents = 'auto';
         }
     }
+    if (currentMode === 'player') {
+    loadPlaylistCards(); // Update card progress in background
+}
 }
         // Helper function to show toast notifications
 function showToast(message, type = 'success') {
