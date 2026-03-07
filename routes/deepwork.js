@@ -17,11 +17,21 @@ const auth = async (req, res, next) => {
 // Start a session
 router.post('/start', auth, async (req, res) => {
     try {
+                // End any existing active sessions
+        await DeepWorkSession.updateMany(
+            { userId: req.session.userId, activeSession: true },
+            { 
+                activeSession: false,
+                endTime: new Date(),
+                durationMinutes: Math.floor((Date.now() - session.startTime) / 60000)
+            }
+        );
         const session = new DeepWorkSession({
             userId: req.session.userId,
             startTime: new Date(),
             taskType: req.body.taskType || 'other',
-            taskDescription: req.body.taskDescription || ''
+            taskDescription: req.body.taskDescription || '',
+            activeSession: true
         });
         await session.save();
         res.json({ sessionId: session._id, startTime: session.startTime });
@@ -41,11 +51,14 @@ router.post('/end/:sessionId', auth, async (req, res) => {
         if (!session) {
             return res.status(404).json({ error: 'Session not found' });
         }
+         const duration = req.body.duration || 
+            Math.floor((Date.now() - session.startTime) / 60000);
         
         session.endTime = new Date();
-        session.durationMinutes = Math.round((session.endTime - session.startTime) / 60000);
+        session.durationMinutes = req.body.duration || Math.round((session.endTime - session.startTime) / 60000);
         session.interruptions = req.body.interruptions || 0;
         session.focusScore = req.body.focusScore || 100;
+        session.activeSession = false;  // ← Clear active flag
         
         await session.save();
         
@@ -59,6 +72,7 @@ router.post('/end/:sessionId', auth, async (req, res) => {
         });
         
     } catch (error) {
+        console.error('Error ending session:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -71,7 +85,33 @@ router.get('/test-auth', auth, (req, res) => {
         sessionId: req.session.id 
     });
 });
-
+// Get current active session
+router.get('/current-session', auth, async (req, res) => {
+    try {
+        const activeSession = await DeepWorkSession.findOne({
+            userId: req.session.userId,
+            activeSession: true,
+            endTime: null
+        }).sort({ startTime: -1 });
+        
+        if (activeSession) {
+            // Calculate elapsed time
+            const elapsedSeconds = Math.floor((Date.now() - activeSession.startTime) / 1000);
+            res.json({
+                hasActiveSession: true,
+                sessionId: activeSession._id,
+                startTime: activeSession.startTime,
+                elapsedSeconds: elapsedSeconds,
+                taskType: activeSession.taskType,
+                taskDescription: activeSession.taskDescription
+            });
+        } else {
+            res.json({ hasActiveSession: false });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 // Get weekly stats (for bar chart)
 router.get('/weekly-stats', auth, async (req, res) => {
     try {
