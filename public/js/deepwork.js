@@ -12,6 +12,7 @@ window.onload = async function() {
     await checkActiveSession();  // ← NEW
     await loadWeeklyStats();
     await loadWeeklyReport();
+    await loadTodayProgress();
 };
 
 // Check if there's an active session
@@ -413,6 +414,60 @@ async function loadWeeklyReport() {
         document.getElementById('goalBar').style.width = '62%';
         document.getElementById('goalCurrent').textContent = '12.5h';
     }
+}
+
+// ===== NEW: Load Today's Progress =====
+async function loadTodayProgress() {
+    try {
+        const response = await fetch('/api/deepwork/today-stats', {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Format today's total
+            const hours = Math.floor(data.totalMinutes / 60);
+            const minutes = data.totalMinutes % 60;
+            document.getElementById('todayTotal').textContent = 
+                hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+            
+            // Current session (if active)
+            if (data.currentSession) {
+                const sessionMinutes = Math.floor(data.currentSession / 60);
+                document.getElementById('currentSession').textContent = 
+                    sessionMinutes > 0 ? `${sessionMinutes}m` : '0m';
+            } else {
+                document.getElementById('currentSession').textContent = 'Not active';
+            }
+            
+            document.getElementById('todayFocus').textContent = data.avgFocus + '%';
+            document.getElementById('todaySessions').textContent = data.sessions;
+            document.getElementById('currentStreak').textContent = 
+                data.streak + ' days 🔥';
+        }
+    } catch (error) {
+        console.error('Error loading today progress:', error);
+    }
+}
+
+// ===== UPDATE Weekly Report Display =====
+function updateWeeklyReportDisplay(report) {
+    document.getElementById('weeklyTotal').textContent = report.totalHours + 'h';
+    document.getElementById('weeklySessions').textContent = report.sessionsCount;
+    document.getElementById('weeklyAvgFocus').textContent = (report.avgFocusScore || '0') + '%';
+    
+    // Update goal display
+    const goalMinutes = 1500; // 25 hours default
+    const goalProgress = ((report.totalMinutes || 0) / goalMinutes) * 100;
+    document.getElementById('goalProgressFill').style.width = Math.min(goalProgress, 100) + '%';
+    document.getElementById('goalPercentage').textContent = Math.min(goalProgress, 100).toFixed(0) + '%';
+    
+    const remainingMinutes = Math.max(0, goalMinutes - (report.totalMinutes || 0));
+    const remainingHours = Math.floor(remainingMinutes / 60);
+    const remainingMins = remainingMinutes % 60;
+    document.getElementById('goalRemaining').textContent = 
+        remainingHours > 0 ? `${remainingHours}h ${remainingMins}m` : `${remainingMins}m`;
 }
 
 // ===== GOAL FUNCTIONS =====
