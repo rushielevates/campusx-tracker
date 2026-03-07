@@ -40,7 +40,7 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: true,
     saveUninitialized: false,
-    name: 'connect.sid',
+    name: 'campusx.sid',
     store: MongoStore.create({
         mongoUrl: process.env.MONGODB_URI,
         collectionName: 'sessions',
@@ -54,6 +54,25 @@ app.use(session({
         maxAge: 24 * 60 * 60 * 1000
     }
 }));
+
+app.get('/debug-mongo', async (req, res) => {
+    try {
+        const db = mongoose.connection.db;
+        const sessions = await db.collection('sessions').find({}).toArray();
+        
+        const sessionList = sessions.map(s => ({
+            id: s._id,
+            data: s.session ? JSON.parse(s.session) : null
+        }));
+        
+        res.json({
+            count: sessions.length,
+            sessions: sessionList
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // ===== 3.5 SESSION DEBUG MIDDLEWARE =====
 app.use(async (req, res, next) => {
