@@ -177,14 +177,18 @@ async function loadWeeklyStats() {
         const response = await fetch('/api/deepwork/weekly-stats', {
             credentials: 'include'
         });
-        
+                if (response.status === 401) {
+            // Not logged in, redirect to login
+            window.location.href = '/';
+            return;
+        }
         if (!response.ok) {
             throw new Error('Failed to load stats');
         }
         
         const stats = await response.json();
         console.log('Weekly stats:', stats);
-        
+        renderBarChart(stats);
         const chart = document.getElementById('barChart');
         chart.innerHTML = '';
         
