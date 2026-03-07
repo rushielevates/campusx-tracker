@@ -45,8 +45,21 @@ router.post('/import', auth, async (req, res) => {
         console.log('User ID:', req.session.userId);
         console.log('YouTube API Key exists:', !!YOUTUBE_API_KEY);
         console.log('API Key prefix:', YOUTUBE_API_KEY ? YOUTUBE_API_KEY.substring(0, 8) + '...' : 'none');
+
+        // ===== ADD THIS BLOCK (8 lines) =====
+        // Handle both playlistId and playlistUrl
+        let playlistId = req.body.playlistId;
         
-        const playlistId = req.body.playlistId || CAMPUSX_PLAYLIST_ID;
+        // If URL was provided instead of ID, extract the ID
+        if (!playlistId && req.body.playlistUrl) {
+            playlistId = extractPlaylistIdFromUrl(req.body.playlistUrl);
+            if (!playlistId) {
+                return res.status(400).json({ error: 'Invalid YouTube playlist URL' });
+            }
+        }
+        // ===== END OF ADDED BLOCK =====
+        
+        const playlistId = req.body.playlistId || req.body.playlistUrl || CAMPUSX_PLAYLIST_ID;
         console.log('Target Playlist ID:', playlistId);
         
         if (!YOUTUBE_API_KEY) {
