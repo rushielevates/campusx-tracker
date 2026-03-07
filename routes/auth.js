@@ -28,6 +28,8 @@ router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         console.log('🔐 Login attempt for email:', email);
+        console.log('Session ID before login:', req.session.id);
+        console.log('User ID before login:', req.session.userId);
         
         const user = await User.findOne({ email });
         if (!user) {
@@ -44,9 +46,9 @@ router.post('/login', async (req, res) => {
         // Set session
         req.session.userId = user._id;
         console.log('✅ userId set in session:', user._id);
-        console.log('📝 Session ID:', req.session.id);
+        console.log('Session ID after set:', req.session.id);
         
-        // CRITICAL: Save session explicitly before responding
+        // Force session save and log result
         req.session.save((err) => {
             if (err) {
                 console.error('❌ Session save error:', err);
@@ -54,6 +56,7 @@ router.post('/login', async (req, res) => {
             }
             
             console.log('✅ Session saved successfully');
+            console.log('Verifying session - userId:', req.session.userId);
             
             // Send success response
             res.json({ 
