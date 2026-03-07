@@ -24,7 +24,7 @@ mongoose.connection.on('error', (err) => {
 const app = express();
 
 // Middleware
-app.use(cors({ origin: '*', credentials: true }));
+app.use(cors({ origin: 'https://campusx-tracker.onrender.com', credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -38,7 +38,7 @@ app.use(session({
     cookie: { 
         secure: true, 
         httpOnly: true,
-        sameSite: 'none', // Important for cross-origin requests
+        sameSite: '1ax', // Important for cross-origin requests
         maxAge: 24 * 60 * 60 * 1000 
     }
 }));
