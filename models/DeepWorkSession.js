@@ -26,7 +26,11 @@ const deepWorkSessionSchema = new mongoose.Schema({
     // Optional link to playlist/video
     relatedVideoId: { type: String },
     relatedPlaylistId: { type: String },
-    
+    activeSession: {
+    type: Boolean,
+    default: false
+},
+lastPingTime: { type: Date } // To detect crashes
     createdAt: { type: Date, default: Date.now }
 });
 
