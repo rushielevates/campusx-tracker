@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Deep Work - CampusX ML Tracker</title>
+    <link rel="stylesheet" href="css/deepwork.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar (same as dashboard) -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2>CampusX ML</h2>
+                <p>Your Learning Journey</p>
+            </div>
+            
+            <div class="user-info">
+                <div class="user-avatar">CX</div>
+                <div class="user-details">
+                    <span id="username">Loading...</span>
+                    <span id="user-email"></span>
+                </div>
+            </div>
+
+            <div class="nav-menu">
+                <div class="nav-item" onclick="window.location.href='/dashboard.html'">📺 Dashboard</div>
+                <div class="nav-item" onclick="window.location.href='/analytics.html'">📊 Analytics</div>
+                <div class="nav-item" onclick="window.location.href='/profile.html'">👤 Profile</div>
+                <div class="nav-item active">⏱️ Deep Work</div>
+            </div>
+
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Timer Section -->
+            <div class="timer-section">
+                <div class="timer-display" id="timerDisplay">00:00:00</div>
+                <div class="timer-controls">
+                    <button id="startBtn" class="timer-btn start" onclick="startTimer()">Start</button>
+                    <button id="pauseBtn" class="timer-btn pause" onclick="pauseTimer()" style="display: none;">Pause</button>
+                    <button id="stopBtn" class="timer-btn stop" onclick="stopTimer()" style="display: none;">Stop</button>
+                </div>
+                <div class="task-input" id="taskInput">
+                    <input type="text" id="taskDescription" placeholder="What are you working on?">
+                    <select id="taskType">
+                        <option value="coding">💻 Coding</option>
+                        <option value="reading">📚 Reading</option>
+                        <option value="studying">🎓 Studying</option>
+                        <option value="writing">✍️ Writing</option>
+                        <option value="planning">📋 Planning</option>
+                        <option value="other">⚙️ Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Weekly Bar Chart -->
+            <div class="chart-section">
+                <h2>Last 7 Days</h2>
+                <div class="bar-chart" id="barChart"></div>
+            </div>
+
+            <!-- Weekly Summary -->
+            <div class="summary-section" id="weeklySummary">
+                <h2>This Week's Progress</h2>
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <div class="summary-value" id="weeklyTotal">0h</div>
+                        <div class="summary-label">Total</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-value" id="weeklyAvg">0h</div>
+                        <div class="summary-label">Daily Avg</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-value" id="weeklySessions">0</div>
+                        <div class="summary-label">Sessions</div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="summary-value" id="weeklyFocus">0%</div>
+                        <div class="summary-label">Focus Score</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Goal Setting -->
+            <div class="goal-section">
+                <h2>Weekly Goal</h2>
+                <div class="goal-progress">
+                    <div class="goal-bar-container">
+                        <div class="goal-bar" id="goalBar" style="width: 0%"></div>
+                    </div>
+                    <div class="goal-stats">
+                        <span id="goalCurrent">0h</span> / <span id="goalTarget">20h</span>
+                    </div>
+                </div>
+                <button class="set-goal-btn" onclick="showGoalModal()">Set Goal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Goal Modal -->
+    <div class="modal" id="goalModal">
+        <div class="modal-content">
+            <h3>Set Weekly Goal</h3>
+            <input type="number" id="goalInput" placeholder="Hours per week" min="1" max="100">
+            <div class="modal-buttons">
+                <button onclick="closeGoalModal()">Cancel</button>
+                <button onclick="setGoal()" class="primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/deepwork.js"></script>
+</body>
+</html>
