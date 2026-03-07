@@ -40,7 +40,7 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
-    name: 'campusx.sid',
+    name: 'connect.sid',
     cookie: { 
         secure: false, 
         httpOnly: true,
