@@ -27,15 +27,46 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
+        console.log('🔐 Login attempt for email:', email);
+        
         const user = await User.findOne({ email });
-        if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+        if (!user) {
+            console.log('❌ User not found');
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
         
         const isMatch = await user.comparePassword(password);
-        if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
+        if (!isMatch) {
+            console.log('❌ Password incorrect');
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
         
+        // Set session
         req.session.userId = user._id;
-        res.json({ user: { username: user.username, email: user.email } });
+        console.log('✅ userId set in session:', user._id);
+        console.log('📝 Session ID:', req.session.id);
+        
+        // CRITICAL: Save session explicitly before responding
+        req.session.save((err) => {
+            if (err) {
+                console.error('❌ Session save error:', err);
+                return res.status(500).json({ error: 'Failed to save session' });
+            }
+            
+            console.log('✅ Session saved successfully');
+            
+            // Send success response
+            res.json({ 
+                success: true,
+                user: { 
+                    username: user.username, 
+                    email: user.email 
+                }
+            });
+        });
+        
     } catch (error) {
+        console.error('❌ Login error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -65,6 +96,20 @@ router.get('/check', (req, res) => {
     } else {
         res.status(401).json({ authenticated: false });
     }
+});
+// Add this temporary debug endpoint
+router.get('/debug-session', (req, res) => {
+    console.log('=== DEBUG SESSION ===');
+    console.log('Session ID:', req.session.id);
+    console.log('User ID:', req.session.userId);
+    console.log('Session exists:', !!req.session);
+    
+    res.json({
+        sessionExists: !!req.session,
+        sessionId: req.session.id,
+        userId: req.session.userId || null,
+        cookie: req.session.cookie
+    });
 });
 
 module.exports = router;
