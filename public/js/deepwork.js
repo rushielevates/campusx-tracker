@@ -9,10 +9,58 @@ let taskDescription = '';
 window.onload = async function() {
     console.log('Deep Work page loaded');
     await loadUserInfo();
+    await checkActiveSession();  // ← NEW
     await loadWeeklyStats();
     await loadWeeklyReport();
 };
 
+// Check if there's an active session
+async function checkActiveSession() {
+    try {
+        const response = await fetch('/api/deepwork/current-session', {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.hasActiveSession) {
+                console.log('Found active session:', data);
+                // Restore the timer
+                currentSessionId = data.sessionId;
+                seconds = data.elapsedSeconds;
+                taskType = data.taskType;
+                taskDescription = data.taskDescription;
+                
+                // Update UI
+                document.getElementById('taskDescription').value = taskDescription;
+                document.getElementById('taskType').value = taskType;
+                updateTimerDisplay();
+                
+                // Start timer again
+                startTimerFromExisting(data.elapsedSeconds);
+            }
+        }
+    } catch (error) {
+        console.error('Error checking active session:', error);
+    }
+}
+
+// Start timer from existing session
+function startTimerFromExisting(elapsedSeconds) {
+    seconds = elapsedSeconds;
+    timerInterval = setInterval(() => {
+        seconds++;
+        updateTimerDisplay();
+    }, 1000);
+    
+    // Update UI
+    document.getElementById('startBtn').style.display = 'none';
+    document.getElementById('pauseBtn').style.display = 'inline-block';
+    document.getElementById('stopBtn').style.display = 'inline-block';
+    document.querySelector('.task-input').style.opacity = '0.5';
+    document.querySelector('.task-input input').disabled = true;
+    document.querySelector('.task-input select').disabled = true;
+}
 // Load user info
 async function loadUserInfo() {
     try {
