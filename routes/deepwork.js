@@ -22,8 +22,8 @@ router.post('/start', auth, async (req, res) => {
             { userId: req.session.userId, activeSession: true },
             { 
                 activeSession: false,
-                endTime: new Date(),
-                durationMinutes: Math.floor((Date.now() - session.startTime) / 60000)
+                endTime: new Date()
+                
             }
         );
         const session = new DeepWorkSession({
@@ -39,7 +39,18 @@ router.post('/start', auth, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
+// Ping endpoint to keep session alive
+router.post('/ping', auth, async (req, res) => {
+    try {
+        const { sessionId } = req.body;
+        await DeepWorkSession.findByIdAndUpdate(sessionId, {
+            lastPingTime: new Date()
+        });
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 // End a session
 router.post('/end/:sessionId', auth, async (req, res) => {
     try {
@@ -55,7 +66,7 @@ router.post('/end/:sessionId', auth, async (req, res) => {
             Math.floor((Date.now() - session.startTime) / 60000);
         
         session.endTime = new Date();
-        session.durationMinutes = req.body.duration || Math.round((session.endTime - session.startTime) / 60000);
+        session.durationMinutes = duration;
         session.interruptions = req.body.interruptions || 0;
         session.focusScore = req.body.focusScore || 100;
         session.activeSession = false;  // ← Clear active flag
