@@ -166,6 +166,7 @@ router.get('/today-stats', auth, async (req, res) => {
         });
         
     } catch (error) {
+        console.error('Error in /today-stats:', error);
         res.status(500).json({ error: error.message });
     }
 });
