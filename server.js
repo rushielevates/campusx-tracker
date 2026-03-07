@@ -42,9 +42,9 @@ app.use(session({
     saveUninitialized: false,
     name: 'campusx.sid',
     cookie: { 
-        secure: true, 
+        secure: false, 
         httpOnly: true,
-        sameSite: 'lax',
+        sameSite: 'none',
         maxAge: 24 * 60 * 60 * 1000
     }
 }));
