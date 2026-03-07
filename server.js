@@ -38,7 +38,7 @@ app.use(session({
     cookie: { 
         secure: true, 
         httpOnly: true,
-        sameSite: '1ax', // Important for cross-origin requests
+        sameSite: 'lax', // Important for cross-origin requests
         maxAge: 24 * 60 * 60 * 1000 
     }
 }));
