@@ -83,7 +83,38 @@ app.get('/debug-mongo', async (req, res) => {
 });
 
 // ===== 3.5 SESSION DEBUG MIDDLEWARE =====
-
+app.get('/debug-session-data', async (req, res) => {
+    try {
+        const db = mongoose.connection.db;
+        const sessionId = req.session.id;
+        
+        // Look up this specific session in MongoDB
+        const sessionDoc = await db.collection('sessions').findOne({
+            _id: sessionId
+        });
+        
+        if (sessionDoc) {
+            // Parse the session data
+            const sessionData = JSON.parse(sessionDoc.session);
+            res.json({
+                sessionId: sessionId,
+                mongoDoc: {
+                    id: sessionDoc._id,
+                    expires: sessionDoc.expires,
+                    userId: sessionData.userId,
+                    cookie: sessionData.cookie
+                }
+            });
+        } else {
+            res.json({
+                sessionId: sessionId,
+                error: 'Session not found in MongoDB'
+            });
+        }
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // Add this near your other debug routes
 app.get('/debug-mongo-sessions', async (req, res) => {
