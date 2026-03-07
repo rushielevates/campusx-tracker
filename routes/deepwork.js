@@ -4,9 +4,13 @@ const DeepWorkSession = require('../models/DeepWorkSession');
 const User = require('../models/User');
 
 const auth = async (req, res, next) => {
+    console.log('DeepWork Auth Check - Session ID:', req.session?.id);
+    console.log('DeepWork Auth Check - User ID:', req.session?.userId);
     if (!req.session || !req.session.userId) {
+        console.log('❌ DeepWork Auth Failed - No session or userId');
         return res.status(401).json({ error: 'Please login' });
     }
+    console.log('✅ DeepWork Auth Successful for user:', req.session.userId);
     next();
 };
 
@@ -57,6 +61,15 @@ router.post('/end/:sessionId', auth, async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
+});
+
+// Add this temporary test route
+router.get('/test-auth', auth, (req, res) => {
+    res.json({ 
+        message: 'Auth working!', 
+        userId: req.session.userId,
+        sessionId: req.session.id 
+    });
 });
 
 // Get weekly stats (for bar chart)
