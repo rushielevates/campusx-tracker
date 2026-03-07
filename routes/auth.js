@@ -1,6 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+// Add this at the top with other requires
+const auth = async (req, res, next) => {
+    if (!req.session || !req.session.userId) {
+        return res.status(401).json({ error: 'Please login' });
+    }
+    next();
+};
 
 router.post('/register', async (req, res) => {
     try {
