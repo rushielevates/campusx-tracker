@@ -57,9 +57,12 @@ router.post('/import', auth, async (req, res) => {
                 return res.status(400).json({ error: 'Invalid YouTube playlist URL' });
             }
         }
+         if (!playlistId) {
+            playlistId = CAMPUSX_PLAYLIST_ID;
+        }
         // ===== END OF ADDED BLOCK =====
         
-        const playlistId = req.body.playlistId || req.body.playlistUrl || CAMPUSX_PLAYLIST_ID;
+        
         console.log('Target Playlist ID:', playlistId);
         
         if (!YOUTUBE_API_KEY) {
