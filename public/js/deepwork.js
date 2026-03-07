@@ -84,7 +84,8 @@ function startTimerFromExisting(elapsedSeconds) {
         seconds++;
         updateTimerDisplay();
     }, 1000);
-    
+     // ✅ ADD THIS LINE HERE
+    startPingInterval();
     // Update UI
     document.getElementById('startBtn').style.display = 'none';
     document.getElementById('pauseBtn').style.display = 'inline-block';
@@ -151,7 +152,8 @@ function startTimer() {
             seconds++;
             updateTimerDisplay();
         }, 1000);
-        
+   // ✅ ADD THIS LINE HERE
+    startPingInterval();
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('pauseBtn').style.display = 'inline-block';
         document.getElementById('stopBtn').style.display = 'inline-block';
@@ -167,7 +169,10 @@ function startTimer() {
 
 // Add after starting timer
 function startPingInterval() {
-    setInterval(() => {
+    if (window.pingInterval) {
+        clearInterval(window.pingInterval);
+    }
+    window.pingInterval = setInterval(() => {
         if (currentSessionId) {
             fetch('/api/deepwork/ping', {
                 method: 'POST',
@@ -179,6 +184,7 @@ function startPingInterval() {
     }, 30000); // Ping every 30 seconds
 }
 
+
 function pauseTimer() {
     clearInterval(timerInterval);
     document.getElementById('pauseBtn').style.display = 'none';
@@ -187,6 +193,10 @@ function pauseTimer() {
 }
 
 function stopTimer() {
+        // Clear ping interval when stopping
+    if (window.pingInterval) {
+        clearInterval(window.pingInterval);
+    }
     if (!currentSessionId) {
         resetTimer();
         return;
@@ -234,6 +244,10 @@ function stopTimer() {
 }
 
 function resetTimer() {
+        // Clear ping interval when stopping
+    if (window.pingInterval) {
+        clearInterval(window.pingInterval);
+    }
     currentSessionId = null;
     seconds = 0;
     updateTimerDisplay();
