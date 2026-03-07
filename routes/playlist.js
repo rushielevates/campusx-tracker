@@ -444,5 +444,22 @@ router.post('/:playlistId/speed', auth, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
+// ===== ADD THIS HELPER FUNCTION AT THE BOTTOM =====
+function extractPlaylistIdFromUrl(url) {
+    if (!url) return null;
+    
+    // Pattern 1: youtube.com/playlist?list=PLAYLIST_ID
+    let match = url.match(/[&?]list=([^&]+)/);
+    if (match) return match[1];
+    
+    // Pattern 2: youtu.be/...?list=PLAYLIST_ID
+    match = url.match(/youtu\.be\/.*[&?]list=([^&]+)/);
+    if (match) return match[1];
+    
+    // Pattern 3: youtube.com/watch?v=...&list=PLAYLIST_ID
+    match = url.match(/youtube\.com\/watch\?v=.*[&?]list=([^&]+)/);
+    if (match) return match[1];
+    
+    return null;
+}
 module.exports = router;
