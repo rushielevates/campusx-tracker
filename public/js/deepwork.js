@@ -441,7 +441,7 @@ async function loadTodayProgress() {
                 hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
             
             // Current session (if active)
-            if (data.currentSession data.currentSession > 0) {
+            if (data.currentSession && data.currentSession > 0) {
                 const sessionMinutes = Math.floor(data.currentSession / 60);
                 const sessionSeconds = data.currentSession % 60;
                 document.getElementById('currentSession').textContent = 
