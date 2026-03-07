@@ -149,15 +149,31 @@ app.get('/debug-mongo-sessions', async (req, res) => {
 
 // ===== 4. Debug middleware to log all requests =====
 app.use((req, res, next) => {
+       if (req.path.startsWith('/debug')) {
+        return next();
+    }
     console.log('=== INCOMING REQUEST ===');
     console.log('Path:', req.path);
     console.log('Method:', req.method);
-    console.log('Session ID:', req.session?.id);
-    console.log('User ID:', req.session?.userId);
-    console.log('Cookie header:', req.headers.cookie);
-    console.log('========================');
-    next();
+    console.log('Session ID:', req.sessionID);
+     if (req.session) {
+        // Force session to reload to ensure we have latest data
+        req.session.reload((err) => {
+            if (!err) {
+                console.log('User ID:', req.session.userId || 'undefined');
+            } else {
+                console.log('User ID: error loading');
+            }
+            console.log('========================');
+            next();
+        });
+    } else {
+        console.log('User ID: no session');
+        console.log('========================');
+        next();
+    }
 });
+
 
 // ===== 5. Static files =====
 app.use(express.static(path.join(__dirname, 'public')));
