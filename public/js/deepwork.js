@@ -392,37 +392,45 @@ async function loadWeeklyReport() {
         const report = await response.json();
         console.log('Weekly report:', report);
         
+        // ===== UPDATED TO USE NEW CARD ELEMENTS =====
         document.getElementById('weeklyTotal').textContent = report.totalHours + 'h';
-        
-        const dailyAvg = (report.totalMinutes / 7 / 60).toFixed(1);
-        document.getElementById('weeklyAvg').textContent = dailyAvg + 'h';
-        
         document.getElementById('weeklySessions').textContent = report.sessionsCount || '0';
-        document.getElementById('weeklyFocus').textContent = (report.avgFocusScore || '0') + '%';
+        document.getElementById('weeklyAvgFocus').textContent = (report.avgFocusScore || '0') + '%';
         
-        const goalMinutes = 1200;
+        // Update goal display (using 25 hours = 1500 minutes as default)
+        const goalMinutes = 1500; // 25 hours
         const goalProgress = ((report.totalMinutes || 0) / goalMinutes) * 100;
-        document.getElementById('goalBar').style.width = Math.min(goalProgress, 100) + '%';
-        document.getElementById('goalCurrent').textContent = report.totalHours || '0h';
+        document.getElementById('goalProgressFill').style.width = Math.min(goalProgress, 100) + '%';
+        document.getElementById('goalPercentage').textContent = Math.min(goalProgress, 100).toFixed(0) + '%';
+        
+        const remainingMinutes = Math.max(0, goalMinutes - (report.totalMinutes || 0));
+        const remainingHours = Math.floor(remainingMinutes / 60);
+        const remainingMins = remainingMinutes % 60;
+        document.getElementById('goalRemaining').textContent = 
+            remainingHours > 0 ? `${remainingHours}h ${remainingMins}m` : `${remainingMins}m`;
         
     } catch (error) {
         console.error('Error loading weekly report:', error);
-        document.getElementById('weeklyTotal').textContent = '12.5h';
-        document.getElementById('weeklyAvg').textContent = '1.8h';
-        document.getElementById('weeklySessions').textContent = '18';
-        document.getElementById('weeklyFocus').textContent = '92%';
-        document.getElementById('goalBar').style.width = '62%';
-        document.getElementById('goalCurrent').textContent = '12.5h';
+        // Fallback values for new structure
+        document.getElementById('weeklyTotal').textContent = '0h';
+        document.getElementById('weeklySessions').textContent = '0';
+        document.getElementById('weeklyAvgFocus').textContent = '0%';
+        document.getElementById('goalProgressFill').style.width = '0%';
+        document.getElementById('goalPercentage').textContent = '0%';
+        document.getElementById('goalRemaining').textContent = '25h';
     }
 }
 
 // ===== NEW: Load Today's Progress =====
 async function loadTodayProgress() {
     try {
+        console.log('Loading today progress...');
         const response = await fetch('/api/deepwork/today-stats', {
             credentials: 'include'
         });
-        
+         if (!response.ok) {
+            throw new Error('Failed to load today stats');
+        }
         if (response.ok) {
             const data = await response.json();
             
@@ -433,8 +441,9 @@ async function loadTodayProgress() {
                 hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
             
             // Current session (if active)
-            if (data.currentSession) {
+            if (data.currentSession data.currentSession > 0) {
                 const sessionMinutes = Math.floor(data.currentSession / 60);
+                const sessionSeconds = data.currentSession % 60;
                 document.getElementById('currentSession').textContent = 
                     sessionMinutes > 0 ? `${sessionMinutes}m` : '0m';
             } else {
@@ -448,6 +457,12 @@ async function loadTodayProgress() {
         }
     } catch (error) {
         console.error('Error loading today progress:', error);
+       // Set fallback values
+        document.getElementById('todayTotal').textContent = '0h 0m';
+        document.getElementById('currentSession').textContent = 'Not active';
+        document.getElementById('todayFocus').textContent = '0%';
+        document.getElementById('todaySessions').textContent = '0';
+        document.getElementById('currentStreak').textContent = '0 days 🔥';
     }
 }
 
