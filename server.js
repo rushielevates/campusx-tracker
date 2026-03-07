@@ -44,7 +44,8 @@ app.use(session({
     store: MongoStore.create({
         mongoUrl: process.env.MONGODB_URI,
         collectionName: 'sessions',
-        ttl: 24 * 60 * 60 // 1 day in seconds
+        ttl: 24 * 60 * 60 ,// 1 day in seconds
+        touchAfter: 24 * 3600 
     }),
     cookie: { 
         secure: false, 
@@ -53,6 +54,51 @@ app.use(session({
         maxAge: 24 * 60 * 60 * 1000
     }
 }));
+
+// ===== 3.5 SESSION DEBUG MIDDLEWARE =====
+app.use(async (req, res, next) => {
+    if (req.headers.cookie) {
+        console.log('🔍 Cookie received:', req.headers.cookie);
+        console.log('🔍 Session ID from cookie:', req.session?.id);
+        
+        // Force reload session from store to verify
+        if (req.session) {
+            req.session.reload((err) => {
+                if (err) {
+                    console.log('❌ Session reload error:', err);
+                } else {
+                    console.log('✅ Session reloaded - userId:', req.session.userId);
+                }
+                next();
+            });
+        } else {
+            next();
+        }
+    } else {
+        next();
+    }
+});
+
+// Add this near your other debug routes
+app.get('/debug-mongo-sessions', async (req, res) => {
+    try {
+        const db = mongoose.connection.db;
+        const sessions = await db.collection('sessions').find({}).toArray();
+        
+        const sessionList = sessions.map(s => ({
+            id: s._id,
+            hasUserId: s.session ? JSON.parse(s.session).userId ? true : false : false,
+            age: Date.now() - new Date(s.expires).getTime()
+        }));
+        
+        res.json({
+            totalSessions: sessions.length,
+            sessions: sessionList
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // ===== 4. Debug middleware to log all requests =====
 app.use((req, res, next) => {
