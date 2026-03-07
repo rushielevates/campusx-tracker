@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema({
         totalVideosWatched: { type: Number, default: 0 },
         totalWatchTimeMinutes: { type: Number, default: 0 },
         totalActiveDays: { type: Number, default: 0 }
-    }
+    },
      // NEW: Deep work stats
     deepWorkStats: {
         totalSessions: { type: Number, default: 0 },
