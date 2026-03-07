@@ -26,6 +26,27 @@ const userSchema = new mongoose.Schema({
         totalWatchTimeMinutes: { type: Number, default: 0 },
         totalActiveDays: { type: Number, default: 0 }
     }
+     // NEW: Deep work stats
+    deepWorkStats: {
+        totalSessions: { type: Number, default: 0 },
+        totalDeepWorkMinutes: { type: Number, default: 0 },
+        currentStreak: { type: Number, default: 0 },
+        longestStreak: { type: Number, default: 0 },
+        lastSessionDate: { type: Date },
+        
+        // Weekly goals
+        weeklyGoal: { type: Number, default: 1200 }, // 20 hours in minutes
+        weeklyProgress: { type: Number, default: 0 },
+        goalWeekStart: { type: Date },
+        
+        // Daily stats for bar chart
+        dailyStats: [{
+            date: { type: Date },
+            totalMinutes: { type: Number, default: 0 },
+            sessions: { type: Number, default: 0 },
+            avgFocusScore: { type: Number, default: 0 }
+        }]
+    }
 });
 
 userSchema.pre('save', async function(next) {
