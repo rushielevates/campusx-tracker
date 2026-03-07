@@ -40,12 +40,17 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
     resave: false,
     saveUninitialized: false,
-    name: 'campusx.sid',
+    name: 'connect.sid',
+       genid: (req) => {
+        // Use the ID from cookie if it exists, otherwise generate new
+        const cookieId = req.headers.cookie?.match(/connect\.sid=([^;]+)/)?.[1];
+        return cookieId || require('crypto').randomBytes(16).toString('hex');
+    },
     store: MongoStore.create({
         mongoUrl: process.env.MONGODB_URI,
         collectionName: 'sessions',
-        ttl: 24 * 60 * 60 ,// 1 day in seconds
-        touchAfter: 24 * 3600 
+        ttl: 24 * 60 * 60 // 1 day in seconds
+        
     }),
     cookie: { 
         secure: false, 
@@ -56,6 +61,7 @@ app.use(session({
     rolling: false,                    // ← ADD THIS
     unset: 'destroy'                   // ← ADD THIS
 }));
+
 
 app.get('/debug-mongo', async (req, res) => {
     try {
@@ -85,14 +91,24 @@ app.get('/debug-mongo-sessions', async (req, res) => {
         const db = mongoose.connection.db;
         const sessions = await db.collection('sessions').find({}).toArray();
         
-        const sessionList = sessions.map(s => ({
-            id: s._id,
-            hasUserId: s.session ? JSON.parse(s.session).userId ? true : false : false,
-            age: Date.now() - new Date(s.expires).getTime()
-        }));
+        const sessionList = sessions.map(s => {
+            try {
+                const sessionData = JSON.parse(s.session);
+                return {
+                    id: s._id,
+                    userId: sessionData.userId || null,
+                    expires: s.expires
+                };
+            } catch (e) {
+                return {
+                    id: s._id,
+                    error: 'Could not parse session'
+                };
+            }
+        });
         
         res.json({
-            totalSessions: sessions.length,
+            total: sessions.length,
             sessions: sessionList
         });
     } catch (error) {
