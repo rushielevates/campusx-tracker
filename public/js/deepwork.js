@@ -17,6 +17,16 @@ window.onload = async function() {
 // Check if there's an active session
 async function checkActiveSession() {
     try {
+         // First check localStorage for quick UI restoration
+        const localActive = localStorage.getItem('deepWorkActive');
+        const localSessionId = localStorage.getItem('deepWorkSessionId');
+        const localStartTime = localStorage.getItem('deepWorkStartTime');
+        
+        if (localActive === 'true' && localSessionId && localStartTime) {
+            const elapsedSeconds = Math.floor((Date.now() - parseInt(localStartTime)) / 1000);
+            // Show restoring UI immediately
+            showRestoringUI(localSessionId, elapsedSeconds);
+        }
         const response = await fetch('/api/deepwork/current-session', {
             credentials: 'include'
         });
@@ -30,19 +40,41 @@ async function checkActiveSession() {
                 seconds = data.elapsedSeconds;
                 taskType = data.taskType;
                 taskDescription = data.taskDescription;
+
                 
-                // Update UI
-                document.getElementById('taskDescription').value = taskDescription;
-                document.getElementById('taskType').value = taskType;
+                // Update localStorage with server data
+                localStorage.setItem('deepWorkActive', 'true');
+                localStorage.setItem('deepWorkSessionId', data.sessionId);
+                localStorage.setItem('deepWorkStartTime', Date.now() - (data.elapsedSeconds * 1000));
+                
                 updateTimerDisplay();
-                
-                // Start timer again
                 startTimerFromExisting(data.elapsedSeconds);
+            } else{
+                // Clear localStorage if server says no active session
+                localStorage.removeItem('deepWorkActive');
+                localStorage.removeItem('deepWorkSessionId');
+                localStorage.removeItem('deepWorkStartTime');
             }
         }
     } catch (error) {
         console.error('Error checking active session:', error);
     }
+}
+
+// Helper function for immediate UI feedback
+function showRestoringUI(sessionId, elapsedSeconds) {
+    console.log('Restoring session from localStorage...');
+    document.getElementById('taskDescription').value = 'Restoring...';
+    document.getElementById('taskDescription').disabled = true;
+    document.getElementById('taskType').disabled = true;
+    document.getElementById('startBtn').style.display = 'none';
+    document.getElementById('pauseBtn').style.display = 'inline-block';
+    document.getElementById('stopBtn').style.display = 'inline-block';
+    document.querySelector('.task-input').style.opacity = '0.5';
+    
+    // Show approximate time while waiting for server
+    seconds = elapsedSeconds;
+    updateTimerDisplay();
 }
 
 // Start timer from existing session
@@ -112,7 +144,9 @@ function startTimer() {
         currentSessionId = data.sessionId;
         seconds = 0;
         updateTimerDisplay();
-        
+    localStorage.setItem('deepWorkActive', 'true');
+    localStorage.setItem('deepWorkSessionId', data.sessionId);
+    localStorage.setItem('deepWorkStartTime', Date.now().toString());
         timerInterval = setInterval(() => {
             seconds++;
             updateTimerDisplay();
@@ -129,6 +163,20 @@ function startTimer() {
         console.error('Error starting timer:', error);
         alert('Failed to start timer. Please try again.');
     });
+}
+
+// Add after starting timer
+function startPingInterval() {
+    setInterval(() => {
+        if (currentSessionId) {
+            fetch('/api/deepwork/ping', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sessionId: currentSessionId })
+            }).catch(err => console.log('Ping failed:', err));
+        }
+    }, 30000); // Ping every 30 seconds
 }
 
 function pauseTimer() {
@@ -170,6 +218,9 @@ function stopTimer() {
     .then(data => {
         console.log('Session ended:', data);
         resetTimer();
+    localStorage.removeItem('deepWorkActive');
+    localStorage.removeItem('deepWorkSessionId');
+    localStorage.removeItem('deepWorkStartTime');
         return Promise.all([
             loadWeeklyStats(),
             loadWeeklyReport()
