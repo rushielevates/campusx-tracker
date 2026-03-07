@@ -123,6 +123,53 @@ router.get('/current-session', auth, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+// ===== ADD THIS NEW ENDPOINT HERE =====
+// Get today's stats
+router.get('/today-stats', auth, async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        const todaySessions = await DeepWorkSession.find({
+            userId: req.session.userId,
+            startTime: { $gte: today, $lt: tomorrow }
+        });
+        
+        const totalMinutes = todaySessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+        const avgFocus = todaySessions.length > 0
+            ? Math.round(todaySessions.reduce((sum, s) => sum + (s.focusScore || 0), 0) / todaySessions.length)
+            : 0;
+        
+        // Get current active session
+        const activeSession = await DeepWorkSession.findOne({
+            userId: req.session.userId,
+            activeSession: true
+        });
+        
+        const currentSessionSeconds = activeSession 
+            ? Math.floor((Date.now() - activeSession.startTime) / 1000)
+            : 0;
+        
+        // Get user for streak
+        const user = await User.findById(req.session.userId);
+        const streak = user.deepWorkStats?.currentStreak || 0;
+        
+        res.json({
+            totalMinutes,
+            sessions: todaySessions.length,
+            avgFocus,
+            currentSession: currentSessionSeconds,
+            streak
+        });
+        
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+// ===== END OF NEW ENDPOINT =====
 // Get weekly stats (for bar chart)
 router.get('/weekly-stats', auth, async (req, res) => {
     try {
