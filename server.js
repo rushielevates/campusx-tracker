@@ -38,7 +38,7 @@ app.use(express.urlencoded({ extended: true }));
 // ===== 3. Session middleware =====
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
-    resave: true,
+    resave: false,
     saveUninitialized: false,
     name: 'campusx.sid',
     store: MongoStore.create({
@@ -52,7 +52,9 @@ app.use(session({
         httpOnly: true,
         sameSite: 'none',
         maxAge: 24 * 60 * 60 * 1000
-    }
+    },
+    rolling: false,                    // ← ADD THIS
+    unset: 'destroy'                   // ← ADD THIS
 }));
 
 app.get('/debug-mongo', async (req, res) => {
@@ -75,28 +77,7 @@ app.get('/debug-mongo', async (req, res) => {
 });
 
 // ===== 3.5 SESSION DEBUG MIDDLEWARE =====
-app.use(async (req, res, next) => {
-    if (req.headers.cookie) {
-        console.log('🔍 Cookie received:', req.headers.cookie);
-        console.log('🔍 Session ID from cookie:', req.session?.id);
-        
-        // Force reload session from store to verify
-        if (req.session) {
-            req.session.reload((err) => {
-                if (err) {
-                    console.log('❌ Session reload error:', err);
-                } else {
-                    console.log('✅ Session reloaded - userId:', req.session.userId);
-                }
-                next();
-            });
-        } else {
-            next();
-        }
-    } else {
-        next();
-    }
-});
+
 
 // Add this near your other debug routes
 app.get('/debug-mongo-sessions', async (req, res) => {
