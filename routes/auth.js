@@ -58,4 +58,13 @@ router.get('/user', auth, async (req, res) => {
     }
 });
 
+// Add to routes/auth.js
+router.get('/check', (req, res) => {
+    if (req.session && req.session.userId) {
+        res.json({ authenticated: true });
+    } else {
+        res.status(401).json({ authenticated: false });
+    }
+});
+
 module.exports = router;
