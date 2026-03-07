@@ -1,3 +1,24 @@
+// At the very top of deepwork.js
+async function checkAuth() {
+    try {
+        const response = await fetch('/api/auth/check', {
+            credentials: 'include'
+        });
+        if (!response.ok) {
+            window.location.href = '/';
+        }
+    } catch (error) {
+        window.location.href = '/';
+    }
+}
+
+// Call this first in window.onload
+window.onload = async function() {
+    await checkAuth();
+    await loadUserInfo();
+    await loadWeeklyStats();
+    await loadWeeklyReport();
+};
 // Global variables
 let currentSessionId = null;
 let timerInterval = null;
