@@ -36,8 +36,9 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     cookie: { 
-        secure: false, 
-        httpOnly: true, 
+        secure: true, 
+        httpOnly: true,
+        sameSite: 'none', // Important for cross-origin requests
         maxAge: 24 * 60 * 60 * 1000 
     }
 }));
