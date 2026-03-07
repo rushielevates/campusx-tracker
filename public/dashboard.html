@@ -480,6 +480,7 @@ async function importFromUrl() {
         const response = await fetch('/api/playlists/import', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+             credentials: 'include',
             body: JSON.stringify({ playlistUrl: url }) // Send URL, backend will parse
         });
         
