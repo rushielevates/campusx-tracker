@@ -38,7 +38,7 @@ app.use(express.urlencoded({ extended: true }));
 // ===== 3. Session middleware =====
 app.use(session({
     secret: process.env.SESSION_SECRET || 'your-secret-key',
-    resave: false,
+    resave: true,
     saveUninitialized: false,
     name: 'connect.sid',
     cookie: { 
