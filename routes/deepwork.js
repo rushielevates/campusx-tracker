@@ -222,50 +222,120 @@ router.get('/weekly-stats', auth, async (req, res) => {
 });
 
 // Get weekly report (for Sunday summary)
+// Get weekly report (for Sunday summary)
 router.get('/weekly-report', auth, async (req, res) => {
     try {
         const today = new Date();
-        const startOfWeek = new Date(today);
-        startOfWeek.setDate(today.getDate() - today.getDay()); // Start on Sunday
         
-        const endOfWeek = new Date(startOfWeek);
-        endOfWeek.setDate(startOfWeek.getDate() + 7);
+        // Calculate Monday of current week (assuming week starts Monday)
+        const monday = new Date(today);
+        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Adjust to Monday
+        monday.setDate(today.getDate() - daysToSubtract);
+        monday.setHours(0, 0, 0, 0);
         
+        // Calculate Sunday (end of week)
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+        
+        // Get all sessions for this week
         const sessions = await DeepWorkSession.find({
             userId: req.session.userId,
-            startTime: { $gte: startOfWeek, $lt: endOfWeek }
+            startTime: { $gte: monday, $lte: sunday }
         });
         
+        // Calculate totals
         const totalMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+        const totalHours = (totalMinutes / 60).toFixed(1);
+        const totalSessions = sessions.length;
+        
+        // Calculate average session length
+        const avgSessionMinutes = totalSessions > 0 
+            ? Math.round(totalMinutes / totalSessions) 
+            : 0;
+        
+        // Calculate average focus score
         const avgFocus = sessions.length > 0 
             ? Math.round(sessions.reduce((sum, s) => sum + (s.focusScore || 0), 0) / sessions.length)
             : 0;
         
-        // Group by task type
-        const taskBreakdown = {};
-        sessions.forEach(s => {
-            const type = s.taskType || 'other';
-            if (!taskBreakdown[type]) {
-                taskBreakdown[type] = 0;
-            }
-            taskBreakdown[type] += s.durationMinutes || 0;
-        });
+        // Find best day
+        let bestDay = null;
+        let maxMinutes = 0;
         
-        const bestDay = findBestDay(sessions);
+        if (sessions.length > 0) {
+            const dayTotals = {};
+            sessions.forEach(s => {
+                const dateStr = s.startTime.toDateString();
+                dayTotals[dateStr] = (dayTotals[dateStr] || 0) + (s.durationMinutes || 0);
+            });
+            
+            for (const [dateStr, minutes] of Object.entries(dayTotals)) {
+                if (minutes > maxMinutes) {
+                    maxMinutes = minutes;
+                    const date = new Date(dateStr);
+                    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+                    const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    
+                    bestDay = {
+                        dayName,
+                        date: monthDay,
+                        hours: (minutes / 60).toFixed(1),
+                        minutes,
+                        formatted: `${dayName}, ${monthDay} · ${Math.floor(minutes/60)}h ${minutes%60}m`
+                    };
+                }
+            }
+        }
+        
+        // Calculate weekly streak (consecutive days with sessions)
+        let weeklyStreak = 0;
+        if (sessions.length > 0) {
+            const daysWithSessions = new Set();
+            sessions.forEach(s => {
+                const dateStr = s.startTime.toDateString();
+                daysWithSessions.add(dateStr);
+            });
+            
+            // Check consecutive days from Monday
+            let currentDate = new Date(monday);
+            while (currentDate <= sunday) {
+                const dateStr = currentDate.toDateString();
+                if (daysWithSessions.has(dateStr)) {
+                    weeklyStreak++;
+                } else {
+                    break; // Break on first day without session
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+        }
+        
+        // Format week range for display
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         
         res.json({
-            weekStart: startOfWeek.toISOString().split('T')[0],
-            weekEnd: endOfWeek.toISOString().split('T')[0],
-            totalHours: (totalMinutes / 60).toFixed(1),
-            totalMinutes,
-            sessionsCount: sessions.length,
+            weekStart: monday.toISOString().split('T')[0],
+            weekEnd: sunday.toISOString().split('T')[0],
+            weekRangeDisplay: `${monthNames[monday.getMonth()]} ${monday.getDate()} - ${monthNames[sunday.getMonth()]} ${sunday.getDate()}, ${sunday.getFullYear()}`,
+            totalHours: totalHours,
+            totalMinutes: totalMinutes,
+            sessionsCount: totalSessions,
             avgFocusScore: avgFocus,
-            taskBreakdown,
-            bestDay,
-            goal: { target: 1200, achieved: totalMinutes } // 20 hours default
+            avgSessionMinutes: avgSessionMinutes,
+            avgSessionDisplay: `${Math.floor(avgSessionMinutes/60)}h ${avgSessionMinutes%60}m`,
+            bestDay: bestDay,
+            weeklyStreak: weeklyStreak,
+            goal: { 
+                target: 1500, // 25 hours in minutes
+                achieved: totalMinutes,
+                percentage: Math.round((totalMinutes / 1500) * 100)
+            }
         });
         
     } catch (error) {
+        console.error('Error in weekly report:', error);
         res.status(500).json({ error: error.message });
     }
 });
