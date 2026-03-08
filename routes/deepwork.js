@@ -346,11 +346,6 @@ router.get('/weekly-report', auth, async (req, res) => {
     }
 });
         
-    } catch (error) {
-        console.error('Error in weekly report:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
 
 // Helper function
 function findBestDay(sessions) {
