@@ -402,7 +402,7 @@ async function loadWeeklyReport() {
         document.getElementById('goalPercentage').textContent = (report.goal.percentage || 0) + '%';
         
         // Stats list (vertical)
-        document.getElementById('avgSession').textContent = report.avgSessionDisplay || '0m';
+       document.getElementById('avgSession').textContent = report.avgDailyDisplay || '0m';
         
         if (report.bestDay) {
             document.getElementById('bestDay').textContent = report.bestDay.formatted;
