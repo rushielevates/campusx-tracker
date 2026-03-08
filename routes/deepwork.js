@@ -223,6 +223,7 @@ router.get('/weekly-stats', auth, async (req, res) => {
 
 // Get weekly report (for Sunday summary)
 // Get weekly report (for Sunday summary)
+// Get weekly report (for Sunday summary)
 router.get('/weekly-report', auth, async (req, res) => {
     try {
         const today = new Date();
@@ -250,16 +251,15 @@ router.get('/weekly-report', auth, async (req, res) => {
         const totalHours = (totalMinutes / 60).toFixed(1);
         const totalSessions = sessions.length;
         
-        // Calculate average session length
-// Calculate average PER DAY (total minutes / 7 days)
-const avgDailyMinutes = Math.round(totalMinutes / 7);
-
-// Format for display
-const avgDailyHours = Math.floor(avgDailyMinutes / 60);
-const avgDailyMins = avgDailyMinutes % 60;
-const avgDailyDisplay = avgDailyHours > 0 
-    ? `${avgDailyHours}h ${avgDailyMins}m` 
-    : `${avgDailyMins}m`;
+        // Calculate average PER DAY (total minutes / 7 days)
+        const avgDailyMinutes = Math.round(totalMinutes / 7);
+        
+        // Format for display
+        const avgDailyHours = Math.floor(avgDailyMinutes / 60);
+        const avgDailyMins = avgDailyMinutes % 60;
+        const avgDailyDisplay = avgDailyHours > 0 
+            ? `${avgDailyHours}h ${avgDailyMins}m` 
+            : `${avgDailyMins}m`;
         
         // Calculate average focus score
         const avgFocus = sessions.length > 0 
@@ -327,12 +327,10 @@ const avgDailyDisplay = avgDailyHours > 0
             weekRangeDisplay: `${monthNames[monday.getMonth()]} ${monday.getDate()} - ${monthNames[sunday.getMonth()]} ${sunday.getDate()}, ${sunday.getFullYear()}`,
             totalHours: totalHours,
             totalMinutes: totalMinutes,
-            sessionsCount: totalSessions,
+            sessionsCount: totalSessions,  // ← FIXED: Use totalSessions
             avgFocusScore: avgFocus,
             avgDailyMinutes: avgDailyMinutes,
             avgDailyDisplay: avgDailyDisplay,
-            avgSessionMinutes: avgSessionMinutes,
-            avgSessionDisplay: `${Math.floor(avgSessionMinutes/60)}h ${avgSessionMinutes%60}m`,
             bestDay: bestDay,
             weeklyStreak: weeklyStreak,
             goal: { 
@@ -341,6 +339,12 @@ const avgDailyDisplay = avgDailyHours > 0
                 percentage: Math.round((totalMinutes / 1500) * 100)
             }
         });
+        
+    } catch (error) {
+        console.error('Error in weekly report:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
         
     } catch (error) {
         console.error('Error in weekly report:', error);
