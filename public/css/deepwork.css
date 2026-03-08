@@ -606,12 +606,12 @@ body {
 }
 
 /* Today's Progress Card (keep same) */
-.progress-card:not(.weekly-card) {
+.progress-card:not(.weekly-card):not(.today-gradient-card) {
     background: white;
     color: #333;
 }
 
-.progress-card:not(.weekly-card) .stat-value {
+.progress-card:not(.weekly-card):not(.today-gradient-card) .stat-value {
     color: #333;
 }
 /* ===== TODAY'S GRADIENT CARD (Matching Weekly Style) ===== */
