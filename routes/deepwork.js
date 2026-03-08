@@ -251,9 +251,15 @@ router.get('/weekly-report', auth, async (req, res) => {
         const totalSessions = sessions.length;
         
         // Calculate average session length
-        const avgSessionMinutes = totalSessions > 0 
-            ? Math.round(totalMinutes / totalSessions) 
-            : 0;
+// Calculate average PER DAY (total minutes / 7 days)
+const avgDailyMinutes = Math.round(totalMinutes / 7);
+
+// Format for display
+const avgDailyHours = Math.floor(avgDailyMinutes / 60);
+const avgDailyMins = avgDailyMinutes % 60;
+const avgDailyDisplay = avgDailyHours > 0 
+    ? `${avgDailyHours}h ${avgDailyMins}m` 
+    : `${avgDailyMins}m`;
         
         // Calculate average focus score
         const avgFocus = sessions.length > 0 
@@ -323,6 +329,8 @@ router.get('/weekly-report', auth, async (req, res) => {
             totalMinutes: totalMinutes,
             sessionsCount: totalSessions,
             avgFocusScore: avgFocus,
+            avgDailyMinutes: avgDailyMinutes,
+            avgDailyDisplay: avgDailyDisplay,
             avgSessionMinutes: avgSessionMinutes,
             avgSessionDisplay: `${Math.floor(avgSessionMinutes/60)}h ${avgSessionMinutes%60}m`,
             bestDay: bestDay,
