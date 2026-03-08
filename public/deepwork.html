@@ -100,37 +100,74 @@
     </div>
 
     <!-- Weekly Progress Card -->
-    <div class="progress-card">
-        <div class="card-title">WEEKLY PROGRESS</div>
-        <div class="main-value" id="weeklyTotal">0h</div>
-        
-        <div class="stat-row">
-            <span class="stat-label">Goal</span>
-            <span class="stat-value" id="goalTarget">25h</span>
+    <!-- Weekly Progress Card (Enhanced) -->
+<div class="progress-card weekly-card">
+    <div class="card-title">WEEKLY PROGRESS</div>
+    <div class="week-range" id="weekRange">Loading...</div>
+    
+    <!-- Main Progress -->
+    <div class="main-progress">
+        <div class="progress-numbers">
+            <span class="current-hours" id="weeklyTotal">0h</span>
+            <span class="separator">/</span>
+            <span class="target-hours" id="goalTarget">25h</span>
         </div>
         
         <!-- Progress bar -->
         <div class="goal-progress">
             <div class="progress-fill" id="goalProgressFill" style="width: 0%"></div>
         </div>
+        <div class="progress-percentage" id="goalPercentage">0%</div>
+    </div>
+    
+    <!-- Stats List (Vertical) -->
+    <div class="weekly-stats-list">
+        <!-- Avg Session -->
+        <div class="stat-item">
+            <div class="stat-icon">⏱️</div>
+            <div class="stat-content">
+                <div class="stat-label">Avg Session</div>
+                <div class="stat-value" id="avgSession">0m</div>
+            </div>
+        </div>
         
-        <div class="stat-row">
-            <span class="stat-label">Complete</span>
-            <span class="stat-value" id="goalPercentage">0%</span>
+        <!-- Best Day -->
+        <div class="stat-item">
+            <div class="stat-icon">📊</div>
+            <div class="stat-content">
+                <div class="stat-label">Best Day</div>
+                <div class="stat-value" id="bestDay">-</div>
+            </div>
         </div>
-        <div class="stat-row">
-            <span class="stat-label">Remaining</span>
-            <span class="stat-value" id="goalRemaining">25h</span>
+        
+        <!-- Weekly Streak -->
+        <div class="stat-item">
+            <div class="stat-icon">🔥</div>
+            <div class="stat-content">
+                <div class="stat-label">Weekly Streak</div>
+                <div class="stat-value" id="weeklyStreak">0 days</div>
+            </div>
         </div>
-        <div class="stat-row">
-            <span class="stat-label">Sessions</span>
-            <span class="stat-value" id="weeklySessions">0</span>
+        
+        <!-- Total Sessions -->
+        <div class="stat-item">
+            <div class="stat-icon">📈</div>
+            <div class="stat-content">
+                <div class="stat-label">Total Sessions</div>
+                <div class="stat-value" id="weeklySessions">0</div>
+            </div>
         </div>
-        <div class="stat-row">
-            <span class="stat-label">Avg Focus</span>
-            <span class="stat-value" id="weeklyAvgFocus">0%</span>
+        
+        <!-- Avg Focus Score -->
+        <div class="stat-item">
+            <div class="stat-icon">🎯</div>
+            <div class="stat-content">
+                <div class="stat-label">Avg Focus</div>
+                <div class="stat-value" id="weeklyAvgFocus">0%</div>
+            </div>
         </div>
     </div>
+</div>
 </div>
 
             <!-- Goal Setting -->
