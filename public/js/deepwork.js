@@ -378,6 +378,7 @@ function showMockChart() {
 }
 
 // ===== WEEKLY REPORT =====
+// ===== WEEKLY REPORT =====
 async function loadWeeklyReport() {
     try {
         console.log('Loading weekly report...');
@@ -392,32 +393,39 @@ async function loadWeeklyReport() {
         const report = await response.json();
         console.log('Weekly report:', report);
         
-        // ===== UPDATED TO USE NEW CARD ELEMENTS =====
+        // Update week range
+        document.getElementById('weekRange').textContent = report.weekRangeDisplay || 'This Week';
+        
+        // Main progress
         document.getElementById('weeklyTotal').textContent = report.totalHours + 'h';
-        document.getElementById('weeklySessions').textContent = report.sessionsCount || '0';
-        document.getElementById('weeklyAvgFocus').textContent = (report.avgFocusScore || '0') + '%';
+        document.getElementById('goalProgressFill').style.width = (report.goal.percentage || 0) + '%';
+        document.getElementById('goalPercentage').textContent = (report.goal.percentage || 0) + '%';
         
-        // Update goal display (using 25 hours = 1500 minutes as default)
-        const goalMinutes = 1500; // 25 hours
-        const goalProgress = ((report.totalMinutes || 0) / goalMinutes) * 100;
-        document.getElementById('goalProgressFill').style.width = Math.min(goalProgress, 100) + '%';
-        document.getElementById('goalPercentage').textContent = Math.min(goalProgress, 100).toFixed(0) + '%';
+        // Stats list (vertical)
+        document.getElementById('avgSession').textContent = report.avgSessionDisplay || '0m';
         
-        const remainingMinutes = Math.max(0, goalMinutes - (report.totalMinutes || 0));
-        const remainingHours = Math.floor(remainingMinutes / 60);
-        const remainingMins = remainingMinutes % 60;
-        document.getElementById('goalRemaining').textContent = 
-            remainingHours > 0 ? `${remainingHours}h ${remainingMins}m` : `${remainingMins}m`;
+        if (report.bestDay) {
+            document.getElementById('bestDay').textContent = report.bestDay.formatted;
+        } else {
+            document.getElementById('bestDay').textContent = 'No data';
+        }
+        
+        document.getElementById('weeklyStreak').textContent = (report.weeklyStreak || 0) + ' days';
+        document.getElementById('weeklySessions').textContent = report.sessionsCount || 0;
+        document.getElementById('weeklyAvgFocus').textContent = (report.avgFocusScore || 0) + '%';
         
     } catch (error) {
         console.error('Error loading weekly report:', error);
-        // Fallback values for new structure
+        // Fallback values
+        document.getElementById('weekRange').textContent = 'This Week';
         document.getElementById('weeklyTotal').textContent = '0h';
-        document.getElementById('weeklySessions').textContent = '0';
-        document.getElementById('weeklyAvgFocus').textContent = '0%';
         document.getElementById('goalProgressFill').style.width = '0%';
         document.getElementById('goalPercentage').textContent = '0%';
-        document.getElementById('goalRemaining').textContent = '25h';
+        document.getElementById('avgSession').textContent = '0m';
+        document.getElementById('bestDay').textContent = 'No data';
+        document.getElementById('weeklyStreak').textContent = '0 days';
+        document.getElementById('weeklySessions').textContent = '0';
+        document.getElementById('weeklyAvgFocus').textContent = '0%';
     }
 }
 
