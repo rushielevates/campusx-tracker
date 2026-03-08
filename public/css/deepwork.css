@@ -337,6 +337,11 @@ body {
     padding: 20px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
+/* Make sure gradient cards override the white background */
+.progress-card.today-gradient-card,
+.progress-card.weekly-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
 
 .card-title {
     font-size: 13px;
