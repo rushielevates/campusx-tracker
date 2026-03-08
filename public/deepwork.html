@@ -77,27 +77,49 @@
 <!-- Today's Progress & Weekly Progress Cards -->
 <div class="progress-row">
     <!-- Today's Progress Card -->
-    <div class="progress-card">
-        <div class="card-title">TODAY'S PROGRESS</div>
-        <div class="main-value" id="todayTotal">0h 0m</div>
+    <!-- Today's Progress Card -->
+<div class="progress-card today-card">
+    <div class="card-title">TODAY'S PROGRESS</div>
+    <div class="main-value" id="todayTotal">0h 0m</div>
+    
+    <div class="today-stats-list">
+        <!-- Current Session -->
+        <div class="today-stat-item">
+            <div class="today-stat-icon">⏱️</div>
+            <div class="today-stat-content">
+                <div class="today-stat-label">Current Session</div>
+                <div class="today-stat-value" id="currentSession">Not active</div>
+            </div>
+        </div>
         
-        <div class="stat-row">
-            <span class="stat-label">Current Session</span>
-            <span class="stat-value" id="currentSession">0m</span>
+        <!-- Focus Score -->
+        <div class="today-stat-item">
+            <div class="today-stat-icon">🎯</div>
+            <div class="today-stat-content">
+                <div class="today-stat-label">Focus Score</div>
+                <div class="today-stat-value" id="todayFocus">0%</div>
+            </div>
         </div>
-        <div class="stat-row">
-            <span class="stat-label">Focus Score</span>
-            <span class="stat-value" id="todayFocus">0%</span>
+        
+        <!-- Sessions Today -->
+        <div class="today-stat-item">
+            <div class="today-stat-icon">📊</div>
+            <div class="today-stat-content">
+                <div class="today-stat-label">Sessions Today</div>
+                <div class="today-stat-value" id="todaySessions">0</div>
+            </div>
         </div>
-        <div class="stat-row">
-            <span class="stat-label">Sessions Today</span>
-            <span class="stat-value" id="todaySessions">0</span>
-        </div>
-        <div class="stat-row">
-            <span class="stat-label">Current Streak</span>
-            <span class="stat-value" id="currentStreak">0 days 🔥</span>
+        
+        <!-- Current Streak -->
+        <div class="today-stat-item">
+            <div class="today-stat-icon">🔥</div>
+            <div class="today-stat-content">
+                <div class="today-stat-label">Current Streak</div>
+                <div class="today-stat-value" id="currentStreak">0 days</div>
+            </div>
         </div>
     </div>
+</div>
 
     <!-- Weekly Progress Card -->
     <!-- Weekly Progress Card (Enhanced) -->
