@@ -490,3 +490,122 @@ body {
     background: #667eea;
     color: white;
 }
+/* Weekly Card Specific Styles */
+.weekly-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.weekly-card .card-title {
+    color: rgba(255,255,255,0.9);
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.week-range {
+    font-size: 12px;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 20px;
+}
+
+.main-progress {
+    margin-bottom: 25px;
+}
+
+.progress-numbers {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 5px;
+    margin-bottom: 10px;
+}
+
+.current-hours {
+    font-size: 32px;
+    font-weight: 600;
+    color: white;
+}
+
+.separator {
+    font-size: 20px;
+    color: rgba(255,255,255,0.5);
+}
+
+.target-hours {
+    font-size: 20px;
+    color: rgba(255,255,255,0.7);
+}
+
+.goal-progress {
+    height: 8px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 10px 0 5px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: white;
+    border-radius: 4px;
+    transition: width 0.3s;
+}
+
+.progress-percentage {
+    text-align: right;
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+}
+
+/* Vertical Stats List */
+.weekly-stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 10px;
+}
+
+.stat-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.stat-icon {
+    font-size: 20px;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.1);
+    border-radius: 8px;
+}
+
+.stat-content {
+    flex: 1;
+}
+
+.stat-label {
+    font-size: 12px;
+    color: rgba(255,255,255,0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.stat-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: white;
+}
+
+/* Today's Progress Card (keep same) */
+.progress-card:not(.weekly-card) {
+    background: white;
+    color: #333;
+}
+
+.progress-card:not(.weekly-card) .stat-value {
+    color: #333;
+}
