@@ -57,15 +57,39 @@
                 <div class="task-input" id="taskInput">
                     <input type="text" id="taskDescription" placeholder="What are you working on?">
                     <select id="taskType">
-                        <option value="coding">💻 Coding</option>
-                        <option value="reading">📚 Reading</option>
-                        <option value="studying">🎓 Studying</option>
-                        <option value="writing">✍️ Writing</option>
-                        <option value="planning">📋 Planning</option>
-                        <option value="other">⚙️ Other</option>
                     </select>
                 </div>
+                <!-- Task Type Management Button -->
+<button class="manage-tasks-btn" onclick="showTaskManager()">
+    <span>⚙️</span> Manage Tasks
+</button>
+
+<!-- Task Manager Modal -->
+<div class="modal" id="taskManagerModal">
+    <div class="modal-content task-manager-content">
+        <h3>Manage Task Types</h3>
+        
+        <div class="task-list" id="taskList">
+            <!-- Tasks will be loaded here -->
+        </div>
+        
+        <div class="add-task-form">
+            <h4>Add New Task Type</h4>
+            <input type="text" id="newTaskName" placeholder="Task name (e.g., Design)">
+            <div class="task-customization">
+                <input type="text" id="newTaskIcon" placeholder="Icon (e.g., 🎨)" maxlength="2">
+                <input type="color" id="newTaskColor" value="#667eea">
             </div>
+            <button onclick="addNewTask()" class="primary">Add Task</button>
+        </div>
+        
+        <div class="modal-buttons">
+            <button onclick="closeTaskManager()">Done</button>
+        </div>
+    </div>
+</div>
+            </div>
+            
 
             <!-- Weekly Bar Chart -->
             <div class="chart-section">
