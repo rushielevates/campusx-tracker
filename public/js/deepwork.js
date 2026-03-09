@@ -548,6 +548,239 @@ document.getElementById('goalSlider').addEventListener('change', function(e) {
     const hours = e.target.value;
     updateGoal(hours);
 });
+// ===== TASK TYPE MANAGEMENT =====
+
+// Load task types into dropdown
+async function loadTaskTypes() {
+    try {
+        const response = await fetch('/api/deepwork/task-types', {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const taskTypes = data.taskTypes;
+            
+            // Sort by order
+            taskTypes.sort((a, b) => (a.order || 0) - (b.order || 0));
+            
+            // Update dropdown
+            const select = document.getElementById('taskType');
+            select.innerHTML = taskTypes.map(task => 
+                `<option value="${task.id}" style="color: ${task.color}">${task.icon} ${task.name}</option>`
+            ).join('');
+            
+            // Store for later use
+            window.taskTypes = taskTypes;
+        }
+    } catch (error) {
+        console.error('Error loading task types:', error);
+    }
+}
+
+// Show task manager modal
+function showTaskManager() {
+    loadTaskList();
+    document.getElementById('taskManagerModal').style.display = 'block';
+}
+
+function closeTaskManager() {
+    document.getElementById('taskManagerModal').style.display = 'none';
+}
+
+// Load task list in manager
+async function loadTaskList() {
+    try {
+        const response = await fetch('/api/deepwork/task-types', {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const taskTypes = data.taskTypes;
+            
+            taskTypes.sort((a, b) => (a.order || 0) - (b.order || 0));
+            
+            const taskList = document.getElementById('taskList');
+            taskList.innerHTML = taskTypes.map(task => `
+                <div class="task-item" data-id="${task.id}">
+                    <div class="task-drag">⋮⋮</div>
+                    <div class="task-icon" style="background: ${task.color}20; color: ${task.color}">
+                        ${task.icon}
+                    </div>
+                    <input type="text" class="task-name" value="${task.name}" 
+                           onchange="updateTask('${task.id}', this.value)">
+                    <input type="color" class="task-color" value="${task.color}" 
+                           onchange="updateTaskColor('${task.id}', this.value)">
+                    <button class="task-delete" onclick="deleteTask('${task.id}')" 
+                            ${['coding','reading','studying','writing','planning','other'].includes(task.id) ? 'disabled' : ''}>
+                        🗑️
+                    </button>
+                </div>
+            `).join('');
+            
+            // Make sortable
+            makeTaskSortable();
+        }
+    } catch (error) {
+        console.error('Error loading task list:', error);
+    }
+}
+
+// Add new task
+async function addNewTask() {
+    const name = document.getElementById('newTaskName').value.trim();
+    const icon = document.getElementById('newTaskIcon').value || '⚙️';
+    const color = document.getElementById('newTaskColor').value;
+    
+    if (!name) {
+        alert('Please enter a task name');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/deepwork/task-types/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ name, icon, color })
+        });
+        
+        if (response.ok) {
+            document.getElementById('newTaskName').value = '';
+            document.getElementById('newTaskIcon').value = '';
+            await loadTaskList();
+            await loadTaskTypes(); // Update dropdown
+        } else {
+            const error = await response.json();
+            alert('Error: ' + error.error);
+        }
+    } catch (error) {
+        console.error('Error adding task:', error);
+    }
+}
+
+// Update task
+async function updateTask(id, newName) {
+    try {
+        await fetch(`/api/deepwork/task-types/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ name: newName })
+        });
+        await loadTaskTypes(); // Update dropdown
+    } catch (error) {
+        console.error('Error updating task:', error);
+    }
+}
+
+async function updateTaskColor(id, color) {
+    try {
+        await fetch(`/api/deepwork/task-types/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ color })
+        });
+        await loadTaskTypes(); // Update dropdown
+    } catch (error) {
+        console.error('Error updating task color:', error);
+    }
+}
+
+// Delete task
+async function deleteTask(id) {
+    if (!confirm('Are you sure you want to delete this task type?')) return;
+    
+    try {
+        const response = await fetch(`/api/deepwork/task-types/${id}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            await loadTaskList();
+            await loadTaskTypes(); // Update dropdown
+        } else {
+            const error = await response.json();
+            alert('Error: ' + error.error);
+        }
+    } catch (error) {
+        console.error('Error deleting task:', error);
+    }
+}
+
+// Make tasks sortable
+function makeTaskSortable() {
+    const taskList = document.getElementById('taskList');
+    let draggedItem = null;
+    
+    taskList.querySelectorAll('.task-item').forEach(item => {
+        item.draggable = true;
+        
+        item.addEventListener('dragstart', (e) => {
+            draggedItem = item;
+            item.style.opacity = '0.5';
+        });
+        
+        item.addEventListener('dragend', (e) => {
+            item.style.opacity = '1';
+        });
+        
+        item.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+        
+        item.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (draggedItem && draggedItem !== item) {
+                const children = [...taskList.children];
+                const draggedIndex = children.indexOf(draggedItem);
+                const targetIndex = children.indexOf(item);
+                
+                if (draggedIndex < targetIndex) {
+                    taskList.insertBefore(draggedItem, item.nextSibling);
+                } else {
+                    taskList.insertBefore(draggedItem, item);
+                }
+                
+                // Save new order
+                saveTaskOrder();
+            }
+        });
+    });
+}
+
+// Save task order
+async function saveTaskOrder() {
+    const taskList = document.getElementById('taskList');
+    const orderedIds = [...taskList.children].map(item => item.dataset.id);
+    
+    try {
+        await fetch('/api/deepwork/task-types/reorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ orderedIds })
+        });
+        await loadTaskTypes(); // Update dropdown with new order
+    } catch (error) {
+        console.error('Error saving order:', error);
+    }
+}
+
+// Update window.onload to load task types
+window.onload = async function() {
+    console.log('Deep Work page loaded');
+    await loadUserInfo();
+    await loadTaskTypes();  // ← ADD THIS
+    await checkActiveSession();
+    await loadWeeklyStats();
+    await loadWeeklyReport();
+    await loadTodayProgress();
+    await loadUserGoal();
+};
 // ===== LOGOUT =====
 async function logout() {
     try {
