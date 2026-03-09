@@ -45,8 +45,28 @@ const userSchema = new mongoose.Schema({
             totalMinutes: { type: Number, default: 0 },
             sessions: { type: Number, default: 0 },
             avgFocusScore: { type: Number, default: 0 }
-        }]
+        }],
+        // new task
+            customTaskTypes: {
+        type: [{
+            id: { type: String, required: true },
+            name: { type: String, required: true },
+            icon: { type: String, default: '⚙️' },
+            color: { type: String, default: '#667eea' },
+            isActive: { type: Boolean, default: true },
+            order: { type: Number, default: 0 }
+        }],
+        default: [
+            { id: 'coding', name: 'Coding', icon: '💻', color: '#28a745', order: 1 },
+            { id: 'reading', name: 'Reading', icon: '📚', color: '#17a2b8', order: 2 },
+            { id: 'studying', name: 'Studying', icon: '🎓', color: '#ffc107', order: 3 },
+            { id: 'writing', name: 'Writing', icon: '✍️', color: '#dc3545', order: 4 },
+            { id: 'planning', name: 'Planning', icon: '📋', color: '#6f42c1', order: 5 },
+            { id: 'other', name: 'Other', icon: '⚙️', color: '#6c757d', order: 6 }
+        ]
     }
+    }
+
 });
 
 userSchema.pre('save', async function(next) {
