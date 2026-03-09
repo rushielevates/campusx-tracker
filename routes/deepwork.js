@@ -346,7 +346,51 @@ router.get('/weekly-report', auth, async (req, res) => {
     }
 });
         
+// ===== GOAL MANAGEMENT ENDPOINTS =====
 
+// Get user's current goal
+router.get('/get-goal', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.session.userId);
+        const weeklyGoal = user.deepWorkStats?.weeklyGoal || 1500;
+        
+        res.json({
+            weeklyGoal: weeklyGoal,
+            weeklyGoalHours: (weeklyGoal / 60).toFixed(1)
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Set user's weekly goal
+router.post('/set-goal', auth, async (req, res) => {
+    try {
+        const { weeklyGoalMinutes } = req.body;
+        
+        // Validate (between 1 and 100 hours)
+        if (weeklyGoalMinutes < 60 || weeklyGoalMinutes > 6000) {
+            return res.status(400).json({ error: 'Goal must be between 1 and 100 hours' });
+        }
+        
+        const user = await User.findById(req.session.userId);
+        
+        if (!user.deepWorkStats) {
+            user.deepWorkStats = {};
+        }
+        
+        user.deepWorkStats.weeklyGoal = weeklyGoalMinutes;
+        await user.save();
+        
+        res.json({ 
+            success: true, 
+            weeklyGoal: weeklyGoalMinutes,
+            weeklyGoalHours: (weeklyGoalMinutes / 60).toFixed(1)
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 // Helper function
 function findBestDay(sessions) {
     if (sessions.length === 0) return null;
