@@ -412,8 +412,6 @@ async function loadWeeklyReport() {
         }
         
         document.getElementById('weeklyStreak').textContent = (report.weeklyStreak || 0) + ' days';
-        document.getElementById('weeklySessions').textContent = report.sessionsCount || 0;
-        document.getElementById('weeklyAvgFocus').textContent = (report.avgFocusScore || 0) + '%';
         
     } catch (error) {
         console.error('Error loading weekly report:', error);
@@ -425,8 +423,7 @@ async function loadWeeklyReport() {
         document.getElementById('avgSession').textContent = '0m';
         document.getElementById('bestDay').textContent = 'No data';
         document.getElementById('weeklyStreak').textContent = '0 days';
-        document.getElementById('weeklySessions').textContent = '0';
-        document.getElementById('weeklyAvgFocus').textContent = '0%';
+
     }
 }
 
@@ -477,10 +474,17 @@ async function loadTodayProgress() {
 
 // ===== UPDATE Weekly Report Display =====
 function updateWeeklyReportDisplay(report) {
-    document.getElementById('weeklyTotal').textContent = report.totalHours + 'h';
-    document.getElementById('weeklySessions').textContent = report.sessionsCount;
-    document.getElementById('weeklyAvgFocus').textContent = (report.avgFocusScore || '0') + '%';
+      document.getElementById('weeklyTotal').textContent = report.totalHours + 'h';
     
+    // KEEP THIS - Avg Session
+    document.getElementById('avgSession').textContent = report.avgDailyDisplay || '0m';
+        if (report.bestDay) {
+        document.getElementById('bestDay').textContent = report.bestDay.formatted;
+    } else {
+        document.getElementById('bestDay').textContent = 'No data';
+    }
+    
+    document.getElementById('weeklyStreak').textContent = (report.weeklyStreak || 0) + ' days';
     // Update goal display - USING USER'S GOAL FROM REPORT
     const goalMinutes = report.goal.target;  // ← NOW USING USER'S ACTUAL GOAL
     const goalProgress = ((report.totalMinutes || 0) / goalMinutes) * 100;
