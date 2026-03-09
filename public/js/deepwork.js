@@ -589,6 +589,7 @@ function closeTaskManager() {
 }
 
 // Load task list in manager
+// Load task list in manager
 async function loadTaskList() {
     try {
         const response = await fetch('/api/deepwork/task-types', {
@@ -602,7 +603,8 @@ async function loadTaskList() {
             taskTypes.sort((a, b) => (a.order || 0) - (b.order || 0));
             
             const taskList = document.getElementById('taskList');
-            taskList.innerHTML = taskTypes.map(task => `
+            taskList.innerHTML = taskTypes.map(task => {
+                return `
                 <div class="task-item" data-id="${task.id}">
                     <div class="task-drag">⋮⋮</div>
                     <div class="task-icon" style="background: ${task.color}20; color: ${task.color}">
@@ -612,12 +614,11 @@ async function loadTaskList() {
                            onchange="updateTask('${task.id}', this.value)">
                     <input type="color" class="task-color" value="${task.color}" 
                            onchange="updateTaskColor('${task.id}', this.value)">
-                    <button class="task-delete" onclick="deleteTask('${task.id}')" 
-                            ${['coding','reading','studying','writing','planning','other'].includes(task.id) ? 'disabled' : ''}>
+                    <button class="task-delete" onclick="deleteTask('${task.id}')">
                         🗑️
                     </button>
                 </div>
-            `).join('');
+            `}).join('');
             
             // Make sortable
             makeTaskSortable();
