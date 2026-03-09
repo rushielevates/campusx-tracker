@@ -188,25 +188,23 @@ router.put('/task-types/:id', auth, async (req, res) => {
 });
 
 // Delete task type
+// Delete task type - NOW ALLOWS DELETING ANY TASK
 router.delete('/task-types/:id', auth, async (req, res) => {
     try {
         const { id } = req.params;
         
         const user = await User.findById(req.session.userId);
         
-        // Don't allow deleting default types? Or allow but warn
-        const isDefault = ['coding', 'reading', 'studying', 'writing', 'planning', 'other'].includes(id);
+        // REMOVED the default task check - now allows deleting any task
         
-        if (isDefault) {
-            return res.status(400).json({ 
-                error: 'Cannot delete default task types. You can deactivate them instead.' 
-            });
+        const taskIndex = user.deepWorkStats.customTaskTypes.findIndex(t => t.id === id);
+        
+        if (taskIndex === -1) {
+            return res.status(404).json({ error: 'Task type not found' });
         }
         
-        user.deepWorkStats.customTaskTypes = user.deepWorkStats.customTaskTypes.filter(
-            t => t.id !== id
-        );
-        
+        // Remove the task completely
+        user.deepWorkStats.customTaskTypes.splice(taskIndex, 1);
         await user.save();
         
         res.json({ success: true, message: 'Task type deleted' });
