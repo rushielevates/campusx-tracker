@@ -418,9 +418,15 @@ async function updateUserDeepWorkStats(userId, session) {
     todayStats.avgFocusScore = Math.round(totalFocus / allTodaySessions.length);
     
     // Update streak
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
+   // ===== FIXED STREAK UPDATE CODE =====
+// Update streak - ONLY ONCE PER DAY
+const yesterday = new Date(today);
+yesterday.setDate(yesterday.getDate() - 1);
+
+// Check if this is the first session of the day
+const isFirstSessionToday = todayStats.sessions === 1;
+
+if (isFirstSessionToday) {
     const hadSessionYesterday = user.deepWorkStats.dailyStats.some(d => 
         new Date(d.date).setHours(0,0,0,0) === yesterday.getTime() && d.totalMinutes > 0
     );
@@ -430,6 +436,8 @@ async function updateUserDeepWorkStats(userId, session) {
     } else {
         user.deepWorkStats.currentStreak = 1;
     }
+}
+// ===== END OF FIXED CODE =====
     
     user.deepWorkStats.longestStreak = Math.max(
         user.deepWorkStats.longestStreak,
