@@ -33,7 +33,7 @@ const userSchema = new mongoose.Schema({
         currentStreak: { type: Number, default: 0 },
         longestStreak: { type: Number, default: 0 },
         lastSessionDate: { type: Date },
-        
+        lastStreakUpdate: { type: Date },  // ← ADD THIS
         // Weekly goals
         weeklyGoal: { type: Number, default: 1200 }, // 20 hours in minutes
         weeklyProgress: { type: Number, default: 0 },
