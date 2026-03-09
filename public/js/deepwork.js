@@ -13,6 +13,7 @@ window.onload = async function() {
     await loadWeeklyStats();
     await loadWeeklyReport();
     await loadTodayProgress();
+    await loadUserGoal();  // ← ADD THIS LINE
 };
 
 // Check if there's an active session
@@ -480,11 +481,16 @@ function updateWeeklyReportDisplay(report) {
     document.getElementById('weeklySessions').textContent = report.sessionsCount;
     document.getElementById('weeklyAvgFocus').textContent = (report.avgFocusScore || '0') + '%';
     
-    // Update goal display
-    const goalMinutes = 1500; // 25 hours default
+    // Update goal display - USING USER'S GOAL FROM REPORT
+    const goalMinutes = report.goal.target;  // ← NOW USING USER'S ACTUAL GOAL
     const goalProgress = ((report.totalMinutes || 0) / goalMinutes) * 100;
     document.getElementById('goalProgressFill').style.width = Math.min(goalProgress, 100) + '%';
     document.getElementById('goalPercentage').textContent = Math.min(goalProgress, 100).toFixed(0) + '%';
+    
+    // Update target display
+    document.getElementById('goalTarget').textContent = Math.round(goalMinutes / 60) + 'h';
+    document.getElementById('goalValue').textContent = Math.round(goalMinutes / 60) + 'h';
+    document.getElementById('goalSlider').value = Math.round(goalMinutes / 60);
     
     const remainingMinutes = Math.max(0, goalMinutes - (report.totalMinutes || 0));
     const remainingHours = Math.floor(remainingMinutes / 60);
@@ -513,7 +519,60 @@ function setGoal() {
         alert('Please enter a valid goal (1-100 hours)');
     }
 }
+// ===== GOAL FUNCTIONS =====
+async function loadUserGoal() {
+    try {
+        const response = await fetch('/api/deepwork/get-goal', {
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const goalHours = Math.round(data.weeklyGoal / 60);
+            
+            document.getElementById('goalTarget').textContent = goalHours + 'h';
+            document.getElementById('goalValue').textContent = goalHours + 'h';
+            document.getElementById('goalSlider').value = goalHours;
+        }
+    } catch (error) {
+        console.error('Error loading goal:', error);
+    }
+}
 
+async function updateGoal(hours) {
+    try {
+        const weeklyGoalMinutes = hours * 60;
+        
+        const response = await fetch('/api/deepwork/set-goal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ weeklyGoalMinutes })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('goalTarget').textContent = data.weeklyGoalHours + 'h';
+            document.getElementById('goalValue').textContent = data.weeklyGoalHours + 'h';
+            
+            // Refresh weekly report to update percentage
+            await loadWeeklyReport();
+        }
+    } catch (error) {
+        console.error('Error updating goal:', error);
+    }
+}
+
+// Add event listener for slider
+document.getElementById('goalSlider').addEventListener('input', function(e) {
+    const hours = e.target.value;
+    document.getElementById('goalValue').textContent = hours + 'h';
+});
+
+document.getElementById('goalSlider').addEventListener('change', function(e) {
+    const hours = e.target.value;
+    updateGoal(hours);
+});
 // ===== LOGOUT =====
 async function logout() {
     try {
