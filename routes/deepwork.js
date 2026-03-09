@@ -333,8 +333,7 @@ router.get('/weekly-report', auth, async (req, res) => {
             weekRangeDisplay: `${monthNames[monday.getMonth()]} ${monday.getDate()} - ${monthNames[sunday.getMonth()]} ${sunday.getDate()}, ${sunday.getFullYear()}`,
             totalHours: totalHours,
             totalMinutes: totalMinutes,
-            avgFocusScore: avgFocus,
-            avgDailyMinutes: avgDailyMinutes,
+            avgDailyDisplay: avgDailyDisplay,
             bestDay: bestDay,
             weeklyStreak: weeklyStreak,
             goal: { 
