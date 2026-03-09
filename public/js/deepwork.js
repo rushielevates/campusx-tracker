@@ -690,6 +690,7 @@ async function updateTaskColor(id, color) {
 }
 
 // Delete task
+// Delete task - NOW ALLOWS DELETING ANY TASK
 async function deleteTask(id) {
     if (!confirm('Are you sure you want to delete this task type?')) return;
     
