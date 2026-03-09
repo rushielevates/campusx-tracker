@@ -96,6 +96,153 @@ router.get('/test-auth', auth, (req, res) => {
         sessionId: req.session.id 
     });
 });
+// ===== TASK TYPE MANAGEMENT ENDPOINTS =====
+
+// Get user's custom task types
+router.get('/task-types', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.session.userId);
+        const taskTypes = user.deepWorkStats?.customTaskTypes || [];
+        
+        res.json({ taskTypes });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Add new task type
+router.post('/task-types/add', auth, async (req, res) => {
+    try {
+        const { name, icon, color } = req.body;
+        
+        if (!name || name.trim() === '') {
+            return res.status(400).json({ error: 'Task type name is required' });
+        }
+        
+        const user = await User.findById(req.session.userId);
+        
+        if (!user.deepWorkStats) {
+            user.deepWorkStats = {};
+        }
+        if (!user.deepWorkStats.customTaskTypes) {
+            user.deepWorkStats.customTaskTypes = [];
+        }
+        
+        // Generate unique ID
+        const newId = name.toLowerCase().replace(/\s+/g, '-') + '-' + Date.now();
+        
+        // Get max order
+        const maxOrder = user.deepWorkStats.customTaskTypes.reduce(
+            (max, t) => Math.max(max, t.order || 0), 0
+        );
+        
+        const newTaskType = {
+            id: newId,
+            name: name.trim(),
+            icon: icon || '⚙️',
+            color: color || '#667eea',
+            isActive: true,
+            order: maxOrder + 1
+        };
+        
+        user.deepWorkStats.customTaskTypes.push(newTaskType);
+        await user.save();
+        
+        res.json({ 
+            success: true, 
+            taskType: newTaskType,
+            message: 'Task type added successfully'
+        });
+        
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Edit task type
+router.put('/task-types/:id', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, icon, color, isActive } = req.body;
+        
+        const user = await User.findById(req.session.userId);
+        
+        const taskType = user.deepWorkStats?.customTaskTypes?.find(t => t.id === id);
+        
+        if (!taskType) {
+            return res.status(404).json({ error: 'Task type not found' });
+        }
+        
+        if (name) taskType.name = name;
+        if (icon) taskType.icon = icon;
+        if (color) taskType.color = color;
+        if (isActive !== undefined) taskType.isActive = isActive;
+        
+        await user.save();
+        
+        res.json({ success: true, taskType });
+        
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Delete task type
+router.delete('/task-types/:id', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const user = await User.findById(req.session.userId);
+        
+        // Don't allow deleting default types? Or allow but warn
+        const isDefault = ['coding', 'reading', 'studying', 'writing', 'planning', 'other'].includes(id);
+        
+        if (isDefault) {
+            return res.status(400).json({ 
+                error: 'Cannot delete default task types. You can deactivate them instead.' 
+            });
+        }
+        
+        user.deepWorkStats.customTaskTypes = user.deepWorkStats.customTaskTypes.filter(
+            t => t.id !== id
+        );
+        
+        await user.save();
+        
+        res.json({ success: true, message: 'Task type deleted' });
+        
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Reorder task types
+router.post('/task-types/reorder', auth, async (req, res) => {
+    try {
+        const { orderedIds } = req.body; // Array of task type IDs in new order
+        
+        const user = await User.findById(req.session.userId);
+        
+        // Create map of existing tasks
+        const taskMap = {};
+        user.deepWorkStats.customTaskTypes.forEach(t => {
+            taskMap[t.id] = t;
+        });
+        
+        // Reorder based on provided IDs
+        const reordered = orderedIds.map((id, index) => {
+            return { ...taskMap[id], order: index + 1 };
+        });
+        
+        user.deepWorkStats.customTaskTypes = reordered;
+        await user.save();
+        
+        res.json({ success: true });
+        
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 // Get current active session
 router.get('/current-session', auth, async (req, res) => {
     try {
