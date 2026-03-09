@@ -333,11 +333,15 @@ router.get('/weekly-report', auth, async (req, res) => {
             avgDailyDisplay: avgDailyDisplay,
             bestDay: bestDay,
             weeklyStreak: weeklyStreak,
-            goal: { 
-                target: 1500, // 25 hours in minutes
-                achieved: totalMinutes,
-                percentage: Math.round((totalMinutes / 1500) * 100)
-            }
+// Get user's weekly goal
+             const user = await User.findById(req.session.userId);
+             const weeklyGoal = user.deepWorkStats?.weeklyGoal || 1500;
+
+              goal: { 
+                     target: weeklyGoal,
+                     achieved: totalMinutes,
+                     percentage: Math.round((totalMinutes / weeklyGoal) * 100)
+             }
         });
         
     } catch (error) {
