@@ -753,3 +753,135 @@ body {
     font-size: 10px;
     color: rgba(255,255,255,0.5);
 }
+/* Task Manager Styles */
+.manage-tasks-btn {
+    margin: 10px auto;
+    padding: 8px 16px;
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid #667eea;
+    border-radius: 20px;
+    color: #667eea;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    transition: all 0.2s;
+}
+
+.manage-tasks-btn:hover {
+    background: #667eea;
+    color: white;
+}
+
+.task-manager-content {
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.task-list {
+    margin: 20px 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: move;
+}
+
+.task-drag {
+    color: #999;
+    font-size: 18px;
+    cursor: grab;
+}
+
+.task-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.task-name {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.task-color {
+    width: 40px;
+    height: 32px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.task-delete {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: #fee;
+    color: #dc3545;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.task-delete:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.add-task-form {
+    margin-top: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.add-task-form h4 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.add-task-form input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+.task-customization {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.task-customization input[type="text"] {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.task-customization input[type="color"] {
+    width: 60px;
+    height: 42px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    cursor: pointer;
+}
