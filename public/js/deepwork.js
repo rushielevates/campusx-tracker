@@ -473,35 +473,6 @@ async function loadTodayProgress() {
 }
 
 // ===== UPDATE Weekly Report Display =====
-function updateWeeklyReportDisplay(report) {
-      document.getElementById('weeklyTotal').textContent = report.totalHours + 'h';
-    
-    // KEEP THIS - Avg Session
-    document.getElementById('avgSession').textContent = report.avgDailyDisplay || '0m';
-        if (report.bestDay) {
-        document.getElementById('bestDay').textContent = report.bestDay.formatted;
-    } else {
-        document.getElementById('bestDay').textContent = 'No data';
-    }
-    
-    document.getElementById('weeklyStreak').textContent = (report.weeklyStreak || 0) + ' days';
-    // Update goal display - USING USER'S GOAL FROM REPORT
-    const goalMinutes = report.goal.target;  // ← NOW USING USER'S ACTUAL GOAL
-    const goalProgress = ((report.totalMinutes || 0) / goalMinutes) * 100;
-    document.getElementById('goalProgressFill').style.width = Math.min(goalProgress, 100) + '%';
-    document.getElementById('goalPercentage').textContent = Math.min(goalProgress, 100).toFixed(0) + '%';
-    
-    // Update target display
-    document.getElementById('goalTarget').textContent = Math.round(goalMinutes / 60) + 'h';
-    document.getElementById('goalValue').textContent = Math.round(goalMinutes / 60) + 'h';
-    document.getElementById('goalSlider').value = Math.round(goalMinutes / 60);
-    
-    const remainingMinutes = Math.max(0, goalMinutes - (report.totalMinutes || 0));
-    const remainingHours = Math.floor(remainingMinutes / 60);
-    const remainingMins = remainingMinutes % 60;
-    document.getElementById('goalRemaining').textContent = 
-        remainingHours > 0 ? `${remainingHours}h ${remainingMins}m` : `${remainingMins}m`;
-}
 
 // ===== GOAL FUNCTIONS =====
 function showGoalModal() {
