@@ -224,6 +224,7 @@ router.get('/weekly-stats', auth, async (req, res) => {
 // Get weekly report (for Sunday summary)
 // Get weekly report (for Sunday summary)
 // Get weekly report (for Sunday summary)
+// Get weekly report (for Sunday summary)
 router.get('/weekly-report', auth, async (req, res) => {
     try {
         const today = new Date();
@@ -321,27 +322,28 @@ router.get('/weekly-report', auth, async (req, res) => {
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         
+        // Get user's weekly goal
+        const user = await User.findById(req.session.userId);
+        const weeklyGoal = user.deepWorkStats?.weeklyGoal || 1500;
+        
+        // Send response with all data INCLUDING goal
         res.json({
             weekStart: monday.toISOString().split('T')[0],
             weekEnd: sunday.toISOString().split('T')[0],
             weekRangeDisplay: `${monthNames[monday.getMonth()]} ${monday.getDate()} - ${monthNames[sunday.getMonth()]} ${sunday.getDate()}, ${sunday.getFullYear()}`,
             totalHours: totalHours,
             totalMinutes: totalMinutes,
-            sessionsCount: totalSessions,  // ← FIXED: Use totalSessions
+            sessionsCount: totalSessions,
             avgFocusScore: avgFocus,
             avgDailyMinutes: avgDailyMinutes,
             avgDailyDisplay: avgDailyDisplay,
             bestDay: bestDay,
             weeklyStreak: weeklyStreak,
-// Get user's weekly goal
-             const user = await User.findById(req.session.userId);
-             const weeklyGoal = user.deepWorkStats?.weeklyGoal || 1500;
-
-              goal: { 
-                     target: weeklyGoal,
-                     achieved: totalMinutes,
-                     percentage: Math.round((totalMinutes / weeklyGoal) * 100)
-             }
+            goal: { 
+                target: weeklyGoal,
+                achieved: totalMinutes,
+                percentage: Math.round((totalMinutes / weeklyGoal) * 100)
+            }
         });
         
     } catch (error) {
