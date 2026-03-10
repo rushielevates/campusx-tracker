@@ -10,7 +10,6 @@ const deepWorkSessionSchema = new mongoose.Schema({
     // Session details
     taskType: { 
         type: String, 
-        enum: ['coding', 'reading', 'studying', 'writing', 'planning', 'other'],
         default: 'other'
     },
     taskDescription: { type: String, default: '' },
