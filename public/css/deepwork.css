@@ -966,3 +966,38 @@ body {
 .add-task-row .add-btn:hover {
     background: #218838;
 }
+.task-icon-input {
+    width: 60px !important;
+    text-align: center;
+    font-size: 18px !important;
+}
+
+.add-task-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.add-task-row input[type="text"] {
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.add-task-row .task-icon-input {
+    width: 60px;
+    text-align: center;
+    font-size: 18px;
+}
+
+.add-task-row .add-btn {
+    padding: 10px 20px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
