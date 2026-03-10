@@ -65,9 +65,11 @@
 </button>
 
 <!-- Task Manager Modal -->
+<!-- Task Manager Modal (Simplified) -->
 <div class="modal" id="taskManagerModal">
     <div class="modal-content task-manager-content">
         <h3>Manage Task Types</h3>
+        <p class="modal-subtitle">Drag ⋮⋮ to reorder</p>
         
         <div class="task-list" id="taskList">
             <!-- Tasks will be loaded here -->
@@ -75,12 +77,10 @@
         
         <div class="add-task-form">
             <h4>Add New Task Type</h4>
-            <input type="text" id="newTaskName" placeholder="Task name (e.g., Design)">
-            <div class="task-customization">
-                <input type="text" id="newTaskIcon" placeholder="Icon (e.g., 🎨)" maxlength="2">
-                <input type="color" id="newTaskColor" value="#667eea">
+            <div class="add-task-row">
+                <input type="text" id="newTaskName" placeholder="Task name (e.g., Design)">
+                <button onclick="addNewTask()" class="primary add-btn">Add</button>
             </div>
-            <button onclick="addNewTask()" class="primary">Add Task</button>
         </div>
         
         <div class="modal-buttons">
