@@ -442,8 +442,20 @@ router.get('/weekly-report', auth, async (req, res) => {
         const totalHours = (totalMinutes / 60).toFixed(1);
         const totalSessions = sessions.length;
         
-        // Calculate average PER DAY (total minutes / 7 days)
-        const avgDailyMinutes = Math.round(totalMinutes / 7);
+       // Calculate number of days that have passed in the current week
+const today = new Date();
+const currentDayIndex = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+
+// Convert to days passed (Monday = 1, Tuesday = 2, ... Sunday = 7)
+let daysPassed;
+if (currentDayIndex === 0) { // Sunday
+    daysPassed = 7; // Full week
+} else {
+    daysPassed = currentDayIndex; // Monday=1, Tuesday=2, etc.
+}
+
+// Calculate average based on actual days passed
+const avgDailyMinutes = Math.round(totalMinutes / daysPassed);
         
         // Format for display
         const avgDailyHours = Math.floor(avgDailyMinutes / 60);
