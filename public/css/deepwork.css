@@ -803,23 +803,6 @@ body {
     cursor: grab;
 }
 
-.task-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-}
-
-.task-name {
-    flex: 1;
-    padding: 6px 10px;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    font-size: 14px;
-}
 
 .task-color {
     width: 40px;
@@ -884,4 +867,102 @@ body {
     border: 1px solid #e0e0e0;
     border-radius: 4px;
     cursor: pointer;
+}
+/* Simplified Task Manager */
+.modal-subtitle {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 15px;
+}
+
+.task-list {
+    margin: 20px 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.task-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.task-drag {
+    color: #999;
+    font-size: 18px;
+    cursor: grab;
+    width: 20px;
+    text-align: center;
+}
+
+.task-icon {
+    width: 32px;
+    height: 32px;
+    background: #667eea20;
+    color: #667eea;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.task-name {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+.task-name:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.delete-task-btn {
+    padding: 6px 12px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.delete-task-btn:hover {
+    background: #c82333;
+}
+
+.add-task-row {
+    display: flex;
+    gap: 10px;
+}
+
+.add-task-row input {
+    flex: 1;
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.add-task-row .add-btn {
+    padding: 10px 20px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.add-task-row .add-btn:hover {
+    background: #218838;
 }
