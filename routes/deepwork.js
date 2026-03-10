@@ -15,28 +15,73 @@ const auth = async (req, res, next) => {
 };
 
 // Start a session
+// Start a session
 router.post('/start', auth, async (req, res) => {
+    console.log('🚀 ===== START ENDPOINT HIT =====');
+    console.log('Request body:', req.body);
+    console.log('User ID from session:', req.session.userId);
+    
     try {
-                // End any existing active sessions
-        await DeepWorkSession.updateMany(
+        // Step 1: End any existing active sessions
+        console.log('📌 Step 1: Ending existing active sessions');
+        const updateResult = await DeepWorkSession.updateMany(
             { userId: req.session.userId, activeSession: true },
             { 
                 activeSession: false,
                 endTime: new Date()
-                
             }
         );
-        const session = new DeepWorkSession({
+        console.log('✅ Updated sessions:', updateResult);
+        
+        // Step 2: Create new session
+        console.log('📌 Step 2: Creating new session');
+        const sessionData = {
             userId: req.session.userId,
             startTime: new Date(),
             taskType: req.body.taskType || 'other',
             taskDescription: req.body.taskDescription || '',
             activeSession: true
-        });
+        };
+        console.log('Session data to save:', sessionData);
+        
+        const session = new DeepWorkSession(sessionData);
+        
+        // Step 3: Save to database
+        console.log('📌 Step 3: Saving to database');
         await session.save();
-        res.json({ sessionId: session._id, startTime: session.startTime });
+        console.log('✅ Session saved with ID:', session._id);
+        
+        // Step 4: Send response
+        console.log('📌 Step 4: Sending response');
+        res.json({ 
+            sessionId: session._id, 
+            startTime: session.startTime 
+        });
+        
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('❌ ERROR IN START ENDPOINT:');
+        console.error('Error name:', error.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        
+        // Check for specific MongoDB errors
+        if (error.name === 'ValidationError') {
+            console.error('Validation Error details:', error.errors);
+            return res.status(500).json({ 
+                error: 'Validation failed', 
+                details: error.errors 
+            });
+        }
+        
+        if (error.name === 'MongoServerError') {
+            console.error('MongoDB error code:', error.code);
+            console.error('MongoDB error message:', error.errmsg);
+        }
+        
+        res.status(500).json({ 
+            error: error.message,
+            name: error.name
+        });
     }
 });
 // Ping endpoint to keep session alive
