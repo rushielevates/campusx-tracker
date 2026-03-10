@@ -652,15 +652,18 @@ async function loadTaskList() {
 }
 
 // Add new task
+// Add new task
 async function addNewTask() {
+    const icon = document.getElementById('newTaskIcon').value.trim() || '⚙️';
     const name = document.getElementById('newTaskName').value.trim();
-    const icon = document.getElementById('newTaskIcon').value || '⚙️';
-    const color = document.getElementById('newTaskColor').value;
     
     if (!name) {
         alert('Please enter a task name');
         return;
     }
+    
+    // Use a default color based on the icon or a standard color
+    const color = '#667eea'; // Default color
     
     try {
         const response = await fetch('/api/deepwork/task-types/add', {
@@ -671,16 +674,20 @@ async function addNewTask() {
         });
         
         if (response.ok) {
+            // Clear inputs
+            document.getElementById('newTaskIcon').value = '⚙️';
             document.getElementById('newTaskName').value = '';
-            document.getElementById('newTaskIcon').value = '';
+            
+            // Refresh lists
             await loadTaskList();
-            await loadTaskTypes(); // Update dropdown
+            await loadTaskTypes();
         } else {
             const error = await response.json();
             alert('Error: ' + error.error);
         }
     } catch (error) {
         console.error('Error adding task:', error);
+        alert('Failed to add task. Please try again.');
     }
 }
 
