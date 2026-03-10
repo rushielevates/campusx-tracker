@@ -443,7 +443,6 @@ router.get('/weekly-report', auth, async (req, res) => {
         const totalSessions = sessions.length;
         
        // Calculate number of days that have passed in the current week
-const today = new Date();
 const currentDayIndex = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
 // Convert to days passed (Monday = 1, Tuesday = 2, ... Sunday = 7)
