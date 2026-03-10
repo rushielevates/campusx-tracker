@@ -165,6 +165,10 @@ function startTimer() {
     })
     .catch(error => {
         console.error('Error starting timer:', error);
+        // Log more details
+    if (error.response) {
+        error.response.text().then(text => console.error('Server response:', text));
+    }
         alert('Failed to start timer. Please try again.');
     });
 }
