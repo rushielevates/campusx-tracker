@@ -81,14 +81,22 @@ function showRestoringUI(sessionId, elapsedSeconds) {
 
 // Start timer from existing session
 function startTimerFromExisting(elapsedSeconds) {
-    seconds = elapsedSeconds;
+    const sessionStartTime = Date.now() - (elapsedSeconds * 1000);
+    
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+    
     timerInterval = setInterval(() => {
-        seconds++;
-        updateTimerDisplay();
-    }, 1000);
-     // ✅ ADD THIS LINE HERE
+        const realSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
+        if (realSeconds !== seconds) {
+            seconds = realSeconds;
+            updateTimerDisplay();
+        }
+    }, 200);
+    
     startPingInterval();
-    // Update UI
+    
     document.getElementById('startBtn').style.display = 'none';
     document.getElementById('pauseBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'inline-block';
@@ -145,17 +153,35 @@ function startTimer() {
     .then(data => {
         console.log('Session started:', data);
         currentSessionId = data.sessionId;
+        
+        // Store the actual start time
+        const sessionStartTime = Date.now();
         seconds = 0;
         updateTimerDisplay();
-    localStorage.setItem('deepWorkActive', 'true');
-    localStorage.setItem('deepWorkSessionId', data.sessionId);
-    localStorage.setItem('deepWorkStartTime', Date.now().toString());
+        
+        localStorage.setItem('deepWorkActive', 'true');
+        localStorage.setItem('deepWorkSessionId', data.sessionId);
+        localStorage.setItem('deepWorkStartTime', sessionStartTime.toString());
+        
+        // Clear any existing interval
+        if (timerInterval) {
+            clearInterval(timerInterval);
+        }
+        
+        // Use accurate timer based on real time
         timerInterval = setInterval(() => {
-            seconds++;
-            updateTimerDisplay();
-        }, 1000);
-   // ✅ ADD THIS LINE HERE
-    startPingInterval();
+            // Calculate real elapsed seconds
+            const realSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
+            
+            // Update if changed
+            if (realSeconds !== seconds) {
+                seconds = realSeconds;
+                updateTimerDisplay();
+            }
+        }, 200); // Check 5 times per second for accuracy
+        
+        startPingInterval();
+        
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('pauseBtn').style.display = 'inline-block';
         document.getElementById('stopBtn').style.display = 'inline-block';
@@ -165,10 +191,6 @@ function startTimer() {
     })
     .catch(error => {
         console.error('Error starting timer:', error);
-        // Log more details
-    if (error.response) {
-        error.response.text().then(text => console.error('Server response:', text));
-    }
         alert('Failed to start timer. Please try again.');
     });
 }
