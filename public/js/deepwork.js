@@ -7,16 +7,32 @@ let taskDescription = '';
 
 // Load data on page load
 window.onload = async function() {
-    console.log('Deep Work page loaded');
+    console.log('🔵 Deep Work page loaded - START');
+    console.log('🔵 Timestamp:', Date.now());
+    
     await loadUserInfo();
-    await checkActiveSession();  // ← NEW
+    console.log('✅ loadUserInfo complete');
+    
+    await checkActiveSession();
+    console.log('✅ checkActiveSession complete');
+    
     await loadWeeklyStats();
+    console.log('✅ loadWeeklyStats complete');
+    
     await loadWeeklyReport();
+    console.log('✅ loadWeeklyReport complete');
+    
     await loadTodayProgress();
-    await loadUserGoal();  // ← ADD THIS LINE
-     setTimeout(() => {
-        loadCategoryBreakdown();
-    }, 100); // 100ms delay
+    console.log('✅ loadTodayProgress complete');
+    
+    await loadUserGoal();
+    console.log('✅ loadUserGoal complete');
+    
+    console.log('🔵 About to call loadCategoryBreakdown');
+    await loadCategoryBreakdown();
+    console.log('✅ loadCategoryBreakdown complete');
+    
+    console.log('🔵 Deep Work page loaded - END');
 };
 
 // Check if there's an active session
@@ -67,6 +83,9 @@ async function checkActiveSession() {
 }
 // ===== CATEGORY BREAKDOWN FUNCTIONS =====
 async function loadCategoryBreakdown() {
+    console.log('🔵 loadCategoryBreakdown STARTED at', Date.now());
+    console.log('🔵 Current URL:', window.location.href);
+    console.log('🔵 Document readyState:', document.readyState);
     console.log('🔵 loadCategoryBreakdown STARTED');
     try {
         console.log('Loading category breakdown...');
