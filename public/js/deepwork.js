@@ -81,37 +81,52 @@ async function loadCategoryBreakdown() {
         const categoryList = document.getElementById('categoryList');
         const categoryTotal = document.getElementById('categoryTotal');
         
+        if (!categoryList || !categoryTotal) {
+            console.error('Category elements not found');
+            return;
+        }
+        
         if (!data.categories || data.categories.length === 0) {
             categoryList.innerHTML = '<div class="loading-categories">No sessions this week</div>';
             categoryTotal.textContent = `Total: 0h`;
             return;
         }
         
-        categoryList.innerHTML = data.categories.map(cat => `
+        // Calculate total minutes for percentage if not provided
+        const totalMinutes = data.totalMinutes || 
+            data.categories.reduce((sum, cat) => sum + (cat.minutes || 0), 0);
+        
+        categoryList.innerHTML = data.categories.map(cat => {
+            // Calculate percentage if not provided
+            const percentage = cat.percentage || 
+                (totalMinutes > 0 ? Math.round((cat.minutes / totalMinutes) * 100) : 0);
+            
+            return `
             <div class="category-item">
-                <div class="category-icon">${cat.icon}</div>
+                <div class="category-icon">${cat.icon || '⚙️'}</div>
                 <div class="category-info">
-                    <div class="category-name">${cat.name}</div>
+                    <div class="category-name">${cat.name || cat.id}</div>
                     <div class="category-bar-container">
                         <div class="category-bar-bg">
-                            <div class="category-bar-fill" style="width: ${cat.percentage}%"></div>
+                            <div class="category-bar-fill" style="width: ${percentage}%"></div>
                         </div>
-                        <span class="category-hours">${cat.hours}h</span>
-                        <span class="category-percent">${cat.percentage}%</span>
+                        <span class="category-hours">${cat.hours || (cat.minutes/60).toFixed(1)}h</span>
+                        <span class="category-percent">${percentage}%</span>
                     </div>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
         
-        categoryTotal.textContent = `Total: ${data.totalHours}h`;
+        categoryTotal.textContent = `Total: ${data.totalHours || (totalMinutes/60).toFixed(1)}h`;
         
     } catch (error) {
         console.error('Error loading category breakdown:', error);
-        document.getElementById('categoryList').innerHTML = 
-            '<div class="loading-categories">Error loading categories</div>';
+        const categoryList = document.getElementById('categoryList');
+        if (categoryList) {
+            categoryList.innerHTML = '<div class="loading-categories">Error loading categories</div>';
+        }
     }
 }
-
 // ===== UPDATE Today's Progress for Compact View =====
 // Modify your existing loadTodayProgress function to update compact stats
 
