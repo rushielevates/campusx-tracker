@@ -1001,3 +1001,150 @@ body {
     cursor: pointer;
     white-space: nowrap;
 }
+/* ===== TODAY'S PROGRESS COMPACT BLOCK ===== */
+.today-progress-block {
+    background: white;
+    border-radius: 16px;
+    padding: 15px 20px;
+    margin: 20px 0;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.today-stats-compact {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.compact-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.compact-stat-icon {
+    font-size: 20px;
+}
+
+.compact-stat-value {
+    font-size: 18px;
+    font-weight: 600;
+    color: #667eea;
+}
+
+.compact-stat-label {
+    font-size: 14px;
+    color: #666;
+    margin-left: 4px;
+}
+
+.compact-stat-divider {
+    color: #ddd;
+    font-size: 18px;
+    font-weight: 300;
+}
+
+/* ===== CATEGORY BREAKDOWN CARD ===== */
+.category-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.category-card .card-title {
+    color: rgba(255,255,255,0.9);
+}
+
+.category-list {
+    margin: 15px 0;
+    max-height: 250px;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+.category-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.category-item:last-child {
+    border-bottom: none;
+}
+
+.category-icon {
+    width: 32px;
+    height: 32px;
+    background: rgba(255,255,255,0.15);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px;
+    font-size: 18px;
+}
+
+.category-info {
+    flex: 1;
+}
+
+.category-name {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 4px;
+    color: white;
+}
+
+.category-bar-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.category-bar-bg {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.category-bar-fill {
+    height: 100%;
+    background: white;
+    border-radius: 3px;
+    transition: width 0.3s;
+}
+
+.category-hours {
+    font-size: 12px;
+    color: rgba(255,255,255,0.8);
+    min-width: 60px;
+    text-align: right;
+}
+
+.category-percent {
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    min-width: 40px;
+    text-align: right;
+}
+
+.category-total {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+    text-align: right;
+}
+
+.loading-categories {
+    text-align: center;
+    color: rgba(255,255,255,0.6);
+    padding: 20px;
+    font-size: 14px;
+}
