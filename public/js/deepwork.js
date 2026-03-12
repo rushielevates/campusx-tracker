@@ -114,48 +114,7 @@ async function loadCategoryBreakdown() {
 
 // ===== UPDATE Today's Progress for Compact View =====
 // Modify your existing loadTodayProgress function to update compact stats
-async function loadTodayProgress() {
-    try {
-        console.log('Loading today progress...');
-        const response = await fetch('/api/deepwork/today-stats', {
-            credentials: 'include'
-        });
-        
-        if (!response.ok) {
-            throw new Error('Failed to load today stats');
-        }
-        
-        const data = await response.json();
-        
-        // Format today's total
-        const hours = Math.floor(data.totalMinutes / 60);
-        const minutes = data.totalMinutes % 60;
-        const todayTotalStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-        
-        // Update compact view
-        document.getElementById('todayTotalCompact').textContent = todayTotalStr;
-        document.getElementById('todaySessionsCompact').textContent = data.sessions;
-        document.getElementById('currentStreakCompact').textContent = data.streak;
-        
-        // Also update original elements if they exist (for backward compatibility)
-        if (document.getElementById('todayTotal')) {
-            document.getElementById('todayTotal').textContent = todayTotalStr;
-        }
-        if (document.getElementById('todaySessions')) {
-            document.getElementById('todaySessions').textContent = data.sessions;
-        }
-        if (document.getElementById('currentStreak')) {
-            document.getElementById('currentStreak').textContent = data.streak + ' days 🔥';
-        }
-        
-    } catch (error) {
-        console.error('Error loading today progress:', error);
-        // Set fallback values
-        document.getElementById('todayTotalCompact').textContent = '0h 0m';
-        document.getElementById('todaySessionsCompact').textContent = '0';
-        document.getElementById('currentStreakCompact').textContent = '0';
-    }
-}
+
 // Helper function for immediate UI feedback
 function showRestoringUI(sessionId, elapsedSeconds) {
     console.log('Restoring session from localStorage...');
