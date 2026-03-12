@@ -14,6 +14,7 @@ window.onload = async function() {
     await loadWeeklyReport();
     await loadTodayProgress();
     await loadUserGoal();  // ← ADD THIS LINE
+    await loadCategoryBreakdown(); 
 };
 
 // Check if there's an active session
@@ -62,7 +63,99 @@ async function checkActiveSession() {
         console.error('Error checking active session:', error);
     }
 }
+// ===== CATEGORY BREAKDOWN FUNCTIONS =====
+async function loadCategoryBreakdown() {
+    try {
+        console.log('Loading category breakdown...');
+        const response = await fetch('/api/deepwork/category-breakdown', {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to load categories');
+        }
+        
+        const data = await response.json();
+        console.log('Category data:', data);
+        
+        const categoryList = document.getElementById('categoryList');
+        const categoryTotal = document.getElementById('categoryTotal');
+        
+        if (!data.categories || data.categories.length === 0) {
+            categoryList.innerHTML = '<div class="loading-categories">No sessions this week</div>';
+            categoryTotal.textContent = `Total: 0h`;
+            return;
+        }
+        
+        categoryList.innerHTML = data.categories.map(cat => `
+            <div class="category-item">
+                <div class="category-icon">${cat.icon}</div>
+                <div class="category-info">
+                    <div class="category-name">${cat.name}</div>
+                    <div class="category-bar-container">
+                        <div class="category-bar-bg">
+                            <div class="category-bar-fill" style="width: ${cat.percentage}%"></div>
+                        </div>
+                        <span class="category-hours">${cat.hours}h</span>
+                        <span class="category-percent">${cat.percentage}%</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        categoryTotal.textContent = `Total: ${data.totalHours}h`;
+        
+    } catch (error) {
+        console.error('Error loading category breakdown:', error);
+        document.getElementById('categoryList').innerHTML = 
+            '<div class="loading-categories">Error loading categories</div>';
+    }
+}
 
+// ===== UPDATE Today's Progress for Compact View =====
+// Modify your existing loadTodayProgress function to update compact stats
+async function loadTodayProgress() {
+    try {
+        console.log('Loading today progress...');
+        const response = await fetch('/api/deepwork/today-stats', {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to load today stats');
+        }
+        
+        const data = await response.json();
+        
+        // Format today's total
+        const hours = Math.floor(data.totalMinutes / 60);
+        const minutes = data.totalMinutes % 60;
+        const todayTotalStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+        
+        // Update compact view
+        document.getElementById('todayTotalCompact').textContent = todayTotalStr;
+        document.getElementById('todaySessionsCompact').textContent = data.sessions;
+        document.getElementById('currentStreakCompact').textContent = data.streak;
+        
+        // Also update original elements if they exist (for backward compatibility)
+        if (document.getElementById('todayTotal')) {
+            document.getElementById('todayTotal').textContent = todayTotalStr;
+        }
+        if (document.getElementById('todaySessions')) {
+            document.getElementById('todaySessions').textContent = data.sessions;
+        }
+        if (document.getElementById('currentStreak')) {
+            document.getElementById('currentStreak').textContent = data.streak + ' days 🔥';
+        }
+        
+    } catch (error) {
+        console.error('Error loading today progress:', error);
+        // Set fallback values
+        document.getElementById('todayTotalCompact').textContent = '0h 0m';
+        document.getElementById('todaySessionsCompact').textContent = '0';
+        document.getElementById('currentStreakCompact').textContent = '0';
+    }
+}
 // Helper function for immediate UI feedback
 function showRestoringUI(sessionId, elapsedSeconds) {
     console.log('Restoring session from localStorage...');
