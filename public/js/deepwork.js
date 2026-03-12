@@ -65,32 +65,41 @@ async function checkActiveSession() {
 }
 // ===== CATEGORY BREAKDOWN FUNCTIONS =====
 async function loadCategoryBreakdown() {
+    console.log('🔵 loadCategoryBreakdown STARTED');
     try {
         console.log('Loading category breakdown...');
         const response = await fetch('/api/deepwork/category-breakdown', {
             credentials: 'include'
         });
         
+        console.log('🔵 Response status:', response.status);
+        
         if (!response.ok) {
             throw new Error('Failed to load categories');
         }
         
         const data = await response.json();
-        console.log('Category data:', data);
+        console.log('🔵 Category data received:', data);
         
         const categoryList = document.getElementById('categoryList');
         const categoryTotal = document.getElementById('categoryTotal');
         
+        console.log('🔵 categoryList element:', categoryList);
+        console.log('🔵 categoryTotal element:', categoryTotal);
+        
         if (!categoryList || !categoryTotal) {
-            console.error('Category elements not found');
+            console.error('❌ Category elements not found');
             return;
         }
         
         if (!data.categories || data.categories.length === 0) {
+            console.log('🔵 No categories data, showing empty state');
             categoryList.innerHTML = '<div class="loading-categories">No sessions this week</div>';
             categoryTotal.textContent = `Total: 0h`;
             return;
         }
+        
+        console.log('🔵 About to render', data.categories.length, 'categories');
         
         // Calculate total minutes for percentage if not provided
         const totalMinutes = data.totalMinutes || 
@@ -118,14 +127,16 @@ async function loadCategoryBreakdown() {
         `}).join('');
         
         categoryTotal.textContent = `Total: ${data.totalHours || (totalMinutes/60).toFixed(1)}h`;
+        console.log('🔵 Category list updated, HTML length:', categoryList.innerHTML.length);
         
     } catch (error) {
-        console.error('Error loading category breakdown:', error);
+        console.error('❌ Error loading category breakdown:', error);
         const categoryList = document.getElementById('categoryList');
         if (categoryList) {
             categoryList.innerHTML = '<div class="loading-categories">Error loading categories</div>';
         }
     }
+    console.log('🔵 loadCategoryBreakdown FINISHED');
 }
 // ===== UPDATE Today's Progress for Compact View =====
 // Modify your existing loadTodayProgress function to update compact stats
