@@ -913,17 +913,7 @@ async function saveTaskOrder() {
     }
 }
 
-// Update window.onload to load task types
-window.onload = async function() {
-    console.log('Deep Work page loaded');
-    await loadUserInfo();
-    await loadTaskTypes();  // ← ADD THIS
-    await checkActiveSession();
-    await loadWeeklyStats();
-    await loadWeeklyReport();
-    await loadTodayProgress();
-    await loadUserGoal();
-};
+
 // ===== LOGOUT =====
 async function logout() {
     try {
