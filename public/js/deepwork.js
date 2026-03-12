@@ -6,16 +6,24 @@ let taskType = 'other';
 let taskDescription = '';
 
 // Load data on page load
+// Load data on page load (KEEP THIS ONE)
 window.onload = async function() {
     console.log('🔵 Deep Work page loaded - START');
     console.log('🔵 Timestamp:', Date.now());
     
+    // 1. Load user info first
     await loadUserInfo();
     console.log('✅ loadUserInfo complete');
     
+    // 2. Load task types (needed for dropdown)
+    await loadTaskTypes();
+    console.log('✅ loadTaskTypes complete');
+    
+    // 3. Check for active session
     await checkActiveSession();
     console.log('✅ checkActiveSession complete');
     
+    // 4. Load all stats
     await loadWeeklyStats();
     console.log('✅ loadWeeklyStats complete');
     
@@ -28,6 +36,7 @@ window.onload = async function() {
     await loadUserGoal();
     console.log('✅ loadUserGoal complete');
     
+    // 5. Load category breakdown
     console.log('🔵 About to call loadCategoryBreakdown');
     await loadCategoryBreakdown();
     console.log('✅ loadCategoryBreakdown complete');
