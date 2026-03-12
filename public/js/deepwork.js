@@ -14,7 +14,9 @@ window.onload = async function() {
     await loadWeeklyReport();
     await loadTodayProgress();
     await loadUserGoal();  // ← ADD THIS LINE
-    await loadCategoryBreakdown(); 
+     setTimeout(() => {
+        loadCategoryBreakdown();
+    }, 100); // 100ms delay
 };
 
 // Check if there's an active session
