@@ -100,120 +100,102 @@
 
             <!-- Weekly Summary -->
 <!-- Today's Progress & Weekly Progress Cards -->
-<div class="progress-row">
-    <!-- Today's Progress Card -->
-  <!-- Today's Progress Card - Updated to match Weekly style -->
-<div class="progress-card today-gradient-card">
-    <div class="card-title">TODAY'S PROGRESS</div>
-    <div class="main-value" id="todayTotal">0h 0m</div>
-    
-    <div class="today-stats-list">
-        <!-- Current Session -->
-        <div class="today-stat-item">
-            <div class="today-stat-icon">⏱️</div>
-            <div class="today-stat-content">
-                <div class="today-stat-label">Current Session</div>
-                <div class="today-stat-value" id="currentSession">Not active</div>
-            </div>
+<!-- Today's Progress - Full Width Block -->
+<div class="today-progress-block">
+    <div class="today-stats-compact">
+        <div class="compact-stat-item">
+            <span class="compact-stat-icon">⏱️</span>
+            <span class="compact-stat-value" id="todayTotalCompact">0h 0m</span>
         </div>
-        
-        <!-- Focus Score -->
-        <div class="today-stat-item">
-            <div class="today-stat-icon">🎯</div>
-            <div class="today-stat-content">
-                <div class="today-stat-label">Focus Score</div>
-                <div class="today-stat-value" id="todayFocus">0%</div>
-            </div>
+        <div class="compact-stat-divider">|</div>
+        <div class="compact-stat-item">
+            <span class="compact-stat-icon">📊</span>
+            <span class="compact-stat-value" id="todaySessionsCompact">0</span>
+            <span class="compact-stat-label">sessions</span>
         </div>
-        
-        <!-- Sessions Today -->
-        <div class="today-stat-item">
-            <div class="today-stat-icon">📊</div>
-            <div class="today-stat-content">
-                <div class="today-stat-label">Sessions Today</div>
-                <div class="today-stat-value" id="todaySessions">0</div>
-            </div>
-        </div>
-        
-        <!-- Current Streak -->
-        <div class="today-stat-item">
-            <div class="today-stat-icon">🔥</div>
-            <div class="today-stat-content">
-                <div class="today-stat-label">Current Streak</div>
-                <div class="today-stat-value" id="currentStreak">0 days</div>
-            </div>
+        <div class="compact-stat-divider">|</div>
+        <div class="compact-stat-item">
+            <span class="compact-stat-icon">🔥</span>
+            <span class="compact-stat-value" id="currentStreakCompact">0</span>
+            <span class="compact-stat-label">day streak</span>
         </div>
     </div>
 </div>
 
-    <!-- Weekly Progress Card -->
-    <!-- Weekly Progress Card (Enhanced) -->
-<div class="progress-card weekly-card">
-    <div class="card-title">WEEKLY PROGRESS</div>
-    <div class="week-range" id="weekRange">Loading...</div>
-    
-    <!-- Main Progress -->
-    <div class="main-progress">
-        <div class="progress-numbers">
-            <span class="current-hours" id="weeklyTotal">0h</span>
-            <span class="separator">/</span>
-            <span class="target-hours" id="goalTarget">25h</span>
-        </div>
+<!-- Weekly Progress & Category Breakdown Row -->
+<div class="progress-row">
+    <!-- Weekly Progress Card (Left) - UNCHANGED -->
+    <div class="progress-card weekly-card">
+        <div class="card-title">WEEKLY PROGRESS</div>
+        <div class="week-range" id="weekRange">Loading...</div>
         
-        <!-- Progress bar -->
-        <div class="goal-progress">
-            <div class="progress-fill" id="goalProgressFill" style="width: 0%"></div>
-        </div>
-        <div class="progress-percentage" id="goalPercentage">0%</div>
-         <!-- changes made here -->
-        <!-- Goal Selector -->
-<div class="goal-selector">
-    <div class="goal-label">
-        <span>Weekly Target</span>
-        <span class="goal-value" id="goalValue">25h</span>
-    </div>
-    <div class="goal-slider-container">
-        <input type="range" id="goalSlider" min="10" max="50" value="25" step="1" class="goal-slider">
-        <div class="goal-slider-labels">
-            <span>10h</span>
-            <span>25h</span>
-            <span>50h</span>
-        </div>
-    </div>
-</div>
-    </div>
-    
-    <!-- Stats List (Vertical) -->
-    <div class="weekly-stats-list">
-        <!-- Avg Session -->
-        <div class="stat-item">
-            <div class="stat-icon">⏱️</div>
-            <div class="stat-content">
-                <div class="stat-label">Daily Avg</div>
-                <div class="stat-value" id="avgSession">0m</div>
+        <!-- Main Progress -->
+        <div class="main-progress">
+            <div class="progress-numbers">
+                <span class="current-hours" id="weeklyTotal">0h</span>
+                <span class="separator">/</span>
+                <span class="target-hours" id="goalTarget">25h</span>
+            </div>
+            
+            <!-- Progress bar -->
+            <div class="goal-progress">
+                <div class="progress-fill" id="goalProgressFill" style="width: 0%"></div>
+            </div>
+            <div class="progress-percentage" id="goalPercentage">0%</div>
+            
+            <!-- Goal Selector -->
+            <div class="goal-selector">
+                <div class="goal-label">
+                    <span>Weekly Target</span>
+                    <span class="goal-value" id="goalValue">25h</span>
+                </div>
+                <div class="goal-slider-container">
+                    <input type="range" id="goalSlider" min="10" max="50" value="25" step="1" class="goal-slider">
+                    <div class="goal-slider-labels">
+                        <span>10h</span>
+                        <span>25h</span>
+                        <span>50h</span>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <!-- Best Day -->
-        <div class="stat-item">
-            <div class="stat-icon">📊</div>
-            <div class="stat-content">
-                <div class="stat-label">Best Day</div>
-                <div class="stat-value" id="bestDay">-</div>
+        <!-- Stats List (Vertical) -->
+        <div class="weekly-stats-list">
+            <div class="stat-item">
+                <div class="stat-icon">⏱️</div>
+                <div class="stat-content">
+                    <div class="stat-label">Daily Avg</div>
+                    <div class="stat-value" id="avgSession">0m</div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon">📊</div>
+                <div class="stat-content">
+                    <div class="stat-label">Best Day</div>
+                    <div class="stat-value" id="bestDay">-</div>
+                </div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-icon">🔥</div>
+                <div class="stat-content">
+                    <div class="stat-label">Weekly Streak</div>
+                    <div class="stat-value" id="weeklyStreak">0 days</div>
+                </div>
             </div>
         </div>
-        
-        <!-- Weekly Streak -->
-        <div class="stat-item">
-            <div class="stat-icon">🔥</div>
-            <div class="stat-content">
-                <div class="stat-label">Weekly Streak</div>
-                <div class="stat-value" id="weeklyStreak">0 days</div>
-            </div>
-        </div>
-        
     </div>
-</div>
+
+    <!-- Category Breakdown Card (Right) - NEW -->
+    <div class="progress-card category-card">
+        <div class="card-title">CATEGORY BREAKDOWN</div>
+        <div class="category-list" id="categoryList">
+            <div class="loading-categories">Loading categories...</div>
+        </div>
+        <div class="category-total" id="categoryTotal">
+            Total: 0h
+        </div>
+    </div>
 </div>
 
             <!-- Goal Setting -->
