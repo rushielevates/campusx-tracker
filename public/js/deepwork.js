@@ -506,47 +506,59 @@ async function loadWeeklyReport() {
 }
 
 // ===== NEW: Load Today's Progress =====
+// ===== UPDATE Today's Progress for Compact View =====
 async function loadTodayProgress() {
     try {
         console.log('Loading today progress...');
         const response = await fetch('/api/deepwork/today-stats', {
             credentials: 'include'
         });
-         if (!response.ok) {
+        
+        if (!response.ok) {
             throw new Error('Failed to load today stats');
         }
-        if (response.ok) {
-            const data = await response.json();
-            
-            // Format today's total
-            const hours = Math.floor(data.totalMinutes / 60);
-            const minutes = data.totalMinutes % 60;
-            document.getElementById('todayTotal').textContent = 
-                hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
-            
-            // Current session (if active)
-            if (data.currentSession && data.currentSession > 0) {
-                const sessionMinutes = Math.floor(data.currentSession / 60);
-                const sessionSeconds = data.currentSession % 60;
-                document.getElementById('currentSession').textContent = 
-                    sessionMinutes > 0 ? `${sessionMinutes}m` : '0m';
-            } else {
-                document.getElementById('currentSession').textContent = 'Not active';
-            }
-            
-            document.getElementById('todayFocus').textContent = data.avgFocus + '%';
-            document.getElementById('todaySessions').textContent = data.sessions;
-            document.getElementById('currentStreak').textContent = 
-                data.streak + ' days 🔥';
+        
+        const data = await response.json();
+        console.log('Today progress data:', data);
+        
+        // Format today's total
+        const hours = Math.floor(data.totalMinutes / 60);
+        const minutes = data.totalMinutes % 60;
+        const todayTotalStr = hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+        
+        // Update ONLY the compact view elements (these exist in your HTML)
+        const totalEl = document.getElementById('todayTotalCompact');
+        const sessionsEl = document.getElementById('todaySessionsCompact');
+        const streakEl = document.getElementById('currentStreakCompact');
+        
+        if (totalEl) {
+            totalEl.textContent = todayTotalStr;
+        } else {
+            console.error('Element todayTotalCompact not found');
         }
+        
+        if (sessionsEl) {
+            sessionsEl.textContent = data.sessions;
+        } else {
+            console.error('Element todaySessionsCompact not found');
+        }
+        
+        if (streakEl) {
+            streakEl.textContent = data.streak;
+        } else {
+            console.error('Element currentStreakCompact not found');
+        }
+        
     } catch (error) {
         console.error('Error loading today progress:', error);
-       // Set fallback values
-        document.getElementById('todayTotal').textContent = '0h 0m';
-        document.getElementById('currentSession').textContent = 'Not active';
-        document.getElementById('todayFocus').textContent = '0%';
-        document.getElementById('todaySessions').textContent = '0';
-        document.getElementById('currentStreak').textContent = '0 days 🔥';
+        // Set fallback values
+        const totalEl = document.getElementById('todayTotalCompact');
+        const sessionsEl = document.getElementById('todaySessionsCompact');
+        const streakEl = document.getElementById('currentStreakCompact');
+        
+        if (totalEl) totalEl.textContent = '0h 0m';
+        if (sessionsEl) sessionsEl.textContent = '0';
+        if (streakEl) streakEl.textContent = '0';
     }
 }
 
