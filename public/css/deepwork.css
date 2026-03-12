@@ -1148,3 +1148,19 @@ body {
     padding: 20px;
     font-size: 14px;
 }
+/* Make sure category card gets gradient */
+.category-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.category-card .card-title {
+    color: rgba(255,255,255,0.9);
+    font-size: 14px;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
