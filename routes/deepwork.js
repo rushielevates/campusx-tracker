@@ -568,7 +568,87 @@ router.get('/get-goal', auth, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+// ===== CATEGORY BREAKDOWN ENDPOINT =====
+router.get('/category-breakdown', auth, async (req, res) => {
+    try {
+        const today = new Date();
+        
+        // Calculate Monday of current week
+        const monday = new Date(today);
+        const dayOfWeek = today.getDay();
+        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        monday.setDate(today.getDate() - daysToSubtract);
+        monday.setHours(0, 0, 0, 0);
+        
+        // Calculate Sunday
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+        
+        // Get all sessions for this week
+        const sessions = await DeepWorkSession.find({
+            userId: req.session.userId,
+            startTime: { $gte: monday, $lte: sunday }
+        });
+        
+        // Calculate total minutes for the week
+        const totalMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+        
+        // Group by task type
+        const categoryMap = new Map();
+        
+        sessions.forEach(session => {
+            const taskType = session.taskType || 'other';
+            const minutes = session.durationMinutes || 0;
+            
+            // Get task type details from user's customTaskTypes
+            // You'll need to fetch user's task types to get icons
+            const category = categoryMap.get(taskType) || {
+                id: taskType,
+                name: taskType,
+                icon: getIconForTaskType(taskType), // You'll need this helper
+                minutes: 0
+            };
+            
+            category.minutes += minutes;
+            categoryMap.set(taskType, category);
+        });
+        
+        // Convert to array and sort by minutes (descending)
+        const categories = Array.from(categoryMap.values())
+            .sort((a, b) => b.minutes - a.minutes)
+            .map(cat => ({
+                ...cat,
+                hours: (cat.minutes / 60).toFixed(1),
+                percentage: totalMinutes > 0 
+                    ? Math.round((cat.minutes / totalMinutes) * 100) 
+                    : 0
+            }));
+        
+        res.json({
+            totalHours: (totalMinutes / 60).toFixed(1),
+            totalMinutes,
+            categories
+        });
+        
+    } catch (error) {
+        console.error('Error in category breakdown:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
+// Helper function to get icon for task type
+function getIconForTaskType(taskType) {
+    const iconMap = {
+        'coding': '💻',
+        'reading': '📚',
+        'studying': '🎓',
+        'writing': '✍️',
+        'planning': '📋',
+        'other': '⚙️'
+    };
+    return iconMap[taskType] || '⚙️';
+}
 // Set user's weekly goal
 router.post('/set-goal', auth, async (req, res) => {
     try {
