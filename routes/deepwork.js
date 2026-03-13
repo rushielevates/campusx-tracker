@@ -569,6 +569,7 @@ router.get('/get-goal', auth, async (req, res) => {
     }
 });
 // ===== CATEGORY BREAKDOWN ENDPOINT =====
+// ===== CATEGORY BREAKDOWN ENDPOINT =====
 router.get('/category-breakdown', auth, async (req, res) => {
     try {
         const today = new Date();
@@ -591,6 +592,19 @@ router.get('/category-breakdown', auth, async (req, res) => {
             startTime: { $gte: monday, $lte: sunday }
         });
         
+        // Get user's custom task types for mapping
+        const user = await User.findById(req.session.userId);
+        const taskTypes = user.deepWorkStats?.customTaskTypes || [];
+        
+        // Create a map for quick lookup
+        const taskTypeMap = new Map();
+        taskTypes.forEach(task => {
+            taskTypeMap.set(task.id, {
+                name: task.name,
+                icon: task.icon || '⚙️'
+            });
+        });
+        
         // Calculate total minutes for the week
         const totalMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
         
@@ -601,12 +615,16 @@ router.get('/category-breakdown', auth, async (req, res) => {
             const taskType = session.taskType || 'other';
             const minutes = session.durationMinutes || 0;
             
-            // Get task type details from user's customTaskTypes
-            // You'll need to fetch user's task types to get icons
+            // Get task details from map, or use defaults
+            const taskDetails = taskTypeMap.get(taskType) || {
+                name: taskType,
+                icon: '⚙️'
+            };
+            
             const category = categoryMap.get(taskType) || {
                 id: taskType,
-                name: taskType,
-                icon: getIconForTaskType(taskType), // You'll need this helper
+                name: taskDetails.name,
+                icon: taskDetails.icon,
                 minutes: 0
             };
             
@@ -636,6 +654,8 @@ router.get('/category-breakdown', auth, async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
+
+// You can remove the old getIconForTaskType helper function since we're not using it anymore
 
 // Helper function to get icon for task type
 function getIconForTaskType(taskType) {
