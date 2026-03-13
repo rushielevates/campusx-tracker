@@ -7,43 +7,33 @@ let taskDescription = '';
 
 // Load data on page load
 // Load data on page load (KEEP THIS ONE)
+// Load data on page load - PARALLEL VERSION
 window.onload = async function() {
     console.log('🔵 Deep Work page loaded - START');
-    console.log('🔵 Timestamp:', Date.now());
     
-    // 1. Load user info first
+    // Load user info first (needed for everything)
     await loadUserInfo();
     console.log('✅ loadUserInfo complete');
     
-    // 2. Load task types (needed for dropdown)
+    // Load task types (needed for dropdown)
     await loadTaskTypes();
     console.log('✅ loadTaskTypes complete');
     
-    // 3. Check for active session
-    await checkActiveSession();
-    console.log('✅ checkActiveSession complete');
+    // Now load EVERYTHING ELSE IN PARALLEL!
+    console.log('🔵 Loading all dashboard data in parallel...');
     
-    // 4. Load all stats
-    await loadWeeklyStats();
-    console.log('✅ loadWeeklyStats complete');
+    await Promise.all([
+        checkActiveSession(),      // Restores timer if needed
+        loadWeeklyStats(),          // Bar chart
+        loadWeeklyReport(),         // Weekly progress card
+        loadTodayProgress(),        // Today's compact stats
+        loadUserGoal(),             // Goal slider
+        loadCategoryBreakdown()     // Category breakdown
+    ]);
     
-    await loadWeeklyReport();
-    console.log('✅ loadWeeklyReport complete');
-    
-    await loadTodayProgress();
-    console.log('✅ loadTodayProgress complete');
-    
-    await loadUserGoal();
-    console.log('✅ loadUserGoal complete');
-    
-    // 5. Load category breakdown
-    console.log('🔵 About to call loadCategoryBreakdown');
-    await loadCategoryBreakdown();
-    console.log('✅ loadCategoryBreakdown complete');
-    
+    console.log('✅ All dashboard data loaded in parallel!');
     console.log('🔵 Deep Work page loaded - END');
 };
-
 // Check if there's an active session
 async function checkActiveSession() {
     try {
