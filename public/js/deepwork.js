@@ -912,7 +912,97 @@ async function saveTaskOrder() {
     }
 }
 
+// Show edit modal with current values
+function showEditModal() {
+    // Get current time from display
+    const totalEl = document.getElementById('todayTotalCompact');
+    const currentText = totalEl.textContent;
+    
+    // Parse hours and minutes
+    let hours = 0, minutes = 0;
+    const match = currentText.match(/(\d+)h\s*(\d+)m/);
+    if (match) {
+        hours = parseInt(match[1]);
+        minutes = parseInt(match[2]);
+    } else {
+        const minMatch = currentText.match(/(\d+)m/);
+        if (minMatch) minutes = parseInt(minMatch[1]);
+    }
+    
+    // Set values in modal
+    document.getElementById('editHours').value = hours;
+    document.getElementById('editMinutes').value = minutes;
+    
+    // Show modal
+    document.getElementById('editModal').style.display = 'block';
+}
 
+// Close modal
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+// Save edited time
+async function saveEdit() {
+    const hours = parseInt(document.getElementById('editHours').value) || 0;
+    const minutes = parseInt(document.getElementById('editMinutes').value) || 0;
+    
+    // Validate
+    if (hours < 0 || hours > 24) {
+        alert('Hours must be between 0 and 24');
+        return;
+    }
+    if (minutes < 0 || minutes > 59) {
+        alert('Minutes must be between 0 and 59');
+        return;
+    }
+    
+    const totalMinutes = (hours * 60) + minutes;
+    
+    try {
+        const response = await fetch('/api/deepwork/edit-today', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ totalMinutes })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            
+            // Update display
+            const newHours = Math.floor(data.newTotal / 60);
+            const newMins = data.newTotal % 60;
+            const displayStr = newHours > 0 ? `${newHours}h ${newMins}m` : `${newMins}m`;
+            document.getElementById('todayTotalCompact').textContent = displayStr;
+            
+            // Close modal
+            closeEditModal();
+            
+            // Show success message
+            alert('Time updated successfully!');
+            
+            // Refresh all data
+            await loadWeeklyReport();
+            await loadCategoryBreakdown();
+            
+        } else {
+            const error = await response.json();
+            alert('Error: ' + error.error);
+        }
+    } catch (error) {
+        console.error('Error saving edit:', error);
+        alert('Failed to save changes');
+    }
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('editModal');
+    if (event.target === modal) {
+        closeEditModal();
+    }
+}
 // ===== LOGOUT =====
 async function logout() {
     try {
