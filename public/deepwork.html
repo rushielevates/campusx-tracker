@@ -100,7 +100,7 @@
 
             <!-- Weekly Summary -->
 <!-- Today's Progress & Weekly Progress Cards -->
-<!-- Today's Progress - Full Width Block -->
+<!-- Today's Progress - Full Width Block with Edit Button -->
 <div class="today-progress-block">
     <div class="today-stats-compact">
         <div class="compact-stat-item">
@@ -119,9 +119,38 @@
             <span class="compact-stat-value" id="currentStreakCompact">0</span>
             <span class="compact-stat-label">day streak</span>
         </div>
+        <button class="edit-today-btn" onclick="showEditModal()" title="Edit today's time">
+            ✏️
+        </button>
     </div>
 </div>
 
+<!-- Simple Edit Modal -->
+<div class="modal" id="editModal">
+    <div class="modal-content">
+        <h3>Edit Today's Deep Work Time</h3>
+        <p class="modal-subtitle">Adjust time if you forgot to start/stop timer</p>
+        
+        <div class="edit-form">
+            <div class="time-input-group">
+                <div class="time-field">
+                    <label>Hours</label>
+                    <input type="number" id="editHours" min="0" max="24" value="0">
+                </div>
+                <span class="time-separator">:</span>
+                <div class="time-field">
+                    <label>Minutes</label>
+                    <input type="number" id="editMinutes" min="0" max="59" value="0">
+                </div>
+            </div>
+        </div>
+        
+        <div class="modal-buttons">
+            <button onclick="closeEditModal()">Cancel</button>
+            <button onclick="saveEdit()" class="primary">Save</button>
+        </div>
+    </div>
+</div>
 <!-- Weekly Progress & Category Breakdown Row -->
 <div class="progress-row">
     <!-- Weekly Progress Card (Left) - UNCHANGED -->
