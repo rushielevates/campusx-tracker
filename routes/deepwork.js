@@ -669,6 +669,63 @@ function getIconForTaskType(taskType) {
     };
     return iconMap[taskType] || '⚙️';
 }
+// ===== EDIT TODAY'S STATS (Manual Edit) =====
+router.post('/edit-today', auth, async (req, res) => {
+    try {
+        const { totalMinutes } = req.body;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Validate (0-24 hours)
+        if (totalMinutes < 0 || totalMinutes > 1440) {
+            return res.status(400).json({ error: 'Time must be between 0 and 24 hours' });
+        }
+        
+        const user = await User.findById(req.session.userId);
+        
+        // Find today's stats
+        let todayStats = user.deepWorkStats.dailyStats.find(d => 
+            new Date(d.date).setHours(0,0,0,0) === today.getTime()
+        );
+        
+        // Calculate difference
+        const oldMinutes = todayStats?.totalMinutes || 0;
+        const difference = totalMinutes - oldMinutes;
+        
+        if (!todayStats) {
+            // Create new entry if none exists
+            todayStats = {
+                date: today,
+                totalMinutes: totalMinutes,
+                sessions: 1, // Assume 1 session for manual entry
+                avgFocusScore: 90,
+                isManualEntry: true
+            };
+            user.deepWorkStats.dailyStats.push(todayStats);
+            user.deepWorkStats.totalSessions += 1;
+        } else {
+            // Update existing entry
+            todayStats.totalMinutes = totalMinutes;
+            todayStats.isManualEntry = true;
+            todayStats.lastEdited = new Date();
+        }
+        
+        // Update total deep work minutes
+        user.deepWorkStats.totalDeepWorkMinutes += difference;
+        
+        await user.save();
+        
+        res.json({ 
+            success: true, 
+            newTotal: totalMinutes,
+            message: 'Today\'s time updated'
+        });
+        
+    } catch (error) {
+        console.error('Error editing today:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 // Set user's weekly goal
 router.post('/set-goal', auth, async (req, res) => {
     try {
