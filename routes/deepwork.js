@@ -320,6 +320,19 @@ router.get('/today-stats', auth, async (req, res) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
+        // Get from user.dailyStats (includes manual edits)
+        const user = await User.findById(req.session.userId);
+        let userTotal = 0;
+        if (user.deepWorkStats?.dailyStats) {
+            const todayStat = user.deepWorkStats.dailyStats.find(d => {
+                const dDate = new Date(d.date);
+                dDate.setHours(0, 0, 0, 0);
+                return dDate.getTime() === today.getTime();
+            });
+            userTotal = todayStat?.totalMinutes || 0;
+        }
+        
+        // Get from sessions (for sessions count, focus, etc.)
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
         
@@ -328,36 +341,20 @@ router.get('/today-stats', auth, async (req, res) => {
             startTime: { $gte: today, $lt: tomorrow }
         });
         
-        const totalMinutes = todaySessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
-        const avgFocus = todaySessions.length > 0
-            ? Math.round(todaySessions.reduce((sum, s) => sum + (s.focusScore || 0), 0) / todaySessions.length)
-            : 0;
+        // Use userTotal for minutes (includes manual edits)
+        // Use todaySessions for count and focus
+        const sessionTotal = todaySessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
         
-        // Get current active session
-        const activeSession = await DeepWorkSession.findOne({
-            userId: req.session.userId,
-            activeSession: true
-        });
-        
-        const currentSessionSeconds = activeSession 
-            ? Math.floor((Date.now() - activeSession.startTime) / 1000)
-            : 0;
-        
-        // Get user for streak
-        const user = await User.findById(req.session.userId);
-        const streak = user.deepWorkStats?.currentStreak || 0;
+        // PRIORITIZE userTotal if it exists and is greater than 0
+        const totalToUse = userTotal > 0 ? userTotal : sessionTotal;
         
         res.json({
-            totalMinutes,
+            totalMinutes: totalToUse,  // ← NOW USES MANUAL EDIT
             sessions: todaySessions.length,
-            avgFocus,
-            currentSession: currentSessionSeconds,
-            streak
+            avgFocus: // ...,
+            currentSession: // ...,
+            streak: user.deepWorkStats?.currentStreak || 0
         });
-        
-    } catch (error) {
-        console.error('Error in /today-stats:', error);
-        res.status(500).json({ error: error.message });
     }
 });
 // ===== END OF NEW ENDPOINT =====
