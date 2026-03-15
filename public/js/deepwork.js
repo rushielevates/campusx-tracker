@@ -1000,7 +1000,8 @@ async function saveEdit() {
             alert('Time updated successfully!');
             
             // DO NOT refresh weekly report or category breakdown automatically
-            // Let the user see their updated time immediately
+            // After successful save, refresh the graph
+           await loadWeeklyStats();// Let the user see their updated time immediately
             
         } else {
             const error = await response.json();
