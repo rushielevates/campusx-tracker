@@ -671,120 +671,104 @@ function getIconForTaskType(taskType) {
 }
 // ===== EDIT TODAY'S STATS (Manual Edit) =====
 // ===== EDIT TODAY'S STATS (Manual Edit) - DEBUG VERSION =====
+// ===== EDIT TODAY'S STATS (Manual Edit) - WITH VERIFICATION =====
 router.post('/edit-today', auth, async (req, res) => {
     try {
         const { totalMinutes } = req.body;
-        console.log('🔵 ===== EDIT TODAY DEBUG START =====');
-        console.log('🔵 Request body:', { totalMinutes });
-        console.log('🔵 User ID:', req.session.userId);
+        console.log('🔵 EDIT REQUEST:', { totalMinutes, userId: req.session.userId });
         
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        console.log('🔵 Today date:', today);
         
-        // Validate (0-24 hours)
+        // Validate
         if (totalMinutes < 0 || totalMinutes > 1440) {
             return res.status(400).json({ error: 'Time must be between 0 and 24 hours' });
         }
         
-        // Get user
         const user = await User.findById(req.session.userId);
-        console.log('🔵 User found:', user ? 'Yes' : 'No');
-        console.log('🔵 Current deepWorkStats structure:', JSON.stringify(user.deepWorkStats, null, 2));
-        
-        // Initialize deepWorkStats if needed
-        if (!user.deepWorkStats) {
-            console.log('🔵 Initializing deepWorkStats');
-            user.deepWorkStats = {
-                totalSessions: 0,
-                totalDeepWorkMinutes: 0,
-                currentStreak: 0,
-                longestStreak: 0,
-                dailyStats: []
-            };
-        }
-        
-        // Initialize dailyStats array if needed
-        if (!user.deepWorkStats.dailyStats) {
-            console.log('🔵 Initializing dailyStats array');
-            user.deepWorkStats.dailyStats = [];
-        }
         
         // Find today's stats
-        console.log('🔵 Searching for today in dailyStats. Array length:', user.deepWorkStats.dailyStats.length);
         let todayStats = null;
         let todayIndex = -1;
         
-        user.deepWorkStats.dailyStats.forEach((stat, index) => {
-            const statDate = new Date(stat.date);
-            statDate.setHours(0, 0, 0, 0);
-            console.log(`🔵 Comparing: stat.date=${statDate}, today=${today}, match=${statDate.getTime() === today.getTime()}`);
-            if (statDate.getTime() === today.getTime()) {
-                todayStats = stat;
-                todayIndex = index;
+        if (user.deepWorkStats?.dailyStats) {
+            for (let i = 0; i < user.deepWorkStats.dailyStats.length; i++) {
+                const stat = user.deepWorkStats.dailyStats[i];
+                const statDate = new Date(stat.date);
+                statDate.setHours(0, 0, 0, 0);
+                
+                if (statDate.getTime() === today.getTime()) {
+                    todayStats = stat;
+                    todayIndex = i;
+                    break;
+                }
             }
-        });
-        
-        console.log('🔵 Today stats found:', todayStats ? 'Yes' : 'No');
-        if (todayStats) {
-            console.log('🔵 Current value:', todayStats.totalMinutes);
         }
         
-        // Calculate difference
+        console.log('🔵 Before update - todayStats:', todayStats);
+        
         const oldMinutes = todayStats?.totalMinutes || 0;
         const difference = totalMinutes - oldMinutes;
-        console.log('🔵 Old minutes:', oldMinutes);
-        console.log('🔵 New minutes:', totalMinutes);
-        console.log('🔵 Difference:', difference);
         
         if (!todayStats) {
-            // Create new entry if none exists
-            console.log('🔵 Creating new daily stat entry');
-            const newStat = {
+            // Create new entry
+            if (!user.deepWorkStats) user.deepWorkStats = { dailyStats: [] };
+            if (!user.deepWorkStats.dailyStats) user.deepWorkStats.dailyStats = [];
+            
+            user.deepWorkStats.dailyStats.push({
                 date: today,
                 totalMinutes: totalMinutes,
                 sessions: 1,
                 avgFocusScore: 90,
                 isManualEntry: true,
                 lastEdited: new Date()
-            };
-            user.deepWorkStats.dailyStats.push(newStat);
+            });
+            
+            if (!user.deepWorkStats.totalSessions) user.deepWorkStats.totalSessions = 0;
             user.deepWorkStats.totalSessions += 1;
-            console.log('🔵 New stat created:', newStat);
         } else {
-            // Update existing entry
-            console.log('🔵 Updating existing entry at index:', todayIndex);
+            // Update existing
             user.deepWorkStats.dailyStats[todayIndex].totalMinutes = totalMinutes;
             user.deepWorkStats.dailyStats[todayIndex].isManualEntry = true;
             user.deepWorkStats.dailyStats[todayIndex].lastEdited = new Date();
-            console.log('🔵 Updated stat:', user.deepWorkStats.dailyStats[todayIndex]);
         }
         
-        // Update total deep work minutes
-        const oldTotal = user.deepWorkStats.totalDeepWorkMinutes || 0;
-        user.deepWorkStats.totalDeepWorkMinutes = oldTotal + difference;
-        console.log('🔵 Old total minutes:', oldTotal);
-        console.log('🔵 New total minutes:', user.deepWorkStats.totalDeepWorkMinutes);
+        // Update total minutes
+        if (!user.deepWorkStats.totalDeepWorkMinutes) user.deepWorkStats.totalDeepWorkMinutes = 0;
+        user.deepWorkStats.totalDeepWorkMinutes += difference;
         
-        // Mark the array as modified (helps Mongoose detect changes)
-        user.markModified('deepWorkStats.dailyStats');
+        // Mark as modified
         user.markModified('deepWorkStats');
         
-        console.log('🔵 About to save user...');
+        console.log('🔵 About to save. Modified deepWorkStats:', user.deepWorkStats);
+        
         const savedUser = await user.save();
         console.log('✅ User saved successfully');
         
-        // Verify the save by fetching fresh from DB
-        console.log('🔵 Verifying save - fetching fresh user...');
-        const verifyUser = await User.findById(req.session.userId);
-        const verifyToday = verifyUser.deepWorkStats.dailyStats.find(d => {
-            const dDate = new Date(d.date);
-            dDate.setHours(0, 0, 0, 0);
-            return dDate.getTime() === today.getTime();
-        });
+        // VERIFICATION - Fetch fresh from DB
+        console.log('🔵 VERIFICATION: Fetching fresh user from DB...');
+        const freshUser = await User.findById(req.session.userId).lean();
         
-        console.log('✅ Verification - saved value in DB:', verifyToday?.totalMinutes);
-        console.log('🔵 ===== EDIT TODAY DEBUG END =====');
+        // Find today's stats in fresh user
+        let freshTodayStats = null;
+        if (freshUser.deepWorkStats?.dailyStats) {
+            for (const stat of freshUser.deepWorkStats.dailyStats) {
+                const statDate = new Date(stat.date);
+                statDate.setHours(0, 0, 0, 0);
+                if (statDate.getTime() === today.getTime()) {
+                    freshTodayStats = stat;
+                    break;
+                }
+            }
+        }
+        
+        console.log('🔵 VERIFICATION - Value in DB after save:', freshTodayStats?.totalMinutes);
+        
+        if (freshTodayStats?.totalMinutes !== totalMinutes) {
+            console.log('❌ MISMATCH! DB has', freshTodayStats?.totalMinutes, 'but expected', totalMinutes);
+        } else {
+            console.log('✅ DB verification passed!');
+        }
         
         res.json({ 
             success: true, 
@@ -793,8 +777,7 @@ router.post('/edit-today', auth, async (req, res) => {
         });
         
     } catch (error) {
-        console.error('❌ Error editing today:', error);
-        console.error('❌ Error stack:', error.stack);
+        console.error('❌ Error:', error);
         res.status(500).json({ error: error.message });
     }
 });
