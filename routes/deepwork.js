@@ -391,18 +391,18 @@ router.get('/weekly-stats', auth, async (req, res) => {
         
         // Get user's dailyStats (includes manual edits)
         const user = await User.findById(req.session.userId);
-        const dailyStats = user.deepWorkStats?.dailyStats || [];
+        const userDailyStats = user.deepWorkStats?.dailyStats || [];  // ← RENAMED
         
-        // Create a map of dates from dailyStats for quick lookup
+        // Create a map of dates from userDailyStats for quick lookup
         const editedMinutesMap = new Map();
-        dailyStats.forEach(stat => {
+        userDailyStats.forEach(stat => {
             const date = new Date(stat.date);
             date.setHours(0, 0, 0, 0);
             editedMinutesMap.set(date.getTime(), stat.totalMinutes || 0);
         });
         
-        // Group by day
-        const dailyStats = [];
+        // Group by day - use a different variable name
+        const weeklyData = [];  // ← RENAMED from dailyStats
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         
         for (let i = 6; i >= 0; i--) {
@@ -431,7 +431,7 @@ router.get('/weekly-stats', auth, async (req, res) => {
                 ? Math.round(daySessions.reduce((sum, s) => sum + (s.focusScore || 0), 0) / daySessions.length)
                 : 0;
             
-            dailyStats.push({
+            weeklyData.push({
                 day: days[date.getDay()],
                 date: date.toISOString().split('T')[0],
                 minutes: totalMinutes,
@@ -441,7 +441,7 @@ router.get('/weekly-stats', auth, async (req, res) => {
             });
         }
         
-        res.json(dailyStats);
+        res.json(weeklyData);  // ← Send the renamed array
         
     } catch (error) {
         console.error('Error in weekly-stats:', error);
