@@ -943,6 +943,7 @@ function closeEditModal() {
 }
 
 // Save edited time
+// Save edited time
 async function saveEdit() {
     const hours = parseInt(document.getElementById('editHours').value) || 0;
     const minutes = parseInt(document.getElementById('editMinutes').value) || 0;
@@ -970,7 +971,7 @@ async function saveEdit() {
         if (response.ok) {
             const data = await response.json();
             
-            // Update display
+            // Update display immediately
             const newHours = Math.floor(data.newTotal / 60);
             const newMins = data.newTotal % 60;
             const displayStr = newHours > 0 ? `${newHours}h ${newMins}m` : `${newMins}m`;
@@ -982,9 +983,9 @@ async function saveEdit() {
             // Show success message
             alert('Time updated successfully!');
             
-            // Refresh all data
-            await loadWeeklyReport();
-            await loadCategoryBreakdown();
+            // Refresh other data in the background (don't await)
+            loadWeeklyReport();
+            loadCategoryBreakdown();
             
         } else {
             const error = await response.json();
