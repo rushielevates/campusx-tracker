@@ -913,21 +913,33 @@ async function saveTaskOrder() {
 }
 
 // Show edit modal with current values
+// Show edit modal with current values
 function showEditModal() {
+    console.log('🔵 showEditModal called');
+    
     // Get current time from display
     const totalEl = document.getElementById('todayTotalCompact');
     const currentText = totalEl.textContent;
+    console.log('🔵 Current display text:', currentText);
     
-    // Parse hours and minutes
+    // Parse hours and minutes - IMPROVED PARSING
     let hours = 0, minutes = 0;
-    const match = currentText.match(/(\d+)h\s*(\d+)m/);
-    if (match) {
-        hours = parseInt(match[1]);
-        minutes = parseInt(match[2]);
-    } else {
-        const minMatch = currentText.match(/(\d+)m/);
-        if (minMatch) minutes = parseInt(minMatch[1]);
+    
+    // Try different formats
+    if (currentText.includes('h')) {
+        // Format: "2h 15m" or "2h 15m"
+        const parts = currentText.split('h');
+        hours = parseInt(parts[0].trim()) || 0;
+        
+        if (parts[1] && parts[1].includes('m')) {
+            minutes = parseInt(parts[1].replace('m', '').trim()) || 0;
+        }
+    } else if (currentText.includes('m')) {
+        // Format: "15m" (only minutes)
+        minutes = parseInt(currentText.replace('m', '').trim()) || 0;
     }
+    
+    console.log('🔵 Parsed - hours:', hours, 'minutes:', minutes);
     
     // Set values in modal
     document.getElementById('editHours').value = hours;
@@ -1016,9 +1028,13 @@ async function saveEdit() {
             console.log('🔵 Step 5: Showing success message');
             alert('Time updated successfully!');
             
-            console.log('🔵 Step 6: Refreshing other data in background');
-            loadWeeklyReport();
-            loadCategoryBreakdown();
+           // In saveEdit(), change this part:
+           console.log('🔵 Step 6: Refreshing other data in background');
+// Don't refresh immediately - wait a bit
+             setTimeout(() => {
+                          loadWeeklyReport();
+                          loadCategoryBreakdown();
+                          }, 1000); // Wait 1 second before refreshing
             
         } else {
             const error = await response.json();
