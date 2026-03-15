@@ -44,7 +44,10 @@ const userSchema = new mongoose.Schema({
             date: { type: Date },
             totalMinutes: { type: Number, default: 0 },
             sessions: { type: Number, default: 0 },
-            avgFocusScore: { type: Number, default: 0 }
+            avgFocusScore: { type: Number, default: 0 },
+            isManualEntry: { type: Boolean, default: false },
+            lastEdited: { type: Date }
+ 
         }],
         // new task
             customTaskTypes: {
