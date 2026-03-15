@@ -376,16 +376,29 @@ router.get('/today-stats', auth, async (req, res) => {
     }
 });
 // ===== END OF NEW ENDPOINT =====
-// Get weekly stats (for bar chart)
+// Get weekly stats (for bar chart) - UPDATED to use manual edits
 router.get('/weekly-stats', auth, async (req, res) => {
     try {
         const today = new Date();
         const sevenDaysAgo = new Date(today);
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
         
+        // Get sessions for the week
         const sessions = await DeepWorkSession.find({
             userId: req.session.userId,
             startTime: { $gte: sevenDaysAgo }
+        });
+        
+        // Get user's dailyStats (includes manual edits)
+        const user = await User.findById(req.session.userId);
+        const dailyStats = user.deepWorkStats?.dailyStats || [];
+        
+        // Create a map of dates from dailyStats for quick lookup
+        const editedMinutesMap = new Map();
+        dailyStats.forEach(stat => {
+            const date = new Date(stat.date);
+            date.setHours(0, 0, 0, 0);
+            editedMinutesMap.set(date.getTime(), stat.totalMinutes || 0);
         });
         
         // Group by day
@@ -400,11 +413,20 @@ router.get('/weekly-stats', auth, async (req, res) => {
             const nextDate = new Date(date);
             nextDate.setDate(date.getDate() + 1);
             
+            // Get sessions for this day
             const daySessions = sessions.filter(s => 
                 s.startTime >= date && s.startTime < nextDate
             );
             
-            const totalMinutes = daySessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+            // Calculate from sessions
+            const sessionMinutes = daySessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+            
+            // Get edited minutes from map (if any)
+            const editedMinutes = editedMinutesMap.get(date.getTime()) || 0;
+            
+            // PRIORITIZE edited minutes if they exist
+            const totalMinutes = editedMinutes > 0 ? editedMinutes : sessionMinutes;
+            
             const avgFocus = daySessions.length > 0 
                 ? Math.round(daySessions.reduce((sum, s) => sum + (s.focusScore || 0), 0) / daySessions.length)
                 : 0;
@@ -422,6 +444,7 @@ router.get('/weekly-stats', auth, async (req, res) => {
         res.json(dailyStats);
         
     } catch (error) {
+        console.error('Error in weekly-stats:', error);
         res.status(500).json({ error: error.message });
     }
 });
