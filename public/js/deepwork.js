@@ -957,40 +957,25 @@ function closeEditModal() {
 // Save edited time
 // Save edited time
 // Save edited time - DEBUG VERSION
+// Save edited time
 async function saveEdit() {
     console.log('🔵 ===== SAVE EDIT STARTED =====');
-    console.log('🔵 Step 1: Reading values from modal');
     
-    const hoursInput = document.getElementById('editHours');
-    const minutesInput = document.getElementById('editMinutes');
-    
-    console.log('🔵 Hours input element:', hoursInput);
-    console.log('🔵 Minutes input element:', minutesInput);
-    console.log('🔵 Hours raw value:', hoursInput?.value);
-    console.log('🔵 Minutes raw value:', minutesInput?.value);
-    
-    const hours = parseInt(hoursInput?.value) || 0;
-    const minutes = parseInt(minutesInput?.value) || 0;
-    
-    console.log('🔵 Parsed hours:', hours);
-    console.log('🔵 Parsed minutes:', minutes);
+    const hours = parseInt(document.getElementById('editHours').value) || 0;
+    const minutes = parseInt(document.getElementById('editMinutes').value) || 0;
     
     // Validate
     if (hours < 0 || hours > 24) {
-        console.log('❌ Hours validation failed:', hours);
         alert('Hours must be between 0 and 24');
         return;
     }
     if (minutes < 0 || minutes > 59) {
-        console.log('❌ Minutes validation failed:', minutes);
         alert('Minutes must be between 0 and 59');
         return;
     }
     
     const totalMinutes = (hours * 60) + minutes;
-    console.log('🔵 Total minutes calculated:', totalMinutes);
     
-    console.log('🔵 Step 2: Sending API request');
     try {
         const response = await fetch('/api/deepwork/edit-today', {
             method: 'POST',
@@ -999,53 +984,32 @@ async function saveEdit() {
             body: JSON.stringify({ totalMinutes })
         });
         
-        console.log('🔵 API Response status:', response.status);
-        
         if (response.ok) {
             const data = await response.json();
-            console.log('🔵 API Response data:', data);
             
-            console.log('🔵 Step 3: Updating display');
-            const totalEl = document.getElementById('todayTotalCompact');
-            console.log('🔵 todayTotalCompact element before update:', totalEl);
-            console.log('🔵 Current text before update:', totalEl?.textContent);
-            
+            // Update display immediately
             const newHours = Math.floor(data.newTotal / 60);
             const newMins = data.newTotal % 60;
             const displayStr = newHours > 0 ? `${newHours}h ${newMins}m` : `${newMins}m`;
-            console.log('🔵 New display string:', displayStr);
+            document.getElementById('todayTotalCompact').textContent = displayStr;
             
-            if (totalEl) {
-                totalEl.textContent = displayStr;
-                console.log('🔵 Updated textContent to:', totalEl.textContent);
-            } else {
-                console.error('❌ todayTotalCompact element not found!');
-            }
-            
-            console.log('🔵 Step 4: Closing modal');
+            // Close modal
             closeEditModal();
             
-            console.log('🔵 Step 5: Showing success message');
+            // Show success message
             alert('Time updated successfully!');
             
-           // In saveEdit(), change this part:
-           console.log('🔵 Step 6: Refreshing other data in background');
-// Don't refresh immediately - wait a bit
-             setTimeout(() => {
-                          loadWeeklyReport();
-                          loadCategoryBreakdown();
-                          }, 1000); // Wait 1 second before refreshing
+            // DO NOT refresh weekly report or category breakdown automatically
+            // Let the user see their updated time immediately
             
         } else {
             const error = await response.json();
-            console.error('❌ API Error response:', error);
             alert('Error: ' + error.error);
         }
     } catch (error) {
-        console.error('❌ Fetch error:', error);
+        console.error('Error saving edit:', error);
         alert('Failed to save changes');
     }
-    console.log('🔵 ===== SAVE EDIT ENDED =====');
 }
 
 // Close modal when clicking outside
