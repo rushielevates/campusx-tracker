@@ -341,20 +341,38 @@ router.get('/today-stats', auth, async (req, res) => {
             startTime: { $gte: today, $lt: tomorrow }
         });
         
-        // Use userTotal for minutes (includes manual edits)
-        // Use todaySessions for count and focus
+        // Calculate session total
         const sessionTotal = todaySessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+        
+        // Calculate average focus
+        const avgFocus = todaySessions.length > 0
+            ? Math.round(todaySessions.reduce((sum, s) => sum + (s.focusScore || 0), 0) / todaySessions.length)
+            : 0;
+        
+        // Get current active session
+        const activeSession = await DeepWorkSession.findOne({
+            userId: req.session.userId,
+            activeSession: true
+        });
+        
+        const currentSessionSeconds = activeSession 
+            ? Math.floor((Date.now() - activeSession.startTime) / 1000)
+            : 0;
         
         // PRIORITIZE userTotal if it exists and is greater than 0
         const totalToUse = userTotal > 0 ? userTotal : sessionTotal;
         
         res.json({
-            totalMinutes: totalToUse,  // ← NOW USES MANUAL EDIT
+            totalMinutes: totalToUse,
             sessions: todaySessions.length,
-            avgFocus: // ...,
-            currentSession: // ...,
+            avgFocus: avgFocus,
+            currentSession: currentSessionSeconds,
             streak: user.deepWorkStats?.currentStreak || 0
         });
+        
+    } catch (error) {
+        console.error('Error in /today-stats:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 // ===== END OF NEW ENDPOINT =====
