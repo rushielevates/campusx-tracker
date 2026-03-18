@@ -46,51 +46,51 @@
 
         <!-- Main Content -->
         <div class="main-content">
-            <!-- Timer Section -->
-            <div class="timer-section">
-                <div class="timer-display" id="timerDisplay">00:00:00</div>
-                <div class="timer-controls">
-                    <button id="startBtn" class="timer-btn start" onclick="startTimer()">Start</button>
-                    <button id="pauseBtn" class="timer-btn pause" onclick="pauseTimer()" style="display: none;">Pause</button>
-                    <button id="stopBtn" class="timer-btn stop" onclick="stopTimer()" style="display: none;">Stop</button>
-                </div>
-                <div class="task-input" id="taskInput">
-                    <input type="text" id="taskDescription" placeholder="What are you working on?">
-                    <select id="taskType">
-                    </select>
-                </div>
-                <!-- Task Type Management Button -->
-<button class="manage-tasks-btn" onclick="showTaskManager()">
-    <span>⚙️</span> Manage Tasks
-</button>
+       <!-- Timer and Tasks/Notes Row -->
+<div class="timer-tasks-row">
+    <!-- Timer Section (Left) -->
+    <div class="timer-section">
+        <div class="timer-display" id="timerDisplay">00:00:00</div>
+        <div class="timer-controls">
+            <button id="startBtn" class="timer-btn start" onclick="startTimer()">Start</button>
+            <button id="pauseBtn" class="timer-btn pause" onclick="pauseTimer()" style="display: none;">Pause</button>
+            <button id="stopBtn" class="timer-btn stop" onclick="stopTimer()" style="display: none;">Stop</button>
+        </div>
+        <div class="task-input" id="taskInput">
+            <input type="text" id="taskDescription" placeholder="What are you working on?">
+            <select id="taskType"></select>
+        </div>
+        <button class="manage-tasks-btn" onclick="showTaskManager()">⚙️ Manage Tasks</button>
+    </div>
 
-<!-- Task Manager Modal -->
-<!-- Task Manager Modal (Simplified) -->
-<div class="modal" id="taskManagerModal">
-    <div class="modal-content task-manager-content">
-        <h3>Manage Task Types</h3>
-        <p class="modal-subtitle">Drag ⋮⋮ to reorder</p>
-        
-        <div class="task-list" id="taskList">
-            <!-- Tasks will be loaded here -->
+    <!-- Tasks/Notes Section (Right) -->
+    <div class="tasks-notes-section">
+        <div class="tab-container">
+            <button class="tab-btn active" onclick="switchTab('tasks')">📋 Tasks</button>
+            <button class="tab-btn" onclick="switchTab('notes')">📝 Notes</button>
         </div>
-        
-<div class="add-task-form">
-    <h4>Add New Task Type</h4>
-    <div class="add-task-row">
-        <input type="text" id="newTaskIcon" placeholder="Icon (e.g., 🎨)" maxlength="2" class="task-icon-input" value="⚙️">
-        <input type="text" id="newTaskName" placeholder="Task name (e.g., Design)">
-        <button onclick="addNewTask()" class="primary add-btn">Add</button>
-    </div>
-</div>
-        
-        <div class="modal-buttons">
-            <button onclick="closeTaskManager()">Done</button>
-        </div>
-    </div>
-</div>
+
+        <!-- Tasks Tab -->
+        <div id="tasks-tab" class="tab-content active">
+            <div class="tasks-list" id="tasksList">
+                <!-- Tasks will load here -->
             </div>
-            
+            <div class="add-task">
+                <input type="text" id="newTaskInput" placeholder="Add new task...">
+                <button onclick="addTask()">Add</button>
+            </div>
+            <div class="tasks-summary" id="tasksSummary">✅ 0/0 completed</div>
+        </div>
+
+        <!-- Notes Tab -->
+        <div id="notes-tab" class="tab-content">
+            <div class="notes-list" id="notesList">
+                <!-- Notes will load here -->
+            </div>
+            <button class="add-note-btn" onclick="showNoteModal()">+ New Note</button>
+        </div>
+    </div>
+</div>
 
             <!-- Weekly Bar Chart -->
             <div class="chart-section">
