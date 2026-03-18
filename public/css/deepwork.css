@@ -1501,3 +1501,58 @@ body {
     background: #6c757d;
     color: white;
 }
+/* Timer and Tasks Row */
+.timer-tasks-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 30px;
+    transition: grid-template-columns 0.3s ease;
+}
+
+/* Collapsed state - tasks section hidden */
+.timer-tasks-row.collapsed {
+    grid-template-columns: 1fr 0fr;
+}
+
+.timer-tasks-row.collapsed .tasks-notes-section {
+    display: none;
+}
+
+.timer-tasks-row.collapsed .timer-section {
+    grid-column: span 2;
+}
+
+/* Show tasks button */
+.show-tasks-btn {
+    margin-top: 20px;
+    padding: 10px;
+    background: none;
+    border: 1px dashed #667eea;
+    color: #667eea;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+    font-size: 14px;
+}
+
+.show-tasks-btn:hover {
+    background: #667eea10;
+}
+
+/* Collapse button */
+.collapse-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    color: #667eea;
+    padding: 0 8px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
