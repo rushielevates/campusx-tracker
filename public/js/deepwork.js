@@ -1254,7 +1254,44 @@ async function deleteNote(id) {
         console.error('Error deleting note:', error);
     }
 }
+// ===== TASKS SECTION COLLAPSE =====
+let isTasksVisible = true;
 
+function toggleTasksSection() {
+    const row = document.querySelector('.timer-tasks-row');
+    const showBtn = document.getElementById('showTasksBtn');
+    const collapseBtn = document.getElementById('collapseBtn');
+    
+    isTasksVisible = !isTasksVisible;
+    
+    if (isTasksVisible) {
+        // Expand
+        row.classList.remove('collapsed');
+        if (showBtn) showBtn.style.display = 'none';
+        if (collapseBtn) collapseBtn.textContent = '▶';
+    } else {
+        // Collapse
+        row.classList.add('collapsed');
+        if (showBtn) showBtn.style.display = 'block';
+        if (collapseBtn) collapseBtn.textContent = '◀';
+    }
+}
+
+function expandTasks() {
+    if (!isTasksVisible) {
+        toggleTasksSection();
+    }
+}
+
+// Optional: Auto-expand when switching tabs
+const originalSwitchTab = switchTab;
+window.switchTab = function(tab) {
+    // If collapsed, expand first
+    if (!isTasksVisible) {
+        toggleTasksSection();
+    }
+    originalSwitchTab(tab);
+};
 // Add to window.onload
 // ===== LOGOUT =====
 async function logout() {
