@@ -211,6 +211,9 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/playlists', require('./routes/playlist'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/deepwork', require('./routes/deepwork'));
+// Add these with your other routes
+app.use('/api/tasks', require('./routes/tasks'));
+app.use('/api/notes', require('./routes/notes'));
 
 // ===== 8. FRONTEND ROUTES =====
 app.get('/', (req, res) => {
