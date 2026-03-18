@@ -250,7 +250,7 @@
         </div>
     </div>
 
-    <script src="js/deepwork.js"></script>
+   
     <!-- Note Modal -->
 <div class="note-modal" id="noteModal">
     <div class="note-modal-content">
@@ -263,5 +263,30 @@
         </div>
     </div>
 </div>
+    <!-- Task Manager Modal -->
+<div class="modal" id="taskManagerModal">
+    <div class="modal-content task-manager-content">
+        <h3>Manage Task Types</h3>
+        <p class="modal-subtitle">Drag ⋮⋮ to reorder</p>
+        
+        <div class="task-list" id="taskList">
+            <!-- Tasks will be loaded here -->
+        </div>
+        
+        <div class="add-task-form">
+            <h4>Add New Task Type</h4>
+            <div class="add-task-row">
+                <input type="text" id="newTaskIcon" placeholder="Icon (e.g., 🎨)" maxlength="2" class="task-icon-input" value="⚙️">
+                <input type="text" id="newTaskName" placeholder="Task name (e.g., Design)">
+                <button onclick="addNewTask()" class="primary add-btn">Add</button>
+            </div>
+        </div>
+        
+        <div class="modal-buttons">
+            <button onclick="closeTaskManager()">Done</button>
+        </div>
+    </div>
+</div>
+     <script src="js/deepwork.js"></script>
 </body>
 </html>
