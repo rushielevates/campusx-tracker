@@ -1020,6 +1020,251 @@ window.onclick = function(event) {
         closeEditModal();
     }
 }
+// ===== TABS =====
+let currentTab = 'tasks';
+
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    if (tab === 'tasks') {
+        document.querySelector('.tab-btn:first-child').classList.add('active');
+        document.getElementById('tasks-tab').classList.add('active');
+        loadTasks();
+    } else {
+        document.querySelector('.tab-btn:last-child').classList.add('active');
+        document.getElementById('notes-tab').classList.add('active');
+        loadNotes();
+    }
+}
+
+// ===== TASKS =====
+async function loadTasks() {
+    try {
+        const response = await fetch('/api/tasks', { credentials: 'include' });
+        const tasks = await response.json();
+        
+        const list = document.getElementById('tasksList');
+        const completed = tasks.filter(t => t.completed).length;
+        
+        list.innerHTML = tasks.map(task => `
+            <div class="task-item" data-id="${task._id}" draggable="true">
+                <span class="drag-handle">⋮⋮</span>
+                <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} 
+                       onchange="toggleTask('${task._id}')">
+                <span class="task-title ${task.completed ? 'completed' : ''}">${task.title}</span>
+                <button class="task-delete-btn" onclick="deleteTask('${task._id}')">Delete</button>
+            </div>
+        `).join('');
+        
+        document.getElementById('tasksSummary').textContent = `✅ ${completed}/${tasks.length} completed`;
+        makeTasksSortable();
+        
+    } catch (error) {
+        console.error('Error loading tasks:', error);
+    }
+}
+
+async function addTask() {
+    const input = document.getElementById('newTaskInput');
+    const title = input.value.trim();
+    if (!title) return;
+    
+    try {
+        await fetch('/api/tasks', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ title })
+        });
+        input.value = '';
+        loadTasks();
+    } catch (error) {
+        console.error('Error adding task:', error);
+    }
+}
+
+async function toggleTask(id) {
+    try {
+        await fetch(`/api/tasks/${id}`, {
+            method: 'PUT',
+            credentials: 'include'
+        });
+        loadTasks();
+    } catch (error) {
+        console.error('Error toggling task:', error);
+    }
+}
+
+async function deleteTask(id) {
+    if (!confirm('Delete this task?')) return;
+    try {
+        await fetch(`/api/tasks/${id}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        loadTasks();
+    } catch (error) {
+        console.error('Error deleting task:', error);
+    }
+}
+
+function makeTasksSortable() {
+    const list = document.getElementById('tasksList');
+    let draggedItem = null;
+    
+    list.querySelectorAll('.task-item').forEach(item => {
+        item.addEventListener('dragstart', (e) => {
+            draggedItem = item;
+            item.style.opacity = '0.5';
+        });
+        
+        item.addEventListener('dragend', (e) => {
+            item.style.opacity = '1';
+        });
+        
+        item.addEventListener('dragover', (e) => e.preventDefault());
+        
+        item.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (draggedItem && draggedItem !== item) {
+                const children = [...list.children];
+                const draggedIndex = children.indexOf(draggedItem);
+                const targetIndex = children.indexOf(item);
+                
+                if (draggedIndex < targetIndex) {
+                    list.insertBefore(draggedItem, item.nextSibling);
+                } else {
+                    list.insertBefore(draggedItem, item);
+                }
+                
+                const orderedIds = [...list.children].map(child => child.dataset.id);
+                fetch('/api/tasks/reorder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ orderedIds })
+                });
+            }
+        });
+    });
+}
+
+// ===== NOTES =====
+let currentNoteId = null;
+
+async function loadNotes() {
+    try {
+        const response = await fetch('/api/notes', { credentials: 'include' });
+        const notes = await response.json();
+        
+        const list = document.getElementById('notesList');
+        list.innerHTML = notes.map(note => `
+            <div class="note-item" data-id="${note._id}">
+                <div class="note-header">
+                    <span class="note-title">📝 ${note.title}</span>
+                    <div class="note-actions">
+                        <button class="edit-btn" onclick="editNote('${note._id}')">Edit</button>
+                        <button class="delete-btn" onclick="deleteNote('${note._id}')">Delete</button>
+                    </div>
+                </div>
+                <div class="note-content">${note.content.replace(/\n/g, '<br>')}</div>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error loading notes:', error);
+    }
+}
+
+function showNoteModal() {
+    currentNoteId = null;
+    document.getElementById('noteModalTitle').value = '';
+    document.getElementById('noteModalContent').value = '';
+    document.getElementById('noteModal').style.display = 'block';
+}
+
+function closeNoteModal() {
+    document.getElementById('noteModal').style.display = 'none';
+}
+
+async function saveNote() {
+    const title = document.getElementById('noteModalTitle').value.trim();
+    const content = document.getElementById('noteModalContent').value.trim();
+    
+    if (!title || !content) {
+        alert('Please enter both title and content');
+        return;
+    }
+    
+    try {
+        if (currentNoteId) {
+            // Update existing
+            await fetch(`/api/notes/${currentNoteId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ title, content })
+            });
+        } else {
+            // Create new
+            await fetch('/api/notes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ title, content })
+            });
+        }
+        closeNoteModal();
+        loadNotes();
+    } catch (error) {
+        console.error('Error saving note:', error);
+    }
+}
+
+async function editNote(id) {
+    try {
+        const response = await fetch('/api/notes', { credentials: 'include' });
+        const notes = await response.json();
+        const note = notes.find(n => n._id === id);
+        
+        if (note) {
+            currentNoteId = id;
+            document.getElementById('noteModalTitle').value = note.title;
+            document.getElementById('noteModalContent').value = note.content;
+            document.getElementById('noteModal').style.display = 'block';
+        }
+    } catch (error) {
+        console.error('Error loading note:', error);
+    }
+}
+
+async function deleteNote(id) {
+    if (!confirm('Delete this note?')) return;
+    try {
+        await fetch(`/api/notes/${id}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        loadNotes();
+    } catch (error) {
+        console.error('Error deleting note:', error);
+    }
+}
+
+// Add to window.onload
+// Find the Promise.all section and add loadTasks()
+await Promise.all([
+    checkActiveSession(),
+    loadWeeklyStats(),
+    loadWeeklyReport(),
+    loadTodayProgress(),
+    loadUserGoal(),
+    loadCategoryBreakdown(),
+    loadTasks(),  // ← ADD THIS
+    loadNotes()   // ← ADD THIS (will load but not show until tab clicked)
+]);
 // ===== LOGOUT =====
 async function logout() {
     try {
