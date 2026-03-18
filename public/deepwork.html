@@ -244,5 +244,17 @@
     </div>
 
     <script src="js/deepwork.js"></script>
+    <!-- Note Modal -->
+<div class="note-modal" id="noteModal">
+    <div class="note-modal-content">
+        <h3>📝 Note</h3>
+        <input type="text" id="noteModalTitle" placeholder="Title">
+        <textarea id="noteModalContent" placeholder="Write your note here..."></textarea>
+        <div class="note-modal-buttons">
+            <button class="cancel-btn" onclick="closeNoteModal()">Cancel</button>
+            <button class="save-btn" onclick="saveNote()">Save</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
