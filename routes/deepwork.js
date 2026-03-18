@@ -887,27 +887,47 @@ async function updateUserDeepWorkStats(userId, session) {
     user.deepWorkStats.totalSessions += 1;
     user.deepWorkStats.totalDeepWorkMinutes += session.durationMinutes;
     
-    // Update daily stats
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    let todayStats = user.deepWorkStats.dailyStats.find(d => 
-        new Date(d.date).setHours(0,0,0,0) === today.getTime()
-    );
-    
-    if (!todayStats) {
-        todayStats = {
-            date: today,
-            totalMinutes: 0,
-            sessions: 0,
-            avgFocusScore: 0
-        };
-        user.deepWorkStats.dailyStats.push(todayStats);
+    // Update daily stats - FIXED VERSION
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+// More robust way to find today's stats
+let todayStats = null;
+let todayIndex = -1;
+
+console.log('🔍 Looking for today stats. Total entries:', user.deepWorkStats.dailyStats?.length || 0);
+
+if (user.deepWorkStats.dailyStats) {
+    for (let i = 0; i < user.deepWorkStats.dailyStats.length; i++) {
+        const stat = user.deepWorkStats.dailyStats[i];
+        const statDate = new Date(stat.date);
+        statDate.setHours(0, 0, 0, 0);
+        
+        // Compare timestamps (more reliable)
+        if (statDate.getTime() === today.getTime()) {
+            todayStats = stat;
+            todayIndex = i;
+            console.log('✅ Found existing entry at index', i, 'with minutes:', stat.totalMinutes);
+            break;
+        }
     }
-    
+}
+
+if (!todayStats) {
+    console.log('⚠️ Creating NEW entry for today');
+    todayStats = {
+        date: today,
+        totalMinutes: session.durationMinutes,  // Initialize with this session's time
+        sessions: 1,
+        avgFocusScore: 0
+    };
+    user.deepWorkStats.dailyStats.push(todayStats);
+} else {
+    // Found existing entry - ADD to it
+    console.log('➕ Adding', session.durationMinutes, 'minutes to existing', todayStats.totalMinutes);
     todayStats.totalMinutes += session.durationMinutes;
     todayStats.sessions += 1;
-    
+}
     // Recalculate average focus
     const allTodaySessions = await DeepWorkSession.find({
         userId,
