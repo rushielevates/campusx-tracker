@@ -28,9 +28,11 @@ window.onload = async function() {
         loadWeeklyReport(),         // Weekly progress card
         loadTodayProgress(),        // Today's compact stats
         loadUserGoal(),             // Goal slider
-        loadCategoryBreakdown()     // Category breakdown
+        loadCategoryBreakdown(),     // Category breakdown
+         loadTasks(),                // ← ADD THIS INSIDE
+        loadNotes()                 // ← ADD THIS INSIDE
     ]);
-    
+    switchTab('tasks');
     console.log('✅ All dashboard data loaded in parallel!');
     console.log('🔵 Deep Work page loaded - END');
 };
@@ -1254,17 +1256,6 @@ async function deleteNote(id) {
 }
 
 // Add to window.onload
-// Find the Promise.all section and add loadTasks()
-await Promise.all([
-    checkActiveSession(),
-    loadWeeklyStats(),
-    loadWeeklyReport(),
-    loadTodayProgress(),
-    loadUserGoal(),
-    loadCategoryBreakdown(),
-    loadTasks(),  // ← ADD THIS
-    loadNotes()   // ← ADD THIS (will load but not show until tab clicked)
-]);
 // ===== LOGOUT =====
 async function logout() {
     try {
