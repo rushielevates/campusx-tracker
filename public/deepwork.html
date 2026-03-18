@@ -47,9 +47,10 @@
         <!-- Main Content -->
         <div class="main-content">
        <!-- Timer and Tasks/Notes Row -->
+<!-- Timer and Tasks/Notes Row -->
 <div class="timer-tasks-row">
-    <!-- Timer Section (Left) -->
-    <div class="timer-section">
+    <!-- Timer Section -->
+    <div class="timer-section" id="timerSection">
         <div class="timer-display" id="timerDisplay">00:00:00</div>
         <div class="timer-controls">
             <button id="startBtn" class="timer-btn start" onclick="startTimer()">Start</button>
@@ -61,20 +62,28 @@
             <select id="taskType"></select>
         </div>
         <button class="manage-tasks-btn" onclick="showTaskManager()">⚙️ Manage Tasks</button>
+        
+        <!-- Show/Hide Tasks Button (visible when collapsed) -->
+        <button class="show-tasks-btn" id="showTasksBtn" onclick="expandTasks()" style="display: none;">
+            ▼ Show Tasks
+        </button>
     </div>
 
     <!-- Tasks/Notes Section (Right) -->
-    <div class="tasks-notes-section">
-        <div class="tab-container">
-            <button class="tab-btn active" onclick="switchTab('tasks')">📋 Tasks</button>
-            <button class="tab-btn" onclick="switchTab('notes')">📝 Notes</button>
+    <div class="tasks-notes-section" id="tasksNotesSection">
+        <div class="section-header">
+            <div class="tab-container">
+                <button class="tab-btn active" onclick="switchTab('tasks')">📋 Tasks</button>
+                <button class="tab-btn" onclick="switchTab('notes')">📝 Notes</button>
+            </div>
+            <button class="collapse-btn" onclick="toggleTasksSection()" id="collapseBtn">
+                ▶
+            </button>
         </div>
 
         <!-- Tasks Tab -->
         <div id="tasks-tab" class="tab-content active">
-            <div class="tasks-list" id="tasksList">
-                <!-- Tasks will load here -->
-            </div>
+            <div class="tasks-list" id="tasksList"></div>
             <div class="add-task">
                 <input type="text" id="newTaskInput" placeholder="Add new task...">
                 <button onclick="addTask()">Add</button>
@@ -84,14 +93,11 @@
 
         <!-- Notes Tab -->
         <div id="notes-tab" class="tab-content">
-            <div class="notes-list" id="notesList">
-                <!-- Notes will load here -->
-            </div>
+            <div class="notes-list" id="notesList"></div>
             <button class="add-note-btn" onclick="showNoteModal()">+ New Note</button>
         </div>
     </div>
 </div>
-
             <!-- Weekly Bar Chart -->
             <div class="chart-section">
                 <h2>Last 7 Days</h2>
