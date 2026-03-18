@@ -1556,3 +1556,36 @@ body {
     align-items: center;
     margin-bottom: 15px;
 }
+.timer-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    gap: 10px;
+}
+
+.show-tasks-btn {
+    padding: 8px 16px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+.show-tasks-btn:hover {
+    background: #5a67d8;
+}
+
+/* When collapsed, make sure button is visible */
+.timer-tasks-row.collapsed .show-tasks-btn {
+    display: block !important;
+}
+
+.timer-tasks-row.collapsed .manage-tasks-btn {
+    /* Keep manage tasks button visible */
+    display: inline-block;
+}
