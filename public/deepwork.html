@@ -100,11 +100,25 @@
     </div>
 </div>
             <!-- Weekly Bar Chart -->
-            <div class="chart-section">
-                <h2>Last 7 Days</h2>
-                <div class="bar-chart" id="barChart"></div>
-            </div>
-
+<!-- Weekly Bar Chart with Navigation -->
+<div class="chart-section">
+    <div class="chart-header">
+        <h2>Weekly Activity</h2>
+        <div class="week-navigation">
+            <button class="nav-week-btn" id="prevWeekBtn" onclick="loadPreviousWeek()" title="Previous Week">
+                ◀ Prev
+            </button>
+            <button class="nav-week-btn current-week-btn" id="currentWeekBtn" onclick="loadCurrentWeek()" title="Go to Current Week">
+                📍 Today
+            </button>
+            <span class="current-week-range" id="weekRangeDisplay">Loading...</span>
+            <button class="nav-week-btn" id="nextWeekBtn" onclick="loadNextWeek()" title="Next Week">
+                Next ▶
+            </button>
+        </div>
+    </div>
+    <div class="bar-chart" id="barChart"></div>
+</div>
             <!-- Weekly Summary -->
 <!-- Today's Progress & Weekly Progress Cards -->
 <!-- Today's Progress - Full Width Block with Edit Button -->
