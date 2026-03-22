@@ -377,21 +377,38 @@ router.get('/today-stats', auth, async (req, res) => {
 });
 // ===== END OF NEW ENDPOINT =====
 // Get weekly stats (for bar chart) - UPDATED to use manual edits
+// Get weekly stats (for bar chart) - WITH WEEK NAVIGATION
 router.get('/weekly-stats', auth, async (req, res) => {
     try {
-        const today = new Date();
-        const sevenDaysAgo = new Date(today);
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        // Get week offset from query parameter (0 = current week, -1 = last week, etc.)
+        const weekOffset = parseInt(req.query.weekOffset) || 0;
         
-        // Get sessions for the week
+        // Calculate the target date based on offset
+        const today = new Date();
+        const targetDate = new Date(today);
+        targetDate.setDate(today.getDate() + (weekOffset * 7));
+        
+        // Calculate Monday of the target week
+        const monday = new Date(targetDate);
+        const dayOfWeek = targetDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Adjust to Monday
+        monday.setDate(targetDate.getDate() - daysToSubtract);
+        monday.setHours(0, 0, 0, 0);
+        
+        // Calculate Sunday of the week
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        sunday.setHours(23, 59, 59, 999);
+        
+        // Get sessions for this week
         const sessions = await DeepWorkSession.find({
             userId: req.session.userId,
-            startTime: { $gte: sevenDaysAgo }
+            startTime: { $gte: monday, $lte: sunday }
         });
         
         // Get user's dailyStats (includes manual edits)
         const user = await User.findById(req.session.userId);
-        const userDailyStats = user.deepWorkStats?.dailyStats || [];  // ← RENAMED
+        const userDailyStats = user.deepWorkStats?.dailyStats || [];
         
         // Create a map of dates from userDailyStats for quick lookup
         const editedMinutesMap = new Map();
@@ -401,13 +418,13 @@ router.get('/weekly-stats', auth, async (req, res) => {
             editedMinutesMap.set(date.getTime(), stat.totalMinutes || 0);
         });
         
-        // Group by day - use a different variable name
-        const weeklyData = [];  // ← RENAMED from dailyStats
+        // Group by day for the week
+        const weeklyData = [];
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         
-        for (let i = 6; i >= 0; i--) {
-            const date = new Date(today);
-            date.setDate(date.getDate() - i);
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(monday);
+            date.setDate(monday.getDate() + i);
             date.setHours(0, 0, 0, 0);
             
             const nextDate = new Date(date);
@@ -441,7 +458,21 @@ router.get('/weekly-stats', auth, async (req, res) => {
             });
         }
         
-        res.json(weeklyData);  // ← Send the renamed array
+        // Format week range for display
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        
+        const weekStartFormatted = `${monthNames[monday.getMonth()]} ${monday.getDate()}`;
+        const weekEndFormatted = `${monthNames[sunday.getMonth()]} ${sunday.getDate()}, ${sunday.getFullYear()}`;
+        
+        res.json({
+            weekStart: monday.toISOString().split('T')[0],
+            weekEnd: sunday.toISOString().split('T')[0],
+            weekRangeDisplay: `${weekStartFormatted} - ${weekEndFormatted}`,
+            weekOffset: weekOffset,
+            isCurrentWeek: weekOffset === 0,
+            data: weeklyData
+        });
         
     } catch (error) {
         console.error('Error in weekly-stats:', error);
@@ -449,9 +480,6 @@ router.get('/weekly-stats', auth, async (req, res) => {
     }
 });
 
-// Get weekly report (for Sunday summary)
-// Get weekly report (for Sunday summary)
-// Get weekly report (for Sunday summary)
 // Get weekly report (for Sunday summary)
 router.get('/weekly-report', auth, async (req, res) => {
     try {
