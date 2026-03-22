@@ -4,6 +4,9 @@ let timerInterval = null;
 let seconds = 0;
 let taskType = 'other';
 let taskDescription = '';
+// Week navigation variables
+let currentWeekOffset = 0; // 0 = current week, -1 = last week, -2 = two weeks ago, etc.
+let isLoadingWeekly = false;
 
 // Load data on page load
 // Load data on page load (KEEP THIS ONE)
@@ -404,10 +407,21 @@ function updateTimerDisplay() {
 }
 
 // ===== WEEKLY BAR CHART =====
+// ===== WEEKLY BAR CHART WITH NAVIGATION =====
 async function loadWeeklyStats() {
+    if (isLoadingWeekly) return;
+    
+    isLoadingWeekly = true;
+    const chartContainer = document.getElementById('barChart');
+    const prevBtn = document.getElementById('prevWeekBtn');
+    const nextBtn = document.getElementById('nextWeekBtn');
+    
     try {
-        console.log('Loading weekly stats...');
-        const response = await fetch('/api/deepwork/weekly-stats', {
+        // Add loading class
+        if (chartContainer) chartContainer.classList.add('loading');
+        
+        console.log(`Loading weekly stats for offset: ${currentWeekOffset}`);
+        const response = await fetch(`/api/deepwork/weekly-stats?weekOffset=${currentWeekOffset}`, {
             credentials: 'include'
         });
         
@@ -415,14 +429,105 @@ async function loadWeeklyStats() {
             throw new Error('Failed to load stats');
         }
         
-        const stats = await response.json();
-        console.log('Weekly stats:', stats);
-        renderBarChart(stats);
+        const data = await response.json();
+        console.log('Weekly stats:', data);
+        
+        // Update week range display
+        const weekRangeEl = document.getElementById('weekRangeDisplay');
+        if (weekRangeEl) {
+            weekRangeEl.textContent = data.weekRangeDisplay;
+        }
+        
+        // Update navigation buttons state
+        if (nextBtn) {
+            nextBtn.disabled = data.isCurrentWeek;
+        }
+        if (prevBtn) {
+            prevBtn.disabled = false;
+        }
+        
+        // Render the chart
+        renderBarChart(data.data);
         
     } catch (error) {
         console.error('Error loading weekly stats:', error);
-        showMockChart();
+        // Show error in chart area
+        const chart = document.getElementById('barChart');
+        if (chart) {
+            chart.innerHTML = '<p style="text-align: center; color: #dc3545; padding: 40px;">Failed to load data. Please try again.</p>';
+        }
+    } finally {
+        isLoadingWeekly = false;
+        if (chartContainer) chartContainer.classList.remove('loading');
     }
+}
+
+// Load previous week
+function loadPreviousWeek() {
+    currentWeekOffset--;
+    loadWeeklyStats();
+}
+
+// Load next week
+function loadNextWeek() {
+    if (currentWeekOffset < 0) {
+        currentWeekOffset++;
+        loadWeeklyStats();
+    }
+}
+
+// Load current week (reset to today)
+function loadCurrentWeek() {
+    if (currentWeekOffset !== 0) {
+        currentWeekOffset = 0;
+        loadWeeklyStats();
+    }
+}
+
+// Update renderBarChart to handle empty data
+function renderBarChart(stats) {
+    const chart = document.getElementById('barChart');
+    chart.innerHTML = '';
+    chart.classList.remove('loading');
+    
+    if (!stats || stats.length === 0) {
+        chart.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No data for this week. Start a timer to see your stats!</p>';
+        return;
+    }
+    
+    // Check if all days have zero minutes
+    const hasAnyData = stats.some(day => day.minutes > 0);
+    if (!hasAnyData) {
+        chart.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No activity recorded for this week.</p>';
+        return;
+    }
+    
+    const maxMinutes = Math.max(...stats.map(s => s.minutes), 1);
+    
+    stats.forEach(day => {
+        const height = maxMinutes > 0 ? (day.minutes / maxMinutes) * 180 : 0;
+        
+        const barContainer = document.createElement('div');
+        barContainer.className = 'bar-container';
+        
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = height + 'px';
+        bar.setAttribute('data-tooltip', `${day.hours}h (${day.sessions} sessions, ${day.focusScore}% focus)`);
+        
+        const label = document.createElement('div');
+        label.className = 'bar-label';
+        label.textContent = day.day;
+        
+        const value = document.createElement('div');
+        value.className = 'bar-value';
+        value.textContent = day.hours + 'h';
+        
+        barContainer.appendChild(bar);
+        barContainer.appendChild(label);
+        barContainer.appendChild(value);
+        chart.appendChild(barContainer);
+    });
 }
 
 function renderBarChart(stats) {
