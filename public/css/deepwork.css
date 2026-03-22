@@ -1651,3 +1651,80 @@ body {
 .timer-tasks-row.collapsed .timer-section {
     grid-column: span 2;
 }
+/* Weekly Chart Navigation */
+.chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.week-navigation {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.nav-week-btn {
+    padding: 6px 14px;
+    background: #f0f0f0;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+    color: #555;
+}
+
+.nav-week-btn:hover {
+    background: #667eea;
+    color: white;
+    transform: translateY(-1px);
+}
+
+.nav-week-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.current-week-btn {
+    background: #667eea;
+    color: white;
+}
+
+.current-week-btn:hover {
+    background: #5a67d8;
+}
+
+.current-week-range {
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
+    background: #f8f9fa;
+    padding: 5px 12px;
+    border-radius: 20px;
+    min-width: 140px;
+    text-align: center;
+}
+
+/* Loading state for chart */
+.bar-chart.loading {
+    opacity: 0.5;
+    pointer-events: none;
+    position: relative;
+}
+
+.bar-chart.loading::after {
+    content: "Loading...";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #667eea;
+    font-size: 14px;
+}
