@@ -246,8 +246,9 @@ app.use((req, res) => {
     res.status(404).json({ error: 'Route not found', path: req.path });
 });
 // Add this with your other routes
+// Add this right after the route
 app.use('/api/journey', require('./routes/journey'));
-
+console.log('✅ Journey route registered successfully');
 // Add journey page route
 app.get('/journey.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'journey.html'));
