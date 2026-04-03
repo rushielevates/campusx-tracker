@@ -13,12 +13,15 @@ router.get('/test', (req, res) => {
     res.json({ message: 'Journey route is working!' });
 });
 // Get user's journey
+// Get user's journey
 router.get('/', auth, async (req, res) => {
+    console.log('🔵 GET /api/journey - Starting...');
     try {
+        console.log('🔵 Looking for journey for user:', req.session.userId);
         let journey = await Journey.findOne({ userId: req.session.userId });
         
         if (!journey) {
-            // Create default journey
+            console.log('🔵 No journey found, creating default...');
             journey = new Journey({
                 userId: req.session.userId,
                 stages: [{
@@ -31,14 +34,23 @@ router.get('/', auth, async (req, res) => {
                 activeStageId: null
             });
             await journey.save();
+            console.log('✅ Default journey created');
         }
         
+        console.log('🔵 Sending journey response...');
         res.json(journey);
+        
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('❌ Error in GET /api/journey:', error);
+        console.error('Error stack:', error.stack);
+        res.status(500).json({ error: error.message, stack: error.stack });
     }
 });
-
+// Test endpoint
+router.get('/ping', (req, res) => {
+    console.log('🔵 PING received!');
+    res.json({ message: 'pong', timestamp: Date.now() });
+});
 // Update journey
 router.put('/', auth, async (req, res) => {
     try {
