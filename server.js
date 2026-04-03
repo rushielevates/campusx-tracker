@@ -245,7 +245,13 @@ app.get('/health', (req, res) => {
 app.use((req, res) => {
     res.status(404).json({ error: 'Route not found', path: req.path });
 });
+// Add this with your other routes
+app.use('/api/journey', require('./routes/journey'));
 
+// Add journey page route
+app.get('/journey.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'journey.html'));
+});
 // ===== 11. ERROR HANDLER =====
 app.use((err, req, res, next) => {
     console.error('Server error:', err.stack);
