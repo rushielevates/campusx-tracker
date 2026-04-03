@@ -7,6 +7,14 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
 // Load environment variables
+// TEMPORARY TEST ROUTE - Add this
+app.get('/api/test-debug', (req, res) => {
+    res.json({ 
+        message: 'Server is running', 
+        time: new Date().toISOString(),
+        session: req.session?.userId || 'no session'
+    });
+});
 dotenv.config();
 
 // Connect to MongoDB
