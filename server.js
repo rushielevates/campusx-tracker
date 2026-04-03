@@ -6,15 +6,8 @@ const connectDB = require('./config/database');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
+
 // Load environment variables
-// TEMPORARY TEST ROUTE - Add this
-app.get('/api/test-debug', (req, res) => {
-    res.json({ 
-        message: 'Server is running', 
-        time: new Date().toISOString(),
-        session: req.session?.userId || 'no session'
-    });
-});
 dotenv.config();
 
 // Connect to MongoDB
@@ -49,16 +42,14 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     name: 'connect.sid',
-       genid: (req) => {
-        // Use the ID from cookie if it exists, otherwise generate new
+    genid: (req) => {
         const cookieId = req.headers.cookie?.match(/connect\.sid=([^;]+)/)?.[1];
         return cookieId || require('crypto').randomBytes(16).toString('hex');
     },
     store: MongoStore.create({
         mongoUrl: process.env.MONGODB_URI,
         collectionName: 'sessions',
-        ttl: 24 * 60 * 60 // 1 day in seconds
-        
+        ttl: 24 * 60 * 60
     }),
     cookie: { 
         secure: false, 
@@ -66,10 +57,19 @@ app.use(session({
         sameSite: 'none',
         maxAge: 24 * 60 * 60 * 1000
     },
-    rolling: false,                    // ← ADD THIS
-    unset: 'destroy'                   // ← ADD THIS
+    rolling: false,
+    unset: 'destroy'
 }));
 
+// ===== TEMPORARY TEST ROUTE (MOVED HERE - AFTER app is defined) =====
+app.get('/api/test-debug', (req, res) => {
+    console.log('🔵 Test debug route hit');
+    res.json({ 
+        message: 'Server is running!', 
+        timestamp: Date.now(),
+        session: req.session?.userId || 'no-session'
+    });
+});
 
 app.get('/debug-mongo', async (req, res) => {
     try {
@@ -90,19 +90,16 @@ app.get('/debug-mongo', async (req, res) => {
     }
 });
 
-// ===== 3.5 SESSION DEBUG MIDDLEWARE =====
 app.get('/debug-session-data', async (req, res) => {
     try {
         const db = mongoose.connection.db;
         const sessionId = req.session.id;
         
-        // Look up this specific session in MongoDB
         const sessionDoc = await db.collection('sessions').findOne({
             _id: sessionId
         });
         
         if (sessionDoc) {
-            // Parse the session data
             const sessionData = JSON.parse(sessionDoc.session);
             res.json({
                 sessionId: sessionId,
@@ -124,7 +121,6 @@ app.get('/debug-session-data', async (req, res) => {
     }
 });
 
-// Add this near your other debug routes
 app.get('/debug-mongo-sessions', async (req, res) => {
     try {
         const db = mongoose.connection.db;
@@ -157,15 +153,14 @@ app.get('/debug-mongo-sessions', async (req, res) => {
 
 // ===== 4. Debug middleware to log all requests =====
 app.use((req, res, next) => {
-       if (req.path.startsWith('/debug')) {
+    if (req.path.startsWith('/debug')) {
         return next();
     }
     console.log('=== INCOMING REQUEST ===');
     console.log('Path:', req.path);
     console.log('Method:', req.method);
     console.log('Session ID:', req.sessionID);
-     if (req.session) {
-        // Force session to reload to ensure we have latest data
+    if (req.session) {
         req.session.reload((err) => {
             if (!err) {
                 console.log('User ID:', req.session.userId || 'undefined');
@@ -182,11 +177,10 @@ app.use((req, res, next) => {
     }
 });
 
-
 // ===== 5. Static files =====
 app.use(express.static(path.join(__dirname, 'public')));
 
-// ===== 6. DEBUG ROUTES (put these BEFORE your API routes) =====
+// ===== 6. DEBUG ROUTES =====
 app.get('/debug-session', (req, res) => {
     console.log('=== DEBUG SESSION ENDPOINT HIT ===');
     res.json({
@@ -219,11 +213,20 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/playlists', require('./routes/playlist'));
 app.use('/api/analytics', require('./routes/analytics'));
 app.use('/api/deepwork', require('./routes/deepwork'));
-// Add these with your other routes
 app.use('/api/tasks', require('./routes/tasks'));
 app.use('/api/notes', require('./routes/notes'));
 
-// ===== 8. FRONTEND ROUTES =====
+// ===== 8. JOURNEY ROUTE =====
+console.log('🔵 Attempting to load journey route...');
+try {
+    const journeyRoute = require('./routes/journey');
+    console.log('✅ Journey route loaded successfully');
+    app.use('/api/journey', journeyRoute);
+} catch (err) {
+    console.error('❌ Failed to load journey route:', err.message);
+}
+
+// ===== 9. FRONTEND ROUTES =====
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -240,7 +243,11 @@ app.get('/profile.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'profile.html'));
 });
 
-// ===== 9. HEALTH CHECK =====
+app.get('/journey.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'journey.html'));
+});
+
+// ===== 10. HEALTH CHECK =====
 app.get('/health', (req, res) => {
     res.status(200).json({ 
         status: 'OK', 
@@ -249,19 +256,12 @@ app.get('/health', (req, res) => {
     });
 });
 
-// ===== 10. 404 HANDLER =====
+// ===== 11. 404 HANDLER =====
 app.use((req, res) => {
     res.status(404).json({ error: 'Route not found', path: req.path });
 });
-// Add this with your other routes
-// Add this right after the route
-app.use('/api/journey', require('./routes/journey'));
-console.log('✅ Journey route registered successfully');
-// Add journey page route
-app.get('/journey.html', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'journey.html'));
-});
-// ===== 11. ERROR HANDLER =====
+
+// ===== 12. ERROR HANDLER =====
 app.use((err, req, res, next) => {
     console.error('Server error:', err.stack);
     res.status(500).json({ error: 'Something went wrong!' });
