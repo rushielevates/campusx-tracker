@@ -219,7 +219,91 @@ async function switchStage(stageId) {
         })
     });
 }
+function ReactFlowComponent({ initialNodes, initialEdges }) {
+    const [rfNodes, setRfNodes] = React.useState(initialNodes);
+    const [rfEdges, setRfEdges] = React.useState(initialEdges);
+    
+    React.useEffect(() => {
+        setRfNodes(initialNodes);
+        setRfEdges(initialEdges);
+    }, [initialNodes, initialEdges]);
+    
+    // If no nodes, show "Add First Track" button
+    if (rfNodes.length === 0) {
+        return React.createElement('div', { 
+            style: { 
+                width: '100%', 
+                height: '100%', 
+                background: '#1a1a2e',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexDirection: 'column'
+            }
+        },
+            React.createElement('button', {
+                onClick: () => addFirstTrack(),
+                style: {
+                    padding: '16px 32px',
+                    fontSize: '18px',
+                    background: '#667eea',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                }
+            }, '+ Add First Track'),
+            React.createElement('div', { style: { color: '#a0a0c0', marginTop: '16px', fontSize: '14px' } },
+                'Click to create your first learning track'
+            )
+        );
+    }
+    
+    // Normal rendering with nodes
+    return React.createElement('div', { 
+        style: { width: '100%', height: '100%', background: '#1a1a2e', position: 'relative', padding: '20px' }
+    },
+        React.createElement('div', { style: { position: 'absolute', top: '10px', left: '10px', zIndex: 10, color: '#a0a0c0', fontSize: '12px' } },
+            '💡 Click +Parallel to add tracks, +Step to add subtasks'
+        ),
+        React.createElement('div', { style: { position: 'relative' } },
+            rfNodes.map(node => {
+                if (node.type === 'trackNode') {
+                    return React.createElement(TrackNode, { key: node.id, data: node.data, id: node.id });
+                } else if (node.type === 'stepNode') {
+                    return React.createElement(StepNode, { key: node.id, data: node.data, id: node.id });
+                }
+                return null;
+            })
+        )
+    );
+}
 
+// Add this function to create the first track
+async function addFirstTrack() {
+    const newNodeId = `node_${Date.now()}`;
+    const newNode = {
+        id: newNodeId,
+        type: 'trackNode',
+        position: { x: 100, y: 100 },
+        data: {
+            title: 'New Track',
+            status: 'Not Started',
+            children: []
+        }
+    };
+    
+    nodes = [newNode];
+    edges = [];
+    
+    // Update React Flow
+    if (window.reactFlowInstance) {
+        window.reactFlowInstance.setNodes(nodes);
+        window.reactFlowInstance.setEdges(edges);
+    }
+    
+    await saveCurrentStage();
+}
 function updateStageTabs() {
     const tabs = document.querySelectorAll('.stage-tab');
     tabs.forEach(tab => {
