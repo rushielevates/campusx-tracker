@@ -8,7 +8,10 @@ const auth = async (req, res, next) => {
     }
     next();
 };
-
+// Add this test route at the top
+router.get('/test', (req, res) => {
+    res.json({ message: 'Journey route is working!' });
+});
 // Get user's journey
 router.get('/', auth, async (req, res) => {
     try {
