@@ -1728,3 +1728,58 @@ body {
     color: #667eea;
     font-size: 14px;
 }
+/* Collapsible Sidebar */
+.sidebar {
+    width: 280px;
+    transition: width 0.3s ease;
+    overflow-x: hidden;
+}
+
+.sidebar.collapsed {
+    width: 70px;
+}
+
+.sidebar.collapsed .sidebar-header h2,
+.sidebar.collapsed .sidebar-header p,
+.sidebar.collapsed .user-details,
+.sidebar.collapsed .nav-text,
+.sidebar.collapsed .logout-btn span {
+    display: none;
+}
+
+.sidebar.collapsed .user-avatar {
+    margin: 0 auto;
+}
+
+.sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 12px 0;
+}
+
+.sidebar.collapsed .nav-icon {
+    margin: 0;
+}
+
+.sidebar-toggle {
+    position: absolute;
+    right: -12px;
+    top: 50%;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    color: #667eea;
+    font-size: 12px;
+}
+
+.sidebar-toggle:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
