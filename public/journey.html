@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Journey Planner - CampusX ML Tracker</title>
+    <link rel="stylesheet" href="css/deepwork.css">
+    <link rel="stylesheet" href="css/journey.css">
+    <!-- React and React Flow will be loaded via CDN or bundled -->
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar (same collapsible structure) -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-toggle" onclick="toggleSidebar()">◀</div>
+            <div class="sidebar-header">
+                <h2>CampusX ML</h2>
+                <p>Your Learning Journey</p>
+            </div>
+            <div class="user-info">...</div>
+            <div class="nav-menu">
+                <div class="nav-item" onclick="window.location.href='/dashboard.html'">📺 Dashboard</div>
+                <div class="nav-item" onclick="window.location.href='/analytics.html'">📊 Analytics</div>
+                <div class="nav-item" onclick="window.location.href='/profile.html'">👤 Profile</div>
+                <div class="nav-item" onclick="window.location.href='/deepwork.html'">⏱️ Deep Work</div>
+                <div class="nav-item active">🗺️ Journey Planner</div>
+            </div>
+            <button class="logout-btn" onclick="logout()">🚪 Logout</button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content journey-main">
+            <!-- Horizontal Stage Tabs -->
+            <div class="stage-tabs-container">
+                <div class="stage-tabs" id="stageTabs">
+                    <!-- Stages will be dynamically added -->
+                </div>
+                <button class="add-stage-btn" onclick="addNewStage()">+ Add Stage</button>
+            </div>
+
+            <!-- React Flow Canvas Container -->
+            <div id="journey-canvas" class="journey-canvas"></div>
+        </div>
+    </div>
+
+    <!-- React and React Flow -->
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@xyflow/react@12.0.0/dist/index.js"></script>
+    
+    <!-- Your Journey JS -->
+    <script src="js/journey.js"></script>
+</body>
+</html>
