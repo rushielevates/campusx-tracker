@@ -10,20 +10,44 @@
     <div class="app-container">
         <!-- Sidebar (same collapsible structure) -->
         <div class="sidebar" id="sidebar">
-            <div class="sidebar-toggle" onclick="toggleSidebar()">◀</div>
             <div class="sidebar-header">
                 <h2>CampusX ML</h2>
                 <p>Your Learning Journey</p>
             </div>
-            <div class="user-info">...</div>
-            <div class="nav-menu">
-                <div class="nav-item" onclick="window.location.href='/dashboard.html'">📺 Dashboard</div>
-                <div class="nav-item" onclick="window.location.href='/analytics.html'">📊 Analytics</div>
-                <div class="nav-item" onclick="window.location.href='/profile.html'">👤 Profile</div>
-                <div class="nav-item" onclick="window.location.href='/deepwork.html'">⏱️ Deep Work</div>
-                <div class="nav-item active">🗺️ Journey Planner</div>
+            <div class="user-info">
+                <div class="user-avatar">CX</div>
+                <div class="user-details">
+                    <span id="username">CampusX User</span>
+                    <span id="user-email">journey@campusx.app</span>
+                </div>
             </div>
-            <button class="logout-btn" onclick="logout()"> Logout</button>
+            <button type="button" class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">&#9664;</button>
+            <div class="nav-menu">
+                <div class="nav-item" onclick="window.location.href='/dashboard.html'">
+                    <span class="nav-icon">&#128250;</span>
+                    <span class="nav-text">Dashboard</span>
+                </div>
+                <div class="nav-item" onclick="window.location.href='/analytics.html'">
+                    <span class="nav-icon">&#128202;</span>
+                    <span class="nav-text">Analytics</span>
+                </div>
+                <div class="nav-item" onclick="window.location.href='/deepwork.html'">
+                    <span class="nav-icon">&#9201;&#65039;</span>
+                    <span class="nav-text">Deep Work</span>
+                </div>
+                <div class="nav-item active">
+                    <span class="nav-icon">&#128506;&#65039;</span>
+                    <span class="nav-text">Journey Planner</span>
+                </div>
+                <div class="nav-item" onclick="window.location.href='/profile.html'">
+                    <span class="nav-icon">&#128100;</span>
+                    <span class="nav-text">Profile</span>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="logout()">
+                <span class="btn-icon">&#8678;</span>
+                <span class="btn-label">Logout</span>
+            </button>
         </div>
 
         <!-- Main Content -->
@@ -45,8 +69,9 @@
     <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@xyflow/react@12.0.0/dist/index.js"></script>
-    
+
     <!-- Your Journey JS -->
     <script src="js/journey.js"></script>
 </body>
 </html>
+
