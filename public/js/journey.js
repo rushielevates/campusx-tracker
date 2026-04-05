@@ -337,7 +337,9 @@ function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('sidebarToggle');
     sidebar.classList.toggle('collapsed');
-    toggleBtn.textContent = sidebar.classList.contains('collapsed') ? '▶' : '◀';
+    if (toggleBtn) {
+        toggleBtn.textContent = sidebar.classList.contains('collapsed') ? '▶' : '◀';
+    }
     localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
 }
 
