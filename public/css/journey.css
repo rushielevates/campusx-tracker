@@ -411,3 +411,100 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
+
+/* Journey Sidebar: match dashboard/random2 behavior */
+.main-content {
+    transition: margin-left 0.3s ease, width 0.3s ease;
+}
+
+.sidebar {
+    width: 280px;
+    transition: width 0.3s ease;
+    overflow-x: hidden;
+}
+
+.sidebar.collapsed {
+    width: 70px;
+}
+
+.sidebar.collapsed .sidebar-header h2,
+.sidebar.collapsed .sidebar-header p,
+.sidebar.collapsed .user-details,
+.sidebar.collapsed .nav-text,
+.sidebar.collapsed .logout-btn .btn-label {
+    display: none;
+}
+
+.sidebar.collapsed .user-avatar {
+    margin: 0 auto;
+}
+
+.sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 12px 0;
+}
+
+.sidebar.collapsed .nav-icon {
+    margin: 0;
+}
+
+.sidebar-toggle {
+    position: static;
+    margin: 12px 14px 6px;
+    align-self: flex-end;
+    flex: none;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    width: 30px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    color: #667eea;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.sidebar-toggle:hover {
+    background: #667eea;
+    color: white;
+    border-color: #667eea;
+}
+
+.logout-btn {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logout-btn .btn-icon {
+    margin-right: 6px;
+    line-height: 1;
+}
+
+.logout-btn .btn-label {
+    white-space: nowrap;
+}
+
+.sidebar.collapsed .logout-btn {
+    width: 40px;
+    height: 40px;
+    margin: 10px auto;
+    padding: 0;
+    border-radius: 10px;
+}
+
+.sidebar.collapsed .logout-btn .btn-icon {
+    display: inline-block;
+    margin: 0;
+    font-size: 18px;
+}
+
+.sidebar.collapsed ~ .main-content {
+    margin-left: 70px;
+    width: calc(100% - 70px);
+}
