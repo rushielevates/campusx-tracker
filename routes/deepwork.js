@@ -737,7 +737,7 @@ function getIconForTaskType(taskType) {
 }
 // ===== EDIT TODAY'S STATS (Manual Edit) =====
 // ===== EDIT TODAY'S STATS (Manual Edit) - DEBUG VERSION =====
-// ===== EDIT TODAY'S STATS (Manual Edit) - WITH VERIFICATION =====
+// ===== EDIT TODAY'S STATS (Manual Edit) - FIXED VERSION =====
 router.post('/edit-today', auth, async (req, res) => {
     try {
         const { totalMinutes } = req.body;
@@ -745,6 +745,8 @@ router.post('/edit-today', auth, async (req, res) => {
         
         const today = new Date();
         today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
         
         // Validate
         if (totalMinutes < 0 || totalMinutes > 1440) {
@@ -753,7 +755,7 @@ router.post('/edit-today', auth, async (req, res) => {
         
         const user = await User.findById(req.session.userId);
         
-        // Find today's stats
+        // Find or create today's stats
         let todayStats = null;
         let todayIndex = -1;
         
@@ -771,29 +773,57 @@ router.post('/edit-today', auth, async (req, res) => {
             }
         }
         
-        console.log('🔵 Before update - todayStats:', todayStats);
-        
         const oldMinutes = todayStats?.totalMinutes || 0;
         const difference = totalMinutes - oldMinutes;
         
+        // Get existing sessions for today
+        const existingSessions = await DeepWorkSession.find({
+            userId: req.session.userId,
+            startTime: { $gte: today, $lt: tomorrow }
+        });
+        
+        const existingTotal = existingSessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+        
+        // If user wants more time than existing sessions, create a manual session
+        if (totalMinutes > existingTotal) {
+            const additionalMinutes = totalMinutes - existingTotal;
+            
+            // Create a manual adjustment session
+            const manualSession = new DeepWorkSession({
+                userId: req.session.userId,
+                startTime: new Date(today.getTime() + 12 * 60 * 60 * 1000), // Noon
+                endTime: new Date(today.getTime() + 12 * 60 * 60 * 1000 + additionalMinutes * 60 * 1000),
+                durationMinutes: additionalMinutes,
+                taskType: 'other',
+                taskDescription: 'Manual time adjustment',
+                focusScore: 90,
+                interruptions: 0,
+                activeSession: false,
+                isManualEntry: true
+            });
+            
+            await manualSession.save();
+            console.log('✅ Created manual session:', manualSession._id, 'with', additionalMinutes, 'minutes');
+        }
+        
+        // If user wants less time, we can't delete sessions (would lose data)
+        // Instead, we'll just update the dailyStats and let the discrepancy exist
+        // The weekly report will show the actual session total
+        
+        // Update dailyStats
         if (!todayStats) {
-            // Create new entry
             if (!user.deepWorkStats) user.deepWorkStats = { dailyStats: [] };
             if (!user.deepWorkStats.dailyStats) user.deepWorkStats.dailyStats = [];
             
             user.deepWorkStats.dailyStats.push({
                 date: today,
                 totalMinutes: totalMinutes,
-                sessions: 1,
+                sessions: existingSessions.length || 1,
                 avgFocusScore: 90,
                 isManualEntry: true,
                 lastEdited: new Date()
             });
-            
-            if (!user.deepWorkStats.totalSessions) user.deepWorkStats.totalSessions = 0;
-            user.deepWorkStats.totalSessions += 1;
         } else {
-            // Update existing
             user.deepWorkStats.dailyStats[todayIndex].totalMinutes = totalMinutes;
             user.deepWorkStats.dailyStats[todayIndex].isManualEntry = true;
             user.deepWorkStats.dailyStats[todayIndex].lastEdited = new Date();
@@ -803,38 +833,8 @@ router.post('/edit-today', auth, async (req, res) => {
         if (!user.deepWorkStats.totalDeepWorkMinutes) user.deepWorkStats.totalDeepWorkMinutes = 0;
         user.deepWorkStats.totalDeepWorkMinutes += difference;
         
-        // Mark as modified
         user.markModified('deepWorkStats');
-        
-        console.log('🔵 About to save. Modified deepWorkStats:', user.deepWorkStats);
-        
-        const savedUser = await user.save();
-        console.log('✅ User saved successfully');
-        
-        // VERIFICATION - Fetch fresh from DB
-        console.log('🔵 VERIFICATION: Fetching fresh user from DB...');
-        const freshUser = await User.findById(req.session.userId).lean();
-        
-        // Find today's stats in fresh user
-        let freshTodayStats = null;
-        if (freshUser.deepWorkStats?.dailyStats) {
-            for (const stat of freshUser.deepWorkStats.dailyStats) {
-                const statDate = new Date(stat.date);
-                statDate.setHours(0, 0, 0, 0);
-                if (statDate.getTime() === today.getTime()) {
-                    freshTodayStats = stat;
-                    break;
-                }
-            }
-        }
-        
-        console.log('🔵 VERIFICATION - Value in DB after save:', freshTodayStats?.totalMinutes);
-        
-        if (freshTodayStats?.totalMinutes !== totalMinutes) {
-            console.log('❌ MISMATCH! DB has', freshTodayStats?.totalMinutes, 'but expected', totalMinutes);
-        } else {
-            console.log('✅ DB verification passed!');
-        }
+        await user.save();
         
         res.json({ 
             success: true, 
