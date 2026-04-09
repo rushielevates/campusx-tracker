@@ -1102,13 +1102,23 @@ async function saveEdit() {
             
             // Close modal
             closeEditModal();
+             document.getElementById('todayTotalCompact').style.opacity = '0.5';
+            
+            // REFRESH EVERYTHING to ensure consistency
+            await Promise.all([
+                loadWeeklyStats(),      // Refresh bar chart
+                loadWeeklyReport(),     // Refresh weekly report card
+                loadCategoryBreakdown() // Refresh category breakdown
+            ]);
+            
+            document.getElementById('todayTotalCompact').style.opacity = '1';
             
             // Show success message
             alert('Time updated successfully!');
             
             // DO NOT refresh weekly report or category breakdown automatically
             // After successful save, refresh the graph
-           await loadWeeklyStats();// Let the user see their updated time immediately
+         
             
         } else {
             const error = await response.json();
