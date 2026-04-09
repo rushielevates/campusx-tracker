@@ -31,6 +31,7 @@ const deepWorkSessionSchema = new mongoose.Schema({
 },
 lastPingTime: { type: Date }, // To detect crashes
     createdAt: { type: Date, default: Date.now }
+    isManualEntry: { type: Boolean, default: false }
 });
 
 module.exports = mongoose.model('DeepWorkSession', deepWorkSessionSchema);
