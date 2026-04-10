@@ -314,6 +314,7 @@ router.get('/current-session', auth, async (req, res) => {
     }
 });
 // ===== ADD THIS NEW ENDPOINT HERE =====
+
 // Get today's stats
 router.get('/today-stats', auth, async (req, res) => {
     try {
@@ -519,6 +520,264 @@ if (currentDayIndex === 0) { // Sunday
     daysPassed = currentDayIndex; // Monday=1, Tuesday=2, etc.
 }
 
+// ===== GET TODAY'S CATEGORY BREAKDOWN FOR EDITING =====
+router.get('/today-categories', auth, async (req, res) => {
+    try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        // Get today's sessions
+        const sessions = await DeepWorkSession.find({
+            userId: req.session.userId,
+            startTime: { $gte: today, $lt: tomorrow }
+        });
+        
+        // Get user's task types for mapping
+        const user = await User.findById(req.session.userId);
+        const taskTypes = user.deepWorkStats?.customTaskTypes || [];
+        
+        // Create map for quick lookup
+        const taskTypeMap = new Map();
+        taskTypes.forEach(task => {
+            taskTypeMap.set(task.id, {
+                name: task.name,
+                icon: task.icon || '⚙️',
+                color: task.color || '#667eea'
+            });
+        });
+        
+        // Group sessions by task type
+        const categoryMap = new Map();
+        
+        sessions.forEach(session => {
+            const taskType = session.taskType || 'other';
+            const minutes = session.durationMinutes || 0;
+            
+            const taskDetails = taskTypeMap.get(taskType) || {
+                name: taskType.charAt(0).toUpperCase() + taskType.slice(1),
+                icon: '⚙️',
+                color: '#667eea'
+            };
+            
+            if (!categoryMap.has(taskType)) {
+                categoryMap.set(taskType, {
+                    id: taskType,
+                    name: taskDetails.name,
+                    icon: taskDetails.icon,
+                    color: taskDetails.color,
+                    minutes: 0,
+                    sessions: []
+                });
+            }
+            
+            const category = categoryMap.get(taskType);
+            category.minutes += minutes;
+            category.sessions.push({
+                id: session._id,
+                minutes: minutes,
+                isManual: session.isManualEntry || false
+            });
+        });
+        
+        // Ensure all active task types are shown (even with 0 minutes)
+        taskTypes.forEach(task => {
+            if (task.isActive !== false) {
+                if (!categoryMap.has(task.id)) {
+                    categoryMap.set(task.id, {
+                        id: task.id,
+                        name: task.name,
+                        icon: task.icon || '⚙️',
+                        color: task.color || '#667eea',
+                        minutes: 0,
+                        sessions: []
+                    });
+                }
+            }
+        });
+        
+        const categories = Array.from(categoryMap.values())
+            .sort((a, b) => b.minutes - a.minutes);
+        
+        const totalMinutes = categories.reduce((sum, cat) => sum + cat.minutes, 0);
+        
+        res.json({
+            date: today,
+            totalMinutes,
+            categories
+        });
+        
+    } catch (error) {
+        console.error('Error getting today categories:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ===== UPDATE TODAY'S TIME BY CATEGORY =====
+router.post('/update-category-time', auth, async (req, res) => {
+    try {
+        const { categoryId, minutes } = req.body;
+        
+        if (minutes < 0 || minutes > 1440) {
+            return res.status(400).json({ error: 'Invalid minutes value' });
+        }
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        
+        // Get existing sessions for this category today
+        const existingSessions = await DeepWorkSession.find({
+            userId: req.session.userId,
+            taskType: categoryId,
+            startTime: { $gte: today, $lt: tomorrow }
+        }).sort({ startTime: 1 });
+        
+        const currentTotal = existingSessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+        const difference = minutes - currentTotal;
+        
+        if (difference === 0) {
+            return res.json({ success: true, message: 'No change needed' });
+        }
+        
+        if (difference > 0) {
+            // Need to ADD time - create a new manual session
+            const user = await User.findById(req.session.userId);
+            const taskTypes = user.deepWorkStats?.customTaskTypes || [];
+            const taskType = taskTypes.find(t => t.id === categoryId);
+            
+            const manualSession = new DeepWorkSession({
+                userId: req.session.userId,
+                startTime: new Date(today.getTime() + 12 * 60 * 60 * 1000), // Noon
+                endTime: new Date(today.getTime() + 12 * 60 * 60 * 1000 + difference * 60 * 1000),
+                durationMinutes: difference,
+                taskType: categoryId,
+                taskDescription: `Manual: ${taskType?.name || categoryId}`,
+                focusScore: 90,
+                interruptions: 0,
+                activeSession: false,
+                isManualEntry: true
+            });
+            
+            await manualSession.save();
+            console.log(`✅ Added ${difference} minutes to ${categoryId}`);
+            
+        } else {
+            // Need to REMOVE time
+            const timeToRemove = Math.abs(difference);
+            let remainingToRemove = timeToRemove;
+            
+            // First, try to remove from manual sessions
+            const manualSessions = existingSessions.filter(s => s.isManualEntry);
+            for (const session of manualSessions) {
+                if (remainingToRemove <= 0) break;
+                
+                if (session.durationMinutes <= remainingToRemove) {
+                    // Remove entire session
+                    remainingToRemove -= session.durationMinutes;
+                    await DeepWorkSession.findByIdAndDelete(session._id);
+                    console.log(`✅ Deleted manual session with ${session.durationMinutes} minutes`);
+                } else {
+                    // Reduce this session
+                    session.durationMinutes -= remainingToRemove;
+                    session.endTime = new Date(session.startTime.getTime() + session.durationMinutes * 60 * 1000);
+                    await session.save();
+                    console.log(`✅ Reduced session by ${remainingToRemove} minutes`);
+                    remainingToRemove = 0;
+                }
+            }
+            
+            // If still need to remove, reduce non-manual sessions
+            if (remainingToRemove > 0) {
+                const regularSessions = existingSessions.filter(s => !s.isManualEntry);
+                for (const session of regularSessions) {
+                    if (remainingToRemove <= 0) break;
+                    
+                    const canRemove = Math.min(session.durationMinutes, remainingToRemove);
+                    session.durationMinutes -= canRemove;
+                    
+                    if (session.durationMinutes > 0) {
+                        session.endTime = new Date(session.startTime.getTime() + session.durationMinutes * 60 * 1000);
+                        await session.save();
+                    } else {
+                        // Remove session completely if duration becomes 0
+                        await DeepWorkSession.findByIdAndDelete(session._id);
+                    }
+                    
+                    remainingToRemove -= canRemove;
+                }
+            }
+            
+            console.log(`✅ Removed ${timeToRemove} minutes from ${categoryId} (${remainingToRemove} could not be removed)`);
+        }
+        
+        // Update user's dailyStats
+        await updateUserDailyStats(req.session.userId);
+        
+        res.json({ 
+            success: true, 
+            message: `Updated ${categoryId} to ${minutes} minutes`,
+            newTotal: minutes
+        });
+        
+    } catch (error) {
+        console.error('Error updating category time:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Helper function to recalculate dailyStats
+async function updateUserDailyStats(userId) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const sessions = await DeepWorkSession.find({
+        userId: userId,
+        startTime: { $gte: today, $lt: tomorrow }
+    });
+    
+    const totalMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+    const avgFocus = sessions.length > 0 
+        ? Math.round(sessions.reduce((sum, s) => sum + (s.focusScore || 0), 0) / sessions.length)
+        : 0;
+    
+    const user = await User.findById(userId);
+    
+    if (!user.deepWorkStats) user.deepWorkStats = { dailyStats: [] };
+    if (!user.deepWorkStats.dailyStats) user.deepWorkStats.dailyStats = [];
+    
+    // Find today's stats
+    let todayStats = null;
+    for (let i = 0; i < user.deepWorkStats.dailyStats.length; i++) {
+        const stat = user.deepWorkStats.dailyStats[i];
+        const statDate = new Date(stat.date);
+        statDate.setHours(0, 0, 0, 0);
+        
+        if (statDate.getTime() === today.getTime()) {
+            todayStats = stat;
+            todayStats.totalMinutes = totalMinutes;
+            todayStats.sessions = sessions.length;
+            todayStats.avgFocusScore = avgFocus;
+            todayStats.lastEdited = new Date();
+            break;
+        }
+    }
+    
+    if (!todayStats) {
+        user.deepWorkStats.dailyStats.push({
+            date: today,
+            totalMinutes: totalMinutes,
+            sessions: sessions.length,
+            avgFocusScore: avgFocus
+        });
+    }
+    
+    await user.save();
+}
 // Calculate average based on actual days passed
 const avgDailyMinutes = Math.round(totalMinutes / daysPassed);
         
