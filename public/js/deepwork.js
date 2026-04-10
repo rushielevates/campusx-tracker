@@ -7,7 +7,7 @@ let taskDescription = '';
 // Week navigation variables
 let currentWeekOffset = 0; // 0 = current week, -1 = last week, -2 = two weeks ago, etc.
 let isLoadingWeekly = false;
-
+let categoryEdits = new Map();
 // Load data on page load
 // Load data on page load (KEEP THIS ONE)
 // Load data on page load - PARALLEL VERSION
@@ -39,6 +39,254 @@ window.onload = async function() {
     console.log('✅ All dashboard data loaded in parallel!');
     console.log('🔵 Deep Work page loaded - END');
 };
+// ===== CATEGORY-BASED TIME EDITING =====
+
+// Store original values for comparison
+let categoryEdits = new Map();
+
+// Show category edit modal
+async function showCategoryEditModal() {
+    console.log('🔵 Opening category edit modal');
+    
+    try {
+        // Show loading state
+        document.getElementById('categoryEditList').innerHTML = '<div class="loading">Loading categories...</div>';
+        document.getElementById('categoryEditModal').style.display = 'block';
+        
+        // Fetch today's category breakdown
+        const response = await fetch('/api/deepwork/today-categories', {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) throw new Error('Failed to load categories');
+        
+        const data = await response.json();
+        console.log('📊 Today categories:', data);
+        
+        // Clear previous edits
+        categoryEdits.clear();
+        
+        // Render categories
+        renderCategoryEditor(data.categories);
+        
+    } catch (error) {
+        console.error('Error loading categories:', error);
+        alert('Failed to load categories. Please try again.');
+        closeCategoryEditModal();
+    }
+}
+
+// Render category editor
+function renderCategoryEditor(categories) {
+    const container = document.getElementById('categoryEditList');
+    
+    if (!categories || categories.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666;">No categories yet. Start a timer first!</p>';
+        return;
+    }
+    
+    container.innerHTML = categories.map(cat => {
+        const hours = Math.floor(cat.minutes / 60);
+        const mins = cat.minutes % 60;
+        const timeDisplay = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+        
+        // Store original value
+        categoryEdits.set(cat.id, {
+            original: cat.minutes,
+            current: cat.minutes,
+            changed: false
+        });
+        
+        return `
+            <div class="category-edit-item" data-category-id="${cat.id}">
+                <div class="category-edit-icon">${cat.icon}</div>
+                <div class="category-edit-info">
+                    <div class="category-edit-name" style="color: ${cat.color}">${cat.name}</div>
+                    <div class="category-edit-current">Current: ${timeDisplay}</div>
+                </div>
+                <div class="category-edit-controls">
+                    <div class="category-time-input">
+                        <input 
+                            type="number" 
+                            id="hours-${cat.id}" 
+                            min="0" 
+                            max="24" 
+                            value="${hours}"
+                            onchange="updateCategoryTime('${cat.id}')"
+                            onkeyup="updateCategoryTime('${cat.id}')"
+                        >
+                        <span class="time-unit">h</span>
+                    </div>
+                    <div class="category-time-input">
+                        <input 
+                            type="number" 
+                            id="mins-${cat.id}" 
+                            min="0" 
+                            max="59" 
+                            value="${mins}"
+                            onchange="updateCategoryTime('${cat.id}')"
+                            onkeyup="updateCategoryTime('${cat.id}')"
+                        >
+                        <span class="time-unit">m</span>
+                    </div>
+                    <div class="category-edit-actions">
+                        <button onclick="adjustCategoryTime('${cat.id}', 15)" title="Add 15 min">+15</button>
+                        <button onclick="adjustCategoryTime('${cat.id}', -15)" title="Remove 15 min">-15</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    updateCategoryTotal();
+}
+
+// Update category time from inputs
+function updateCategoryTime(categoryId) {
+    const hoursInput = document.getElementById(`hours-${categoryId}`);
+    const minsInput = document.getElementById(`mins-${categoryId}`);
+    
+    let hours = parseInt(hoursInput.value) || 0;
+    let mins = parseInt(minsInput.value) || 0;
+    
+    // Validate
+    hours = Math.max(0, Math.min(24, hours));
+    mins = Math.max(0, Math.min(59, mins));
+    
+    // Normalize (if mins > 59, add to hours)
+    if (mins >= 60) {
+        hours += Math.floor(mins / 60);
+        mins = mins % 60;
+    }
+    
+    // Update inputs
+    hoursInput.value = hours;
+    minsInput.value = mins;
+    
+    const totalMinutes = (hours * 60) + mins;
+    
+    // Store edit
+    const edit = categoryEdits.get(categoryId);
+    if (edit) {
+        edit.current = totalMinutes;
+        edit.changed = (totalMinutes !== edit.original);
+    }
+    
+    // Highlight changed item
+    const item = document.querySelector(`[data-category-id="${categoryId}"]`);
+    if (edit.changed) {
+        item.classList.add('changed');
+    } else {
+        item.classList.remove('changed');
+    }
+    
+    updateCategoryTotal();
+}
+
+// Quick adjust by amount
+function adjustCategoryTime(categoryId, deltaMinutes) {
+    const edit = categoryEdits.get(categoryId);
+    if (!edit) return;
+    
+    const newMinutes = Math.max(0, edit.current + deltaMinutes);
+    const hours = Math.floor(newMinutes / 60);
+    const mins = newMinutes % 60;
+    
+    document.getElementById(`hours-${categoryId}`).value = hours;
+    document.getElementById(`mins-${categoryId}`).value = mins;
+    
+    updateCategoryTime(categoryId);
+}
+
+// Update total display
+function updateCategoryTotal() {
+    let totalMinutes = 0;
+    
+    for (const edit of categoryEdits.values()) {
+        totalMinutes += edit.current;
+    }
+    
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+    
+    document.getElementById('categoryEditTotal').textContent = 
+        hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+}
+
+// Save all category edits
+async function saveAllCategoryEdits() {
+    const changes = [];
+    
+    for (const [categoryId, edit] of categoryEdits.entries()) {
+        if (edit.changed) {
+            changes.push({
+                categoryId,
+                minutes: edit.current
+            });
+        }
+    }
+    
+    if (changes.length === 0) {
+        closeCategoryEditModal();
+        return;
+    }
+    
+    console.log('💾 Saving category changes:', changes);
+    
+    // Show saving indicator
+    const saveBtn = document.querySelector('.btn-primary');
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = 'Saving...';
+    saveBtn.disabled = true;
+    
+    try {
+        // Save each category change
+        const promises = changes.map(change => 
+            fetch('/api/deepwork/update-category-time', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(change)
+            })
+        );
+        
+        await Promise.all(promises);
+        
+        console.log('✅ All category changes saved');
+        
+        // Close modal
+        closeCategoryEditModal();
+        
+        // Refresh all dashboard components
+        await Promise.all([
+            loadTodayProgress(),
+            loadWeeklyStats(),
+            loadWeeklyReport(),
+            loadCategoryBreakdown()
+        ]);
+        
+        alert('Time updated successfully!');
+        
+    } catch (error) {
+        console.error('Error saving category edits:', error);
+        alert('Failed to save changes. Please try again.');
+    } finally {
+        saveBtn.textContent = originalText;
+        saveBtn.disabled = false;
+    }
+}
+
+// Close modal
+function closeCategoryEditModal() {
+    document.getElementById('categoryEditModal').style.display = 'none';
+}
+
+// Update the edit button in the UI to use the new modal
+// Replace the old showEditModal function:
+function showEditModal() {
+    // Use the new category-based editor instead
+    showCategoryEditModal();
+}
 // Check if there's an active session
 async function checkActiveSession() {
     try {
