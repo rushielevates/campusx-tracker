@@ -42,7 +42,7 @@ window.onload = async function() {
 // ===== CATEGORY-BASED TIME EDITING =====
 
 // Store original values for comparison
-let categoryEdits = new Map();
+
 
 // Show category edit modal
 async function showCategoryEditModal() {
