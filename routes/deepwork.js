@@ -484,13 +484,15 @@ router.get('/weekly-stats', auth, async (req, res) => {
 // Get weekly report (for Sunday summary)
 router.get('/weekly-report', auth, async (req, res) => {
     try {
+        const weekOffset = parseInt(req.query.weekOffset) || 0;
         const today = new Date();
-        
+        const targetDate = new Date(today);
+        targetDate.setDate(today.getDate() + (weekOffset * 7));
         // Calculate Monday of current week (assuming week starts Monday)
-        const monday = new Date(today);
-        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Adjust to Monday
-        monday.setDate(today.getDate() - daysToSubtract);
+        const monday = new Date(targetDate);
+        const dayOfWeek = targetDate.getDay();
+        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        monday.setDate(targetDate.getDate() - daysToSubtract);
         monday.setHours(0, 0, 0, 0);
         
         // Calculate Sunday (end of week)
@@ -897,13 +899,15 @@ router.get('/get-goal', auth, async (req, res) => {
 // ===== CATEGORY BREAKDOWN ENDPOINT =====
 router.get('/category-breakdown', auth, async (req, res) => {
     try {
+        const weekOffset = parseInt(req.query.weekOffset) || 0;
         const today = new Date();
-        
+        const targetDate = new Date(today);
+        targetDate.setDate(today.getDate() + (weekOffset * 7));
         // Calculate Monday of current week
-        const monday = new Date(today);
-        const dayOfWeek = today.getDay();
+        const monday = new Date(targetDate);
+        const dayOfWeek = targetDate.getDay();
         const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        monday.setDate(today.getDate() - daysToSubtract);
+        monday.setDate(targetDate.getDate() - daysToSubtract);
         monday.setHours(0, 0, 0, 0);
         
         // Calculate Sunday
