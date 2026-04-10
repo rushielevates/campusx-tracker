@@ -1787,8 +1787,17 @@ body {
 .category-edit-modal {
     max-width: 500px;
     width: 90%;
+    max-height: 85vh;           /* ← ADD THIS */
+    overflow-y: auto;            /* ← ADD THIS */
+    display: flex;               /* ← ADD THIS */
+    flex-direction: column;      /* ← ADD THIS */
 }
-
+.category-edit-modal .modal-footer {
+    position: sticky;            /* ← ADD THIS */
+    bottom: 0;                   /* ← ADD THIS */
+    background: white;           /* ← ADD THIS */
+    z-index: 5;                  /* ← ADD THIS */
+}
 .modal-header {
     display: flex;
     justify-content: space-between;
@@ -1824,7 +1833,7 @@ body {
 }
 
 .category-edit-list {
-    max-height: 400px;
+    max-height: 350px;
     overflow-y: auto;
     margin: 20px 0;
 }
