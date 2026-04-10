@@ -520,6 +520,105 @@ if (currentDayIndex === 0) { // Sunday
     daysPassed = currentDayIndex; // Monday=1, Tuesday=2, etc.
 }
 
+// Calculate average based on actual days passed
+const avgDailyMinutes = Math.round(totalMinutes / daysPassed);
+        
+        // Format for display
+        const avgDailyHours = Math.floor(avgDailyMinutes / 60);
+        const avgDailyMins = avgDailyMinutes % 60;
+        const avgDailyDisplay = avgDailyHours > 0 
+            ? `${avgDailyHours}h ${avgDailyMins}m` 
+            : `${avgDailyMins}m`;
+        
+        // Calculate average focus score
+        const avgFocus = sessions.length > 0 
+            ? Math.round(sessions.reduce((sum, s) => sum + (s.focusScore || 0), 0) / sessions.length)
+            : 0;
+        
+        // Find best day
+        let bestDay = null;
+        let maxMinutes = 0;
+        
+        if (sessions.length > 0) {
+            const dayTotals = {};
+            sessions.forEach(s => {
+                const dateStr = s.startTime.toDateString();
+                dayTotals[dateStr] = (dayTotals[dateStr] || 0) + (s.durationMinutes || 0);
+            });
+            
+            for (const [dateStr, minutes] of Object.entries(dayTotals)) {
+                if (minutes > maxMinutes) {
+                    maxMinutes = minutes;
+                    const date = new Date(dateStr);
+                    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+                    const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    
+                    bestDay = {
+                        dayName,
+                        date: monthDay,
+                        hours: (minutes / 60).toFixed(1),
+                        minutes,
+                        formatted: `${dayName}, ${monthDay} · ${Math.floor(minutes/60)}h ${minutes%60}m`
+                    };
+                }
+            }
+        }
+        
+        // Calculate weekly streak (consecutive days with sessions)
+        let weeklyStreak = 0;
+        if (sessions.length > 0) {
+            const daysWithSessions = new Set();
+            sessions.forEach(s => {
+                const dateStr = s.startTime.toDateString();
+                daysWithSessions.add(dateStr);
+            });
+            
+            // Check consecutive days from Monday
+            let currentDate = new Date(monday);
+            while (currentDate <= sunday) {
+                const dateStr = currentDate.toDateString();
+                if (daysWithSessions.has(dateStr)) {
+                    weeklyStreak++;
+                } else {
+                    break; // Break on first day without session
+                }
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+        }
+        
+        // Format week range for display
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        
+        // Get user's weekly goal
+        const user = await User.findById(req.session.userId);
+        const weeklyGoal = user.deepWorkStats?.weeklyGoal || 1500;
+        
+        // Send response with all data INCLUDING goal
+        res.json({
+            weekStart: monday.toISOString().split('T')[0],
+            weekEnd: sunday.toISOString().split('T')[0],
+            weekRangeDisplay: `${monthNames[monday.getMonth()]} ${monday.getDate()} - ${monthNames[sunday.getMonth()]} ${sunday.getDate()}, ${sunday.getFullYear()}`,
+            totalHours: totalHours,
+            totalMinutes: totalMinutes,
+            sessionsCount: totalSessions,  // ← ADDED THIS
+            avgFocusScore: avgFocus,        // ← ADDED THIS
+            avgDailyDisplay: avgDailyDisplay,
+            bestDay: bestDay,
+            weeklyStreak: weeklyStreak,
+            goal: { 
+                target: weeklyGoal,
+                achieved: totalMinutes,
+                percentage: Math.round((totalMinutes / weeklyGoal) * 100)
+            }
+        });
+        
+    } catch (error) {
+        console.error('Error in weekly report:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // ===== GET TODAY'S CATEGORY BREAKDOWN FOR EDITING =====
 router.get('/today-categories', auth, async (req, res) => {
     try {
@@ -778,105 +877,6 @@ async function updateUserDailyStats(userId) {
     
     await user.save();
 }
-// Calculate average based on actual days passed
-const avgDailyMinutes = Math.round(totalMinutes / daysPassed);
-        
-        // Format for display
-        const avgDailyHours = Math.floor(avgDailyMinutes / 60);
-        const avgDailyMins = avgDailyMinutes % 60;
-        const avgDailyDisplay = avgDailyHours > 0 
-            ? `${avgDailyHours}h ${avgDailyMins}m` 
-            : `${avgDailyMins}m`;
-        
-        // Calculate average focus score
-        const avgFocus = sessions.length > 0 
-            ? Math.round(sessions.reduce((sum, s) => sum + (s.focusScore || 0), 0) / sessions.length)
-            : 0;
-        
-        // Find best day
-        let bestDay = null;
-        let maxMinutes = 0;
-        
-        if (sessions.length > 0) {
-            const dayTotals = {};
-            sessions.forEach(s => {
-                const dateStr = s.startTime.toDateString();
-                dayTotals[dateStr] = (dayTotals[dateStr] || 0) + (s.durationMinutes || 0);
-            });
-            
-            for (const [dateStr, minutes] of Object.entries(dayTotals)) {
-                if (minutes > maxMinutes) {
-                    maxMinutes = minutes;
-                    const date = new Date(dateStr);
-                    const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
-                    const monthDay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                    
-                    bestDay = {
-                        dayName,
-                        date: monthDay,
-                        hours: (minutes / 60).toFixed(1),
-                        minutes,
-                        formatted: `${dayName}, ${monthDay} · ${Math.floor(minutes/60)}h ${minutes%60}m`
-                    };
-                }
-            }
-        }
-        
-        // Calculate weekly streak (consecutive days with sessions)
-        let weeklyStreak = 0;
-        if (sessions.length > 0) {
-            const daysWithSessions = new Set();
-            sessions.forEach(s => {
-                const dateStr = s.startTime.toDateString();
-                daysWithSessions.add(dateStr);
-            });
-            
-            // Check consecutive days from Monday
-            let currentDate = new Date(monday);
-            while (currentDate <= sunday) {
-                const dateStr = currentDate.toDateString();
-                if (daysWithSessions.has(dateStr)) {
-                    weeklyStreak++;
-                } else {
-                    break; // Break on first day without session
-                }
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
-        }
-        
-        // Format week range for display
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        
-        // Get user's weekly goal
-        const user = await User.findById(req.session.userId);
-        const weeklyGoal = user.deepWorkStats?.weeklyGoal || 1500;
-        
-        // Send response with all data INCLUDING goal
-        res.json({
-            weekStart: monday.toISOString().split('T')[0],
-            weekEnd: sunday.toISOString().split('T')[0],
-            weekRangeDisplay: `${monthNames[monday.getMonth()]} ${monday.getDate()} - ${monthNames[sunday.getMonth()]} ${sunday.getDate()}, ${sunday.getFullYear()}`,
-            totalHours: totalHours,
-            totalMinutes: totalMinutes,
-            sessionsCount: totalSessions,  // ← ADDED THIS
-            avgFocusScore: avgFocus,        // ← ADDED THIS
-            avgDailyDisplay: avgDailyDisplay,
-            bestDay: bestDay,
-            weeklyStreak: weeklyStreak,
-            goal: { 
-                target: weeklyGoal,
-                achieved: totalMinutes,
-                percentage: Math.round((totalMinutes / weeklyGoal) * 100)
-            }
-        });
-        
-    } catch (error) {
-        console.error('Error in weekly report:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-        
 // ===== GOAL MANAGEMENT ENDPOINTS =====
 
 // Get user's current goal
