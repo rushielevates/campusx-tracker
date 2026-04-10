@@ -1223,14 +1223,32 @@ async function saveTaskOrder() {
 }
 
 // Show edit modal with current values
-
-// Close modal when clicking outside
+// Close modals when clicking outside
 window.onclick = function(event) {
-    const modal = document.getElementById('editModal');
-    if (event.target === modal) {
-        closeEditModal();
+    // Handle category edit modal
+    const categoryModal = document.getElementById('categoryEditModal');
+    if (event.target === categoryModal) {
+        closeCategoryEditModal();
     }
-}
+    
+    // Handle goal modal
+    const goalModal = document.getElementById('goalModal');
+    if (event.target === goalModal) {
+        closeGoalModal();
+    }
+    
+    // Handle task manager modal
+    const taskModal = document.getElementById('taskManagerModal');
+    if (event.target === taskModal) {
+        closeTaskManager();
+    }
+    
+    // Handle note modal
+    const noteModal = document.getElementById('noteModal');
+    if (event.target === noteModal) {
+        closeNoteModal();
+    }
+};
 // ===== TABS =====
 let currentTab = 'tasks';
 
