@@ -27,10 +27,10 @@ window.onload = async function() {
     await Promise.all([
         checkActiveSession(),      // Restores timer if needed
         loadWeeklyStats(),          // Bar chart
-        loadWeeklyReport(),         // Weekly progress card
+        loadWeeklyReport(0),         // Weekly progress card
         loadTodayProgress(),        // Today's compact stats
         loadUserGoal(),             // Goal slider
-        loadCategoryBreakdown(),     // Category breakdown
+        loadCategoryBreakdown(0),     // Category breakdown
          loadTasks(),                // ← ADD THIS INSIDE
         loadNotes()                 // ← ADD THIS INSIDE
     ]);
@@ -340,7 +340,7 @@ async function loadCategoryBreakdown() {
     console.log('🔵 loadCategoryBreakdown STARTED');
     try {
         console.log('Loading category breakdown...');
-        const response = await fetch('/api/deepwork/category-breakdown', {
+         const response = await fetch(`/api/deepwork/category-breakdown?weekOffset=${weekOffset}`, {
             credentials: 'include'
         });
         
@@ -712,14 +712,22 @@ async function loadWeeklyStats() {
 // Load previous week
 function loadPreviousWeek() {
     currentWeekOffset--;
-    loadWeeklyStats();
+    await Promise.all([
+        loadWeeklyStats(),
+        loadWeeklyReport(currentWeekOffset),
+        loadCategoryBreakdown(currentWeekOffset)
+    ]);
 }
 
 // Load next week
 function loadNextWeek() {
     if (currentWeekOffset < 0) {
         currentWeekOffset++;
-        loadWeeklyStats();
+        await Promise.all([
+            loadWeeklyStats(),
+            loadWeeklyReport(currentWeekOffset),
+            loadCategoryBreakdown(currentWeekOffset)
+        ]);
     }
 }
 
@@ -727,7 +735,11 @@ function loadNextWeek() {
 function loadCurrentWeek() {
     if (currentWeekOffset !== 0) {
         currentWeekOffset = 0;
-        loadWeeklyStats();
+        await Promise.all([
+            loadWeeklyStats(),
+            loadWeeklyReport(0),
+            loadCategoryBreakdown(0)
+        ]);
     }
 }
 
@@ -814,10 +826,11 @@ function showMockChart() {
 
 // ===== WEEKLY REPORT =====
 // ===== WEEKLY REPORT =====
-async function loadWeeklyReport() {
+// ===== WEEKLY REPORT =====
+async function loadWeeklyReport(weekOffset = 0) {
     try {
-        console.log('Loading weekly report...');
-        const response = await fetch('/api/deepwork/weekly-report', {
+        console.log('Loading weekly report for offset:', weekOffset);
+        const response = await fetch(`/api/deepwork/weekly-report?weekOffset=${weekOffset}`, {
             credentials: 'include'
         });
         
@@ -837,7 +850,7 @@ async function loadWeeklyReport() {
         document.getElementById('goalPercentage').textContent = (report.goal.percentage || 0) + '%';
         
         // Stats list (vertical)
-       document.getElementById('avgSession').textContent = report.avgDailyDisplay || '0m';
+        document.getElementById('avgSession').textContent = report.avgDailyDisplay || '0m';
         
         if (report.bestDay) {
             document.getElementById('bestDay').textContent = report.bestDay.formatted;
@@ -857,10 +870,8 @@ async function loadWeeklyReport() {
         document.getElementById('avgSession').textContent = '0m';
         document.getElementById('bestDay').textContent = 'No data';
         document.getElementById('weeklyStreak').textContent = '0 days';
-
     }
 }
-
 // ===== NEW: Load Today's Progress =====
 // ===== UPDATE Today's Progress for Compact View =====
 async function loadTodayProgress() {
