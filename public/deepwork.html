@@ -306,6 +306,33 @@
         </div>
     </div>
 </div>
+    <!-- Category Time Editor Modal -->
+<div class="modal" id="categoryEditModal">
+    <div class="modal-content category-edit-modal">
+        <div class="modal-header">
+            <h2>✏️ Edit Today's Time by Category</h2>
+            <span class="close" onclick="closeCategoryEditModal()">&times;</span>
+        </div>
+        
+        <div class="modal-body">
+            <p class="edit-info">Adjust time for each category. Changes will reflect in your weekly report.</p>
+            
+            <div id="categoryEditList" class="category-edit-list">
+                <!-- Categories will be loaded here -->
+            </div>
+            
+            <div class="total-summary">
+                <span>Total Today:</span>
+                <strong id="categoryEditTotal">0h 0m</strong>
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeCategoryEditModal()">Cancel</button>
+            <button class="btn-primary" onclick="saveAllCategoryEdits()">Save All Changes</button>
+        </div>
+    </div>
+</div>
      <script src="js/deepwork.js"></script>
 </body>
 </html>
