@@ -1792,12 +1792,7 @@ body {
     display: flex;               /* ← ADD THIS */
     flex-direction: column;      /* ← ADD THIS */
 }
-.category-edit-modal .modal-footer {
-    position: sticky;            /* ← ADD THIS */
-    bottom: 0;                   /* ← ADD THIS */
-    background: white;           /* ← ADD THIS */
-    z-index: 5;                  /* ← ADD THIS */
-}
+
 .modal-header {
     display: flex;
     justify-content: space-between;
