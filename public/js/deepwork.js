@@ -7,7 +7,6 @@ let taskDescription = '';
 // Week navigation variables
 let currentWeekOffset = 0; // 0 = current week, -1 = last week, -2 = two weeks ago, etc.
 let isLoadingWeekly = false;
-let categoryEdits = new Map();
 // Load data on page load
 // Load data on page load (KEEP THIS ONE)
 // Load data on page load - PARALLEL VERSION
@@ -43,7 +42,7 @@ window.onload = async function() {
 
 // Store original values for comparison
 
-
+let categoryEdits = new Map();
 // Show category edit modal
 async function showCategoryEditModal() {
     console.log('🔵 Opening category edit modal');
