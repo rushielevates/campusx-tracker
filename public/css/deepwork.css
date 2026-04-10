@@ -1166,22 +1166,31 @@ body {
 }
 /* Edit Button */
 .edit-today-btn {
-    background: none;
-    border: none;
-    font-size: 18px;
+    background: rgba(102, 126, 234, 0.1);
+    border: 1px solid #667eea;
+    font-size: 13px;
+    font-weight: 500;
     cursor: pointer;
-    padding: 5px 10px;
+    padding: 6px 14px;
     border-radius: 20px;
     color: #667eea;
-    margin-left: 10px;
-    transition: all 0.2s;
+    margin-left: 12px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
 }
 
 .edit-today-btn:hover {
-    background: #667eea20;
-    transform: scale(1.1);
+    background: #667eea;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
 }
-
+.edit-today-btn:active {
+    transform: translateY(0);
+}
 /* Edit Modal Styles */
 #editModal .modal-content {
     max-width: 350px;
