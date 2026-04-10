@@ -333,7 +333,7 @@ async function checkActiveSession() {
     }
 }
 // ===== CATEGORY BREAKDOWN FUNCTIONS =====
-async function loadCategoryBreakdown() {
+async function loadCategoryBreakdown(weekOffset = 0) {
     console.log('🔵 loadCategoryBreakdown STARTED at', Date.now());
     console.log('🔵 Current URL:', window.location.href);
     console.log('🔵 Document readyState:', document.readyState);
@@ -710,7 +710,7 @@ async function loadWeeklyStats() {
 }
 
 // Load previous week
-function loadPreviousWeek() {
+async function loadPreviousWeek() {
     currentWeekOffset--;
     await Promise.all([
         loadWeeklyStats(),
@@ -720,7 +720,7 @@ function loadPreviousWeek() {
 }
 
 // Load next week
-function loadNextWeek() {
+async function loadNextWeek() {
     if (currentWeekOffset < 0) {
         currentWeekOffset++;
         await Promise.all([
@@ -732,7 +732,7 @@ function loadNextWeek() {
 }
 
 // Load current week (reset to today)
-function loadCurrentWeek() {
+async function loadCurrentWeek() {
     if (currentWeekOffset !== 0) {
         currentWeekOffset = 0;
         await Promise.all([
