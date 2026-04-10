@@ -732,50 +732,6 @@ function loadCurrentWeek() {
 }
 
 // Update renderBarChart to handle empty data
-function renderBarChart(stats) {
-    const chart = document.getElementById('barChart');
-    chart.innerHTML = '';
-    chart.classList.remove('loading');
-    
-    if (!stats || stats.length === 0) {
-        chart.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No data for this week. Start a timer to see your stats!</p>';
-        return;
-    }
-    
-    // Check if all days have zero minutes
-    const hasAnyData = stats.some(day => day.minutes > 0);
-    if (!hasAnyData) {
-        chart.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No activity recorded for this week.</p>';
-        return;
-    }
-    
-    const maxMinutes = Math.max(...stats.map(s => s.minutes), 1);
-    
-    stats.forEach(day => {
-        const height = maxMinutes > 0 ? (day.minutes / maxMinutes) * 180 : 0;
-        
-        const barContainer = document.createElement('div');
-        barContainer.className = 'bar-container';
-        
-        const bar = document.createElement('div');
-        bar.className = 'bar';
-        bar.style.height = height + 'px';
-        bar.setAttribute('data-tooltip', `${day.hours}h (${day.sessions} sessions, ${day.focusScore}% focus)`);
-        
-        const label = document.createElement('div');
-        label.className = 'bar-label';
-        label.textContent = day.day;
-        
-        const value = document.createElement('div');
-        value.className = 'bar-value';
-        value.textContent = day.hours + 'h';
-        
-        barContainer.appendChild(bar);
-        barContainer.appendChild(label);
-        barContainer.appendChild(value);
-        chart.appendChild(barContainer);
-    });
-}
 
 function renderBarChart(stats) {
     const chart = document.getElementById('barChart');
