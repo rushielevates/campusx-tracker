@@ -450,6 +450,7 @@ function startTimerFromExisting(elapsedSeconds) {
     document.getElementById('startBtn').style.display = 'none';
     document.getElementById('pauseBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'inline-block';
+    document.getElementById('startBtn').textContent = 'Start';
     document.querySelector('.task-input').style.opacity = '0.5';
     document.querySelector('.task-input input').disabled = true;
     document.querySelector('.task-input select').disabled = true;
@@ -478,6 +479,12 @@ async function loadUserInfo() {
 
 // ===== TIMER FUNCTIONS =====
 function startTimer() {
+        // Check if we're resuming or starting fresh
+    if (currentSessionId) {
+        // We have an existing session, so RESUME it
+        resumeTimer();
+        return;
+    }
     taskDescription = document.getElementById('taskDescription').value;
     taskType = document.getElementById('taskType').value;
     
@@ -569,7 +576,41 @@ function pauseTimer() {
     document.getElementById('startBtn').style.display = 'inline-block';
     document.getElementById('startBtn').textContent = 'Resume';
 }
-
+// ===== ADD THIS NEW FUNCTION =====
+function resumeTimer() {
+    if (!currentSessionId) {
+        // If no session, start a new one
+        startTimer();
+        return;
+    }
+    
+    const sessionStartTime = Date.now() - (seconds * 1000);
+    
+    // Clear any existing interval
+    if (timerInterval) {
+        clearInterval(timerInterval);
+    }
+    
+    // Resume the timer from current seconds
+    timerInterval = setInterval(() => {
+        const realSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
+        if (realSeconds !== seconds) {
+            seconds = realSeconds;
+            updateTimerDisplay();
+        }
+    }, 200);
+    
+    // Resume ping interval
+    startPingInterval();
+    
+    // Update UI
+    document.getElementById('startBtn').style.display = 'none';
+    document.getElementById('pauseBtn').style.display = 'inline-block';
+    document.getElementById('stopBtn').style.display = 'inline-block';
+    document.querySelector('.task-input').style.opacity = '0.5';
+    document.querySelector('.task-input input').disabled = true;
+    document.querySelector('.task-input select').disabled = true;
+}
 function stopTimer() {
         // Clear ping interval when stopping
     if (window.pingInterval) {
