@@ -1,10 +1,11 @@
 // public/js/journey.js
-// Journey Planner - With Draggable Items
+// Journey Planner - Two Column Kanban Style
 
 let currentJourney = null;
 let activeStageId = null;
+let sortableInstances = new Map();
 
-// Load SortableJS for drag and drop
+// Load SortableJS
 const loadSortable = () => {
     return new Promise((resolve) => {
         if (window.Sortable) {
@@ -37,31 +38,22 @@ async function loadJourneyData() {
         
         currentJourney = await response.json();
         
-        // Migrate old data structure if needed
+        // Migrate old data structure
         currentJourney.stages.forEach(stage => {
             stage.mainCards = stage.mainCards || [];
             stage.mainCards.forEach(card => {
-                // Convert old subCards to items if they exist
-                if (card.subCards && !card.items) {
-                    card.items = card.subCards.map((sub, index) => ({
-                        id: sub.id,
-                        title: sub.title,
-                        completed: false,
-                        order: index
-                    }));
-                    // Move resources from subCards to main card
-                    if (!card.resources) {
-                        card.resources = [];
-                    }
-                    card.subCards.forEach(sub => {
-                        if (sub.resources) {
-                            card.resources.push(...sub.resources);
-                        }
-                    });
-                    delete card.subCards;
+                // Initialize column names if missing
+                if (!card.columnNames) {
+                    card.columnNames = { priority: 'Priority', secondary: 'Secondary' };
                 }
-                // Initialize if missing
-                if (!card.items) card.items = [];
+                // Convert old items without column property
+                if (card.items) {
+                    card.items.forEach(item => {
+                        if (!item.column) item.column = 'priority';
+                    });
+                } else {
+                    card.items = [];
+                }
                 if (!card.resources) card.resources = [];
             });
         });
@@ -156,6 +148,10 @@ async function saveCurrentStage() {
 }
 
 function renderCanvas() {
+    // Destroy existing sortable instances
+    sortableInstances.forEach(instance => instance.destroy());
+    sortableInstances.clear();
+    
     const container = document.getElementById('journey-canvas');
     if (!container) return;
     
@@ -179,9 +175,11 @@ function renderCanvas() {
     mainCards.forEach((mainCard) => {
         const items = mainCard.items || [];
         const resources = mainCard.resources || [];
+        const columnNames = mainCard.columnNames || { priority: 'Priority', secondary: 'Secondary' };
         
-        // Sort items by order
-        items.sort((a, b) => (a.order || 0) - (b.order || 0));
+        // Filter items by column
+        const priorityItems = items.filter(i => i.column === 'priority').sort((a, b) => (a.order || 0) - (b.order || 0));
+        const secondaryItems = items.filter(i => i.column === 'secondary').sort((a, b) => (a.order || 0) - (b.order || 0));
         
         html += `
             <div class="main-card" data-main-id="${mainCard.id}">
@@ -192,29 +190,41 @@ function renderCanvas() {
                     <button class="delete-main-btn" onclick="deleteMainCard('${mainCard.id}')">🗑️</button>
                 </div>
                 
-                <!-- Items Section -->
-                <div class="items-section">
-                    <div class="section-label">
-                        <span>📋</span> Planning Items
+                <!-- Two Column Layout -->
+                <div class="columns-container">
+                    <!-- Priority Column -->
+                    <div class="column">
+                        <div class="column-header">
+                            <input type="text" class="column-title" 
+                                   value="${escapeHtml(columnNames.priority)}"
+                                   onchange="updateColumnName('${mainCard.id}', 'priority', this.value)"
+                                   placeholder="Column name">
+                            <span class="column-count">${priorityItems.length}</span>
+                        </div>
+                        <div class="items-list" id="priority-${mainCard.id}" data-column="priority">
+                            ${priorityItems.map(item => renderItem(item, mainCard.id)).join('')}
+                        </div>
+                        <button class="add-item-btn" onclick="addItem('${mainCard.id}', 'priority')">
+                            <span>➕</span> Add
+                        </button>
                     </div>
-                    <div class="items-list" id="items-${mainCard.id}">
-                        ${items.map(item => `
-                            <div class="item-row" data-item-id="${item.id}">
-                                <span class="drag-handle">⋮⋮</span>
-                                <input type="checkbox" class="item-checkbox" 
-                                       ${item.completed ? 'checked' : ''}
-                                       onchange="toggleItemComplete('${mainCard.id}', '${item.id}', this.checked)">
-                                <input type="text" class="item-title-input" 
-                                       value="${escapeHtml(item.title)}"
-                                       onchange="updateItemTitle('${mainCard.id}', '${item.id}', this.value)"
-                                       placeholder="Item title">
-                                <button class="delete-item-btn" onclick="deleteItem('${mainCard.id}', '${item.id}')">✕</button>
-                            </div>
-                        `).join('')}
+                    
+                    <!-- Secondary Column -->
+                    <div class="column">
+                        <div class="column-header">
+                            <input type="text" class="column-title" 
+                                   value="${escapeHtml(columnNames.secondary)}"
+                                   onchange="updateColumnName('${mainCard.id}', 'secondary', this.value)"
+                                   placeholder="Column name">
+                            <span class="column-count">${secondaryItems.length}</span>
+                        </div>
+                        <div class="items-list" id="secondary-${mainCard.id}" data-column="secondary">
+                            ${secondaryItems.map(item => renderItem(item, mainCard.id)).join('')}
+                        </div>
+                        <button class="add-item-btn" onclick="addItem('${mainCard.id}', 'secondary')">
+                            <span>➕</span> Add
+                        </button>
                     </div>
-                    <button class="add-item-btn" onclick="addItem('${mainCard.id}')">
-                        <span>➕</span> Add item
-                    </button>
                 </div>
                 
                 <!-- Resources Section -->
@@ -226,15 +236,15 @@ function renderCanvas() {
                         ${resources.map(res => `
                             <div class="resource-chip">
                                 <a href="${escapeHtml(res.url)}" target="_blank" title="${escapeHtml(res.title)}">
-                                    🔗 ${escapeHtml(res.title).substring(0, 25)}${res.title.length > 25 ? '...' : ''}
+                                    🔗 ${escapeHtml(res.title).substring(0, 20)}${res.title.length > 20 ? '...' : ''}
                                 </a>
                                 <button class="remove-resource" onclick="removeResource('${mainCard.id}', '${res.id}')">✕</button>
                             </div>
                         `).join('')}
+                        <button class="add-resource-btn" onclick="addResource('${mainCard.id}')">
+                            <span>➕</span> Add link
+                        </button>
                     </div>
-                    <button class="add-resource-btn" onclick="addResource('${mainCard.id}')">
-                        <span>➕</span> Add link
-                    </button>
                 </div>
             </div>
         `;
@@ -249,46 +259,133 @@ function renderCanvas() {
     
     container.innerHTML = html;
     
-    // Initialize drag and drop for each main card's items
+    // Initialize drag and drop for each main card's columns
     mainCards.forEach(card => {
         initDragAndDrop(card.id);
     });
 }
 
+function renderItem(item, mainCardId) {
+    return `
+        <div class="item-row" data-item-id="${item.id}">
+            <span class="drag-handle">⋮⋮</span>
+            <input type="text" class="item-title-input" 
+                   value="${escapeHtml(item.title)}"
+                   onchange="updateItemTitle('${mainCardId}', '${item.id}', this.value)"
+                   placeholder="Item">
+            <button class="delete-item-btn" onclick="deleteItem('${mainCardId}', '${item.id}')">✕</button>
+        </div>
+    `;
+}
+
 function initDragAndDrop(mainCardId) {
-    const itemsList = document.getElementById(`items-${mainCardId}`);
-    if (!itemsList) return;
+    const priorityList = document.getElementById(`priority-${mainCardId}`);
+    const secondaryList = document.getElementById(`secondary-${mainCardId}`);
     
-    new Sortable(itemsList, {
+    if (!priorityList || !secondaryList) return;
+    
+    // Create a shared group for dragging between columns
+    const groupName = `items-${mainCardId}`;
+    
+    const prioritySortable = new Sortable(priorityList, {
+        group: {
+            name: groupName,
+            put: true,
+            pull: true
+        },
         handle: '.drag-handle',
         animation: 150,
         ghostClass: 'dragging',
-        onEnd: async function() {
-            await updateItemsOrder(mainCardId);
+        onEnd: async function(evt) {
+            await handleDragEnd(mainCardId, evt);
         }
     });
+    
+    const secondarySortable = new Sortable(secondaryList, {
+        group: {
+            name: groupName,
+            put: true,
+            pull: true
+        },
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'dragging',
+        onEnd: async function(evt) {
+            await handleDragEnd(mainCardId, evt);
+        }
+    });
+    
+    // Store instances for cleanup
+    sortableInstances.set(`priority-${mainCardId}`, prioritySortable);
+    sortableInstances.set(`secondary-${mainCardId}`, secondarySortable);
 }
 
-async function updateItemsOrder(mainCardId) {
-    const itemsList = document.getElementById(`items-${mainCardId}`);
-    if (!itemsList) return;
+async function handleDragEnd(mainCardId, evt) {
+    const itemElement = evt.item;
+    const itemId = itemElement.dataset.itemId;
+    const newList = evt.to;
+    const newColumn = newList.dataset.column;
+    const newIndex = evt.newIndex;
     
-    const itemElements = itemsList.querySelectorAll('.item-row');
     const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
     const mainCard = activeStage?.mainCards.find(c => c.id === mainCardId);
-    
     if (!mainCard) return;
     
-    // Update order based on DOM position
-    itemElements.forEach((el, index) => {
-        const itemId = el.dataset.itemId;
-        const item = mainCard.items.find(i => i.id === itemId);
-        if (item) {
-            item.order = index;
-        }
-    });
+    const item = mainCard.items.find(i => i.id === itemId);
+    if (!item) return;
+    
+    // Update column
+    item.column = newColumn;
+    
+    // Update orders for all items in both columns
+    const priorityList = document.getElementById(`priority-${mainCardId}`);
+    const secondaryList = document.getElementById(`secondary-${mainCardId}`);
+    
+    if (priorityList) {
+        const priorityItems = priorityList.querySelectorAll('.item-row');
+        priorityItems.forEach((el, index) => {
+            const id = el.dataset.itemId;
+            const foundItem = mainCard.items.find(i => i.id === id);
+            if (foundItem) {
+                foundItem.column = 'priority';
+                foundItem.order = index;
+            }
+        });
+    }
+    
+    if (secondaryList) {
+        const secondaryItems = secondaryList.querySelectorAll('.item-row');
+        secondaryItems.forEach((el, index) => {
+            const id = el.dataset.itemId;
+            const foundItem = mainCard.items.find(i => i.id === id);
+            if (foundItem) {
+                foundItem.column = 'secondary';
+                foundItem.order = index;
+            }
+        });
+    }
+    
+    // Update column counts
+    updateColumnCounts(mainCardId);
     
     await saveCurrentStage();
+}
+
+function updateColumnCounts(mainCardId) {
+    const priorityList = document.getElementById(`priority-${mainCardId}`);
+    const secondaryList = document.getElementById(`secondary-${mainCardId}`);
+    
+    if (priorityList) {
+        const count = priorityList.querySelectorAll('.item-row').length;
+        const countEl = priorityList.closest('.column').querySelector('.column-count');
+        if (countEl) countEl.textContent = count;
+    }
+    
+    if (secondaryList) {
+        const count = secondaryList.querySelectorAll('.item-row').length;
+        const countEl = secondaryList.closest('.column').querySelector('.column-count');
+        if (countEl) countEl.textContent = count;
+    }
 }
 
 // ===== MAIN CARD FUNCTIONS =====
@@ -301,6 +398,7 @@ async function addMainCard() {
     const newCard = {
         id: `main_${Date.now()}`,
         title: 'New Topic',
+        columnNames: { priority: 'Priority', secondary: 'Secondary' },
         items: [],
         resources: []
     };
@@ -330,19 +428,31 @@ async function updateMainCardTitle(mainCardId, newTitle) {
     }
 }
 
+async function updateColumnName(mainCardId, columnKey, newName) {
+    const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
+    const mainCard = activeStage?.mainCards.find(c => c.id === mainCardId);
+    if (mainCard && mainCard.columnNames) {
+        mainCard.columnNames[columnKey] = newName;
+        await saveCurrentStage();
+    }
+}
+
 // ===== ITEM FUNCTIONS =====
-async function addItem(mainCardId) {
+async function addItem(mainCardId, column) {
     const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
     const mainCard = activeStage?.mainCards.find(c => c.id === mainCardId);
     if (!mainCard) return;
     
     if (!mainCard.items) mainCard.items = [];
     
+    // Get current count for this column to set order
+    const columnItems = mainCard.items.filter(i => i.column === column);
+    
     const newItem = {
         id: `item_${Date.now()}`,
         title: 'New item',
-        completed: false,
-        order: mainCard.items.length
+        column: column,
+        order: columnItems.length
     };
     
     mainCard.items.push(newItem);
@@ -366,16 +476,6 @@ async function updateItemTitle(mainCardId, itemId, newTitle) {
     const item = mainCard?.items.find(i => i.id === itemId);
     if (item) {
         item.title = newTitle;
-        await saveCurrentStage();
-    }
-}
-
-async function toggleItemComplete(mainCardId, itemId, completed) {
-    const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
-    const mainCard = activeStage?.mainCards.find(c => c.id === mainCardId);
-    const item = mainCard?.items.find(i => i.id === itemId);
-    if (item) {
-        item.completed = completed;
         await saveCurrentStage();
     }
 }
