@@ -187,7 +187,9 @@ function renderCanvas() {
                     <input type="text" class="main-card-title" value="${escapeHtml(mainCard.title)}" 
                            onchange="updateMainCardTitle('${mainCard.id}', this.value)"
                            placeholder="Topic Title">
-                    <button class="delete-main-btn" onclick="deleteMainCard('${mainCard.id}')">🗑️</button>
+                    <button class="delete-main-btn" onclick="deleteMainCard('${mainCard.id}')" title="Delete Topic">
+    <img src="/images/icons/delete.png" alt="Delete" onerror="this.style.display='none';this.parentElement.innerHTML='🗑️'">
+</button>
                 </div>
                 
                 <!-- Two Column Layout -->
@@ -238,7 +240,9 @@ function renderCanvas() {
                                 <a href="${escapeHtml(res.url)}" target="_blank" title="${escapeHtml(res.title)}">
                                     🔗 ${escapeHtml(res.title).substring(0, 20)}${res.title.length > 20 ? '...' : ''}
                                 </a>
-                                <button class="remove-resource" onclick="removeResource('${mainCard.id}', '${res.id}')">✕</button>
+                               <button class="remove-resource" onclick="removeResource('${mainCard.id}', '${res.id}')" title="Remove">
+    <img src="/images/icons/delete.png" alt="Remove" onerror="this.style.display='none';this.parentElement.innerHTML='✕'">
+</button>
                             </div>
                         `).join('')}
                         <button class="add-resource-btn" onclick="addResource('${mainCard.id}')">
@@ -273,8 +277,9 @@ function renderItem(item, mainCardId) {
                    value="${escapeHtml(item.title)}"
                    onchange="updateItemTitle('${mainCardId}', '${item.id}', this.value)"
                    placeholder="Item">
-            <button class="delete-item-btn" onclick="deleteItem('${mainCardId}', '${item.id}')">✕</button>
-        </div>
+            <button class="delete-item-btn" onclick="deleteItem('${mainCardId}', '${item.id}')" title="Delete">
+    <img src="/images/icons/delete.png" alt="Delete" onerror="this.style.display='none';this.parentElement.innerHTML='✕'">
+</button>
     `;
 }
 
