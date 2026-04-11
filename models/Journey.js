@@ -6,16 +6,18 @@ const resourceSchema = new mongoose.Schema({
     url: String
 });
 
-const subCardSchema = new mongoose.Schema({
+const itemSchema = new mongoose.Schema({
     id: String,
     title: String,
-    resources: [resourceSchema]
+    completed: { type: Boolean, default: false },
+    order: Number
 });
 
 const mainCardSchema = new mongoose.Schema({
     id: String,
     title: String,
-    subCards: [subCardSchema]
+    items: [itemSchema],
+    resources: [resourceSchema]
 });
 
 const stageSchema = new mongoose.Schema({
