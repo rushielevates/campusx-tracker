@@ -9,13 +9,17 @@ const resourceSchema = new mongoose.Schema({
 const itemSchema = new mongoose.Schema({
     id: String,
     title: String,
-    completed: { type: Boolean, default: false },
+    column: { type: String, default: 'priority' }, // 'priority' or 'secondary'
     order: Number
 });
 
 const mainCardSchema = new mongoose.Schema({
     id: String,
     title: String,
+    columnNames: {
+        priority: { type: String, default: 'Priority' },
+        secondary: { type: String, default: 'Secondary' }
+    },
     items: [itemSchema],
     resources: [resourceSchema]
 });
