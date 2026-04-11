@@ -1,5 +1,4 @@
-/* Journey Page Specific Styles */
-/* ===== NEW MAIN CARD LAYOUT ===== */
+/* ===== MAIN CARD LAYOUT ===== */
 .main-card {
     background: white;
     border-radius: 16px;
@@ -48,44 +47,84 @@
     background: #fef2f2;
 }
 
-/* ===== ITEMS SECTION ===== */
-.items-section {
-    margin-bottom: 20px;
+/* ===== TWO COLUMN LAYOUT ===== */
+.columns-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
 }
 
-.section-label {
-    font-size: 12px;
+.column {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid #e2e8f0;
+    min-height: 150px;
+}
+
+.column-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #cbd5e1;
+}
+
+.column-title {
+    font-size: 13px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: #64748b;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+    border: none;
+    background: transparent;
+    padding: 2px 4px;
+    width: auto;
+    max-width: 120px;
+}
+
+.column-title:focus {
+    outline: none;
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.column-count {
+    background: #e2e8f0;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 12px;
 }
 
 .items-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-bottom: 10px;
+    gap: 6px;
+    min-height: 60px;
 }
 
+/* ===== ITEM ROW ===== */
 .item-row {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    background: #f8fafc;
+    gap: 8px;
+    padding: 8px 10px;
+    background: white;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
     transition: all 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 .item-row:hover {
-    background: #f1f5f9;
+    background: #ffffff;
     border-color: #cbd5e1;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
 }
 
 .item-row.dragging {
@@ -96,35 +135,28 @@
 .drag-handle {
     cursor: grab;
     color: #94a3b8;
-    font-size: 18px;
+    font-size: 16px;
     user-select: none;
-    padding: 0 4px;
+    padding: 0 2px;
 }
 
 .drag-handle:active {
     cursor: grabbing;
 }
 
-.item-checkbox {
-    width: 18px;
-    height: 18px;
-    cursor: pointer;
-    accent-color: #667eea;
-}
-
 .item-title-input {
     flex: 1;
     border: none;
     background: transparent;
-    font-size: 14px;
-    padding: 4px 8px;
+    font-size: 13px;
+    padding: 2px 4px;
     border-radius: 4px;
 }
 
 .item-title-input:focus {
     outline: none;
-    background: white;
-    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+    background: #f8fafc;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
 }
 
 .delete-item-btn {
@@ -132,8 +164,8 @@
     border: none;
     color: #ef4444;
     cursor: pointer;
-    font-size: 16px;
-    padding: 0 4px;
+    font-size: 14px;
+    padding: 0 2px;
     opacity: 0;
     transition: opacity 0.2s;
 }
@@ -146,28 +178,63 @@
     color: #dc2626;
 }
 
+/* ===== COMPACT ADD BUTTON ===== */
+.add-item-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    font-size: 11px;
+    background: transparent;
+    border: 1px dashed #94a3b8;
+    color: #64748b;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: auto;
+    margin-top: 8px;
+    font-weight: 500;
+}
+
+.add-item-btn:hover {
+    background: white;
+    border-color: #667eea;
+    color: #667eea;
+}
+
 /* ===== RESOURCES SECTION ===== */
 .resources-section {
     margin-top: 8px;
     padding-top: 16px;
-    border-top: 1px dashed #e2e8f0;
+    border-top: 1px solid #e2e8f0;
+}
+
+.section-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .resources-container {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
-    margin-top: 10px;
+    gap: 6px;
 }
 
 .resource-chip {
     display: inline-flex;
     align-items: center;
     background: #e0e7ff;
-    border-radius: 20px;
-    padding: 5px 12px;
-    font-size: 12px;
+    border-radius: 16px;
+    padding: 4px 10px;
+    font-size: 11px;
     transition: all 0.2s;
 }
 
@@ -178,8 +245,12 @@
 .resource-chip a {
     color: #4338ca;
     text-decoration: none;
-    margin-right: 8px;
+    margin-right: 6px;
     font-weight: 500;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .resource-chip a:hover {
@@ -191,8 +262,8 @@
     border: none;
     cursor: pointer;
     color: #6b7280;
-    font-size: 14px;
-    padding: 0 4px;
+    font-size: 12px;
+    padding: 0 2px;
     display: flex;
     align-items: center;
 }
@@ -201,32 +272,30 @@
     color: #ef4444;
 }
 
-/* ===== COMPACT BUTTONS (Icon + Text) ===== */
-.add-item-btn,
 .add-resource-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    font-size: 13px;
+    gap: 4px;
+    padding: 4px 10px;
+    font-size: 11px;
     background: transparent;
     border: 1px dashed #94a3b8;
     color: #64748b;
-    border-radius: 20px;
+    border-radius: 16px;
     cursor: pointer;
     transition: all 0.2s;
     width: auto;
-    margin-top: 4px;
     font-weight: 500;
+    margin-left: 4px;
 }
 
-.add-item-btn:hover,
 .add-resource-btn:hover {
-    background: #f8fafc;
+    background: white;
     border-color: #667eea;
     color: #667eea;
 }
 
+/* ===== ADD MAIN CARD BUTTON ===== */
 .add-main-btn {
     display: inline-flex;
     align-items: center;
@@ -242,6 +311,7 @@
     width: auto;
     font-weight: 600;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    margin-top: 8px;
 }
 
 .add-main-btn:hover {
@@ -270,8 +340,6 @@
     color: #94a3b8;
     font-size: 14px;
 }
-
-/* ===== STAGE TABS (Keep existing) ===== */
 /* Your existing stage tab styles stay the same */
 
 .journey-main {
