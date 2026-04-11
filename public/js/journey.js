@@ -1,19 +1,32 @@
 // public/js/journey.js
-// Simple Journey Planner - No React Flow
+// Journey Planner - With Draggable Items
 
-// Global variables
 let currentJourney = null;
 let activeStageId = null;
 
-// Load data on page load
-document.addEventListener('DOMContentLoaded', function() {
+// Load SortableJS for drag and drop
+const loadSortable = () => {
+    return new Promise((resolve) => {
+        if (window.Sortable) {
+            resolve();
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js';
+        script.onload = resolve;
+        document.head.appendChild(script);
+    });
+};
+
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadSortable();
     initJourneyPlanner();
 });
 
 async function initJourneyPlanner() {
     console.log('🚀 Initializing Journey Planner...');
     await loadJourneyData();
-    await setupStageTabs();
+    setupStageTabs();
     renderCanvas();
 }
 
@@ -23,6 +36,36 @@ async function loadJourneyData() {
         if (!response.ok) throw new Error('Failed to load journey');
         
         currentJourney = await response.json();
+        
+        // Migrate old data structure if needed
+        currentJourney.stages.forEach(stage => {
+            stage.mainCards = stage.mainCards || [];
+            stage.mainCards.forEach(card => {
+                // Convert old subCards to items if they exist
+                if (card.subCards && !card.items) {
+                    card.items = card.subCards.map((sub, index) => ({
+                        id: sub.id,
+                        title: sub.title,
+                        completed: false,
+                        order: index
+                    }));
+                    // Move resources from subCards to main card
+                    if (!card.resources) {
+                        card.resources = [];
+                    }
+                    card.subCards.forEach(sub => {
+                        if (sub.resources) {
+                            card.resources.push(...sub.resources);
+                        }
+                    });
+                    delete card.subCards;
+                }
+                // Initialize if missing
+                if (!card.items) card.items = [];
+                if (!card.resources) card.resources = [];
+            });
+        });
+        
         activeStageId = currentJourney.activeStageId || currentJourney.stages[0]?.id;
         console.log('Journey loaded:', currentJourney);
     } catch (error) {
@@ -56,7 +99,7 @@ async function createDefaultJourney() {
     }
 }
 
-async function setupStageTabs() {
+function setupStageTabs() {
     const container = document.getElementById('stageTabs');
     if (!container) return;
     
@@ -100,15 +143,16 @@ function updateStageTabs() {
 
 async function saveCurrentStage() {
     if (!currentJourney || !activeStageId) return;
-    const stageIndex = currentJourney.stages.findIndex(s => s.id === activeStageId);
-    if (stageIndex !== -1) {
-        await fetch('/api/journey', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ stages: currentJourney.stages, activeStageId: activeStageId })
-        });
-    }
+    
+    await fetch('/api/journey', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ 
+            stages: currentJourney.stages, 
+            activeStageId: activeStageId 
+        })
+    });
 }
 
 function renderCanvas() {
@@ -121,8 +165,10 @@ function renderCanvas() {
     if (mainCards.length === 0) {
         container.innerHTML = `
             <div class="empty-canvas">
-                <button class="add-main-btn" onclick="addMainCard()">+ Add Main Card</button>
-                <p>Click to create your first learning topic</p>
+                <button class="add-main-btn" onclick="addMainCard()">
+                    <span>➕</span> New Topic
+                </button>
+                <p>Create your first learning topic to start planning</p>
             </div>
         `;
         return;
@@ -130,59 +176,122 @@ function renderCanvas() {
     
     let html = '<div class="main-cards-container">';
     
-    mainCards.forEach((mainCard, mainIndex) => {
-        const subCards = mainCard.subCards || [];
+    mainCards.forEach((mainCard) => {
+        const items = mainCard.items || [];
+        const resources = mainCard.resources || [];
+        
+        // Sort items by order
+        items.sort((a, b) => (a.order || 0) - (b.order || 0));
         
         html += `
-            <div class="main-card">
+            <div class="main-card" data-main-id="${mainCard.id}">
                 <div class="main-card-header">
                     <input type="text" class="main-card-title" value="${escapeHtml(mainCard.title)}" 
-                           onchange="updateMainCardTitle('${mainCard.id}', this.value)">
+                           onchange="updateMainCardTitle('${mainCard.id}', this.value)"
+                           placeholder="Topic Title">
                     <button class="delete-main-btn" onclick="deleteMainCard('${mainCard.id}')">🗑️</button>
                 </div>
-                <div class="sub-cards-container">
-        `;
-        
-        subCards.forEach((subCard, subIndex) => {
-            const resources = subCard.resources || [];
-            html += `
-                <div class="sub-card">
-                    <div class="sub-card-header">
-                        <input type="text" class="sub-card-title" value="${escapeHtml(subCard.title)}" 
-                               onchange="updateSubCardTitle('${mainCard.id}', '${subCard.id}', this.value)">
-                        <button class="delete-sub-btn" onclick="deleteSubCard('${mainCard.id}', '${subCard.id}')">🗑️</button>
+                
+                <!-- Items Section -->
+                <div class="items-section">
+                    <div class="section-label">
+                        <span>📋</span> Planning Items
                     </div>
-                    <div class="resources-container">
+                    <div class="items-list" id="items-${mainCard.id}">
+                        ${items.map(item => `
+                            <div class="item-row" data-item-id="${item.id}">
+                                <span class="drag-handle">⋮⋮</span>
+                                <input type="checkbox" class="item-checkbox" 
+                                       ${item.completed ? 'checked' : ''}
+                                       onchange="toggleItemComplete('${mainCard.id}', '${item.id}', this.checked)">
+                                <input type="text" class="item-title-input" 
+                                       value="${escapeHtml(item.title)}"
+                                       onchange="updateItemTitle('${mainCard.id}', '${item.id}', this.value)"
+                                       placeholder="Item title">
+                                <button class="delete-item-btn" onclick="deleteItem('${mainCard.id}', '${item.id}')">✕</button>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button class="add-item-btn" onclick="addItem('${mainCard.id}')">
+                        <span>➕</span> Add item
+                    </button>
+                </div>
+                
+                <!-- Resources Section -->
+                <div class="resources-section">
+                    <div class="section-label">
+                        <span>📎</span> Resources
+                    </div>
+                    <div class="resources-container" id="resources-${mainCard.id}">
                         ${resources.map(res => `
                             <div class="resource-chip">
                                 <a href="${escapeHtml(res.url)}" target="_blank" title="${escapeHtml(res.title)}">
-                                    📎 ${escapeHtml(res.title).substring(0, 20)}
+                                    🔗 ${escapeHtml(res.title).substring(0, 25)}${res.title.length > 25 ? '...' : ''}
                                 </a>
-                                <button class="remove-resource" onclick="removeResource('${mainCard.id}', '${subCard.id}', '${res.id}')">×</button>
+                                <button class="remove-resource" onclick="removeResource('${mainCard.id}', '${res.id}')">✕</button>
                             </div>
                         `).join('')}
-                        <button class="add-resource-btn" onclick="addResource('${mainCard.id}', '${subCard.id}')">+ Add Link</button>
                     </div>
-                </div>
-            `;
-        });
-        
-        html += `
-                    <button class="add-sub-btn" onclick="addSubCard('${mainCard.id}')">+ Add Sub Card</button>
+                    <button class="add-resource-btn" onclick="addResource('${mainCard.id}')">
+                        <span>➕</span> Add link
+                    </button>
                 </div>
             </div>
         `;
     });
     
     html += `
-            <button class="add-main-btn" onclick="addMainCard()">+ Add Main Card</button>
+            <button class="add-main-btn" onclick="addMainCard()">
+                <span>➕</span> New Topic
+            </button>
         </div>
     `;
     
     container.innerHTML = html;
+    
+    // Initialize drag and drop for each main card's items
+    mainCards.forEach(card => {
+        initDragAndDrop(card.id);
+    });
 }
 
-// ===== CARD MANAGEMENT FUNCTIONS =====
+function initDragAndDrop(mainCardId) {
+    const itemsList = document.getElementById(`items-${mainCardId}`);
+    if (!itemsList) return;
+    
+    new Sortable(itemsList, {
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'dragging',
+        onEnd: async function() {
+            await updateItemsOrder(mainCardId);
+        }
+    });
+}
+
+async function updateItemsOrder(mainCardId) {
+    const itemsList = document.getElementById(`items-${mainCardId}`);
+    if (!itemsList) return;
+    
+    const itemElements = itemsList.querySelectorAll('.item-row');
+    const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
+    const mainCard = activeStage?.mainCards.find(c => c.id === mainCardId);
+    
+    if (!mainCard) return;
+    
+    // Update order based on DOM position
+    itemElements.forEach((el, index) => {
+        const itemId = el.dataset.itemId;
+        const item = mainCard.items.find(i => i.id === itemId);
+        if (item) {
+            item.order = index;
+        }
+    });
+    
+    await saveCurrentStage();
+}
+
+// ===== MAIN CARD FUNCTIONS =====
 async function addMainCard() {
     const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
     if (!activeStage) return;
@@ -192,7 +301,8 @@ async function addMainCard() {
     const newCard = {
         id: `main_${Date.now()}`,
         title: 'New Topic',
-        subCards: []
+        items: [],
+        resources: []
     };
     
     activeStage.mainCards.push(newCard);
@@ -201,7 +311,7 @@ async function addMainCard() {
 }
 
 async function deleteMainCard(mainCardId) {
-    if (!confirm('Delete this main card and all its sub-cards?')) return;
+    if (!confirm('Delete this topic and all its items?')) return;
     
     const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
     if (!activeStage) return;
@@ -220,48 +330,59 @@ async function updateMainCardTitle(mainCardId, newTitle) {
     }
 }
 
-async function addSubCard(mainCardId) {
+// ===== ITEM FUNCTIONS =====
+async function addItem(mainCardId) {
     const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
     const mainCard = activeStage?.mainCards.find(c => c.id === mainCardId);
     if (!mainCard) return;
     
-    if (!mainCard.subCards) mainCard.subCards = [];
+    if (!mainCard.items) mainCard.items = [];
     
-    const newSubCard = {
-        id: `sub_${Date.now()}`,
-        title: 'New Section',
-        resources: []
+    const newItem = {
+        id: `item_${Date.now()}`,
+        title: 'New item',
+        completed: false,
+        order: mainCard.items.length
     };
     
-    mainCard.subCards.push(newSubCard);
+    mainCard.items.push(newItem);
     await saveCurrentStage();
     renderCanvas();
 }
 
-async function deleteSubCard(mainCardId, subCardId) {
-    if (!confirm('Delete this sub-card and all its resources?')) return;
-    
+async function deleteItem(mainCardId, itemId) {
     const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
     const mainCard = activeStage?.mainCards.find(c => c.id === mainCardId);
     if (mainCard) {
-        mainCard.subCards = mainCard.subCards.filter(s => s.id !== subCardId);
+        mainCard.items = mainCard.items.filter(i => i.id !== itemId);
         await saveCurrentStage();
         renderCanvas();
     }
 }
 
-async function updateSubCardTitle(mainCardId, subCardId, newTitle) {
+async function updateItemTitle(mainCardId, itemId, newTitle) {
     const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
     const mainCard = activeStage?.mainCards.find(c => c.id === mainCardId);
-    const subCard = mainCard?.subCards.find(s => s.id === subCardId);
-    if (subCard) {
-        subCard.title = newTitle;
+    const item = mainCard?.items.find(i => i.id === itemId);
+    if (item) {
+        item.title = newTitle;
         await saveCurrentStage();
     }
 }
 
-async function addResource(mainCardId, subCardId) {
-    const title = prompt('Enter resource title:', 'Resource Name');
+async function toggleItemComplete(mainCardId, itemId, completed) {
+    const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
+    const mainCard = activeStage?.mainCards.find(c => c.id === mainCardId);
+    const item = mainCard?.items.find(i => i.id === itemId);
+    if (item) {
+        item.completed = completed;
+        await saveCurrentStage();
+    }
+}
+
+// ===== RESOURCE FUNCTIONS =====
+async function addResource(mainCardId) {
+    const title = prompt('Enter resource title:', 'Documentation');
     if (!title) return;
     
     const url = prompt('Enter resource URL:', 'https://');
@@ -269,11 +390,10 @@ async function addResource(mainCardId, subCardId) {
     
     const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
     const mainCard = activeStage?.mainCards.find(c => c.id === mainCardId);
-    const subCard = mainCard?.subCards.find(s => s.id === subCardId);
     
-    if (subCard) {
-        if (!subCard.resources) subCard.resources = [];
-        subCard.resources.push({
+    if (mainCard) {
+        if (!mainCard.resources) mainCard.resources = [];
+        mainCard.resources.push({
             id: `res_${Date.now()}`,
             title: title,
             url: url
@@ -283,18 +403,18 @@ async function addResource(mainCardId, subCardId) {
     }
 }
 
-async function removeResource(mainCardId, subCardId, resourceId) {
+async function removeResource(mainCardId, resourceId) {
     const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
     const mainCard = activeStage?.mainCards.find(c => c.id === mainCardId);
-    const subCard = mainCard?.subCards.find(s => s.id === subCardId);
     
-    if (subCard) {
-        subCard.resources = subCard.resources.filter(r => r.id !== resourceId);
+    if (mainCard) {
+        mainCard.resources = mainCard.resources.filter(r => r.id !== resourceId);
         await saveCurrentStage();
         renderCanvas();
     }
 }
 
+// ===== STAGE FUNCTIONS =====
 async function addNewStage() {
     const stageName = prompt('Enter stage name:', `Stage ${(currentJourney?.stages?.length || 0) + 1}`);
     if (!stageName) return;
@@ -311,7 +431,7 @@ async function addNewStage() {
             const newStage = await response.json();
             if (!currentJourney.stages) currentJourney.stages = [];
             currentJourney.stages.push(newStage);
-            await setupStageTabs();
+            setupStageTabs();
             await switchStage(newStage.id);
         }
     } catch (error) {
@@ -319,20 +439,19 @@ async function addNewStage() {
     }
 }
 
+// ===== UTILITY FUNCTIONS =====
 function escapeHtml(str) {
     if (!str) return '';
-    return str.replace(/[&<>]/g, function(m) {
+    return str.replace(/[&<>"]/g, function(m) {
         if (m === '&') return '&amp;';
         if (m === '<') return '&lt;';
         if (m === '>') return '&gt;';
+        if (m === '"') return '&quot;';
         return m;
     });
 }
 
-// Update the Journey model to use mainCards structure
-// In models/Journey.js, change stages.nodes to stages.mainCards
-
-// Sidebar functions
+// ===== SIDEBAR FUNCTIONS =====
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('sidebarToggle');
