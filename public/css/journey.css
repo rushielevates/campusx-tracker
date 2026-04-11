@@ -1,4 +1,279 @@
 /* Journey Page Specific Styles */
+/* ===== NEW MAIN CARD LAYOUT ===== */
+.main-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid #e2e8f0;
+    margin-bottom: 20px;
+}
+
+.main-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #667eea;
+}
+
+.main-card-title {
+    font-size: 18px;
+    font-weight: 600;
+    border: none;
+    background: transparent;
+    padding: 4px 8px;
+    width: 80%;
+}
+
+.main-card-title:focus {
+    outline: none;
+    background: #f8fafc;
+    border-radius: 6px;
+}
+
+.delete-main-btn {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: #ef4444;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.delete-main-btn:hover {
+    background: #fef2f2;
+}
+
+/* ===== ITEMS SECTION ===== */
+.items-section {
+    margin-bottom: 20px;
+}
+
+.section-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #64748b;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.item-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s;
+}
+
+.item-row:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+.item-row.dragging {
+    opacity: 0.5;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.drag-handle {
+    cursor: grab;
+    color: #94a3b8;
+    font-size: 18px;
+    user-select: none;
+    padding: 0 4px;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.item-checkbox {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #667eea;
+}
+
+.item-title-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 14px;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.item-title-input:focus {
+    outline: none;
+    background: white;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.delete-item-btn {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.item-row:hover .delete-item-btn {
+    opacity: 1;
+}
+
+.delete-item-btn:hover {
+    color: #dc2626;
+}
+
+/* ===== RESOURCES SECTION ===== */
+.resources-section {
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.resources-container {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.resource-chip {
+    display: inline-flex;
+    align-items: center;
+    background: #e0e7ff;
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.resource-chip:hover {
+    background: #c7d2fe;
+}
+
+.resource-chip a {
+    color: #4338ca;
+    text-decoration: none;
+    margin-right: 8px;
+    font-weight: 500;
+}
+
+.resource-chip a:hover {
+    text-decoration: underline;
+}
+
+.remove-resource {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6b7280;
+    font-size: 14px;
+    padding: 0 4px;
+    display: flex;
+    align-items: center;
+}
+
+.remove-resource:hover {
+    color: #ef4444;
+}
+
+/* ===== COMPACT BUTTONS (Icon + Text) ===== */
+.add-item-btn,
+.add-resource-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    background: transparent;
+    border: 1px dashed #94a3b8;
+    color: #64748b;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: auto;
+    margin-top: 4px;
+    font-weight: 500;
+}
+
+.add-item-btn:hover,
+.add-resource-btn:hover {
+    background: #f8fafc;
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.add-main-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 20px;
+    font-size: 14px;
+    background: white;
+    border: 1.5px solid #667eea;
+    color: #667eea;
+    border-radius: 24px;
+    cursor: pointer;
+    transition: all 0.2s;
+    width: auto;
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.add-main-btn:hover {
+    background: #667eea;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-canvas {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 400px;
+    text-align: center;
+}
+
+.empty-canvas .add-main-btn {
+    margin-bottom: 16px;
+}
+
+.empty-canvas p {
+    color: #94a3b8;
+    font-size: 14px;
+}
+
+/* ===== STAGE TABS (Keep existing) ===== */
+/* Your existing stage tab styles stay the same */
+
 .journey-main {
     padding: 0 !important;
     display: flex;
