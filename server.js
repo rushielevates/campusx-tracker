@@ -1,14 +1,16 @@
 const express = require('express');
 const session = require('express-session');
 const path = require('path');
+const fs = require('fs');
 const dotenv = require('dotenv');
 const connectDB = require('./config/database');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
 
-//lets Load environment variables
-dotenv.config();
+// Load local credentials when present. Render-provided environment variables still win.
+const localEnvPath = path.join(__dirname, 'credentials', '.env');
+dotenv.config({ path: fs.existsSync(localEnvPath) ? localEnvPath : path.join(__dirname, '.env') });
 
 // Connect to MongoDB
 connectDB();

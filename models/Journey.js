@@ -9,6 +9,8 @@ const resourceSchema = new mongoose.Schema({
 const itemSchema = new mongoose.Schema({
     id: String,
     title: String,
+    linkTitle: { type: String, default: '' },
+    linkUrl: { type: String, default: '' },
     column: { type: String, default: 'priority' }, // 'priority' or 'secondary'
     order: Number
 });

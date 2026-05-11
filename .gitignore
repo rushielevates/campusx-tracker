@@ -1,0 +1,6 @@
+node_modules/
+npm-debug.log*
+
+# Local credentials. Configure these separately on Render.
+credentials/.env
+.env

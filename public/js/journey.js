@@ -50,6 +50,8 @@ async function loadJourneyData() {
                 if (card.items) {
                     card.items.forEach(item => {
                         if (!item.column) item.column = 'priority';
+                        if (item.linkTitle === undefined) item.linkTitle = '';
+                        if (item.linkUrl === undefined) item.linkUrl = '';
                     });
                 } else {
                     card.items = [];
@@ -174,7 +176,6 @@ function renderCanvas() {
     
     mainCards.forEach((mainCard) => {
         const items = mainCard.items || [];
-        const resources = mainCard.resources || [];
         const columnNames = mainCard.columnNames || { priority: 'Priority', secondary: 'Secondary' };
         
         // Filter items by column
@@ -226,26 +227,6 @@ function renderCanvas() {
                         </button>
                     </div>
                 </div>
-                
-                <!-- Resources Section -->
-                <div class="resources-section">
-                    <div class="section-label">
-                        <span>📎</span> Resources
-                    </div>
-                    <div class="resources-container" id="resources-${mainCard.id}">
-                        ${resources.map(res => `
-                            <div class="resource-chip">
-                                <a href="${escapeHtml(res.url)}" target="_blank" title="${escapeHtml(res.title)}">
-                                    🔗 ${escapeHtml(res.title).substring(0, 20)}${res.title.length > 20 ? '...' : ''}
-                                </a>
-<button class="remove-resource" onclick="removeResource('${mainCard.id}', '${res.id}')">✕</button>
-                            </div>
-                        `).join('')}
-                        <button class="add-resource-btn" onclick="addResource('${mainCard.id}')">
-                            <span>➕</span> Add link
-                        </button>
-                    </div>
-                </div>
             </div>
         `;
     });
@@ -266,14 +247,22 @@ function renderCanvas() {
 }
 
 function renderItem(item, mainCardId) {
+    const hasLink = !!item.linkUrl;
+    const linkTitle = item.linkTitle || item.linkUrl || '';
     return `
-        <div class="item-row" data-item-id="${item.id}">
-            <span class="drag-handle">⋮⋮</span>
+        <div class="item-row ${hasLink ? 'has-link' : ''}" data-item-id="${item.id}" onclick="openItemLink('${mainCardId}', '${item.id}')">
+            <span class="drag-handle" onclick="event.stopPropagation()">&#8942;&#8942;</span>
             <input type="text" class="item-title-input" 
                    value="${escapeHtml(item.title)}"
                    onchange="updateItemTitle('${mainCardId}', '${item.id}', this.value)"
+                   onclick="event.stopPropagation()"
+                   title="${hasLink ? 'Open link: ' + escapeHtml(linkTitle) : 'No link attached'}"
                    placeholder="Item">
-<button class="delete-item-btn" onclick="deleteItem('${mainCardId}', '${item.id}')">✕</button>
+            <button class="item-link-btn ${hasLink ? 'linked' : ''}" onclick="event.stopPropagation(); editItemLink('${mainCardId}', '${item.id}')" title="${hasLink ? 'Edit link' : 'Add link'}">
+                ${hasLink ? '&#128279;' : '+'}
+            </button>
+            <button class="delete-item-btn" onclick="event.stopPropagation(); deleteItem('${mainCardId}', '${item.id}')">&times;</button>
+        </div>
     `;
 }
 
@@ -450,6 +439,8 @@ async function addItem(mainCardId, column) {
     const newItem = {
         id: `item_${Date.now()}`,
         title: 'New item',
+        linkTitle: '',
+        linkUrl: '',
         column: column,
         order: columnItems.length
     };
@@ -479,38 +470,48 @@ async function updateItemTitle(mainCardId, itemId, newTitle) {
     }
 }
 
-// ===== RESOURCE FUNCTIONS =====
-async function addResource(mainCardId) {
-    const title = prompt('Enter resource title:', 'Documentation');
-    if (!title) return;
-    
-    const url = prompt('Enter resource URL:', 'https://');
-    if (!url) return;
-    
+function findJourneyItem(mainCardId, itemId) {
     const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
     const mainCard = activeStage?.mainCards.find(c => c.id === mainCardId);
-    
-    if (mainCard) {
-        if (!mainCard.resources) mainCard.resources = [];
-        mainCard.resources.push({
-            id: `res_${Date.now()}`,
-            title: title,
-            url: url
-        });
-        await saveCurrentStage();
-        renderCanvas();
+    const item = mainCard?.items.find(i => i.id === itemId);
+    return { mainCard, item };
+}
+
+function openItemLink(mainCardId, itemId) {
+    const { item } = findJourneyItem(mainCardId, itemId);
+    if (item?.linkUrl) {
+        window.open(normalizeUrl(item.linkUrl), '_blank', 'noopener,noreferrer');
     }
 }
 
-async function removeResource(mainCardId, resourceId) {
-    const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
-    const mainCard = activeStage?.mainCards.find(c => c.id === mainCardId);
-    
-    if (mainCard) {
-        mainCard.resources = mainCard.resources.filter(r => r.id !== resourceId);
+async function editItemLink(mainCardId, itemId) {
+    const { item } = findJourneyItem(mainCardId, itemId);
+    if (!item) return;
+
+    const url = prompt('Enter item link. Leave empty to remove the link:', item.linkUrl || '');
+    if (url === null) return;
+
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) {
+        item.linkUrl = '';
+        item.linkTitle = '';
         await saveCurrentStage();
         renderCanvas();
+        return;
     }
+
+    const title = prompt('Enter link label:', item.linkTitle || item.title || 'Open link');
+    if (title === null) return;
+
+    item.linkUrl = trimmedUrl;
+    item.linkTitle = title.trim() || item.title || trimmedUrl;
+    await saveCurrentStage();
+    renderCanvas();
+}
+
+function normalizeUrl(url) {
+    if (/^https?:\/\//i.test(url)) return url;
+    return `https://${url}`;
 }
 
 // ===== STAGE FUNCTIONS =====
@@ -555,10 +556,12 @@ function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const toggleBtn = document.getElementById('sidebarToggle');
     sidebar.classList.toggle('collapsed');
+    const isCollapsed = sidebar.classList.contains('collapsed');
     if (toggleBtn) {
-        toggleBtn.textContent = sidebar.classList.contains('collapsed') ? '▶' : '◀';
+        toggleBtn.textContent = isCollapsed ? '▶' : '◀';
     }
-    localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+    localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
+    document.documentElement.classList.toggle('sidebar-precollapsed', isCollapsed);
 }
 
 if (localStorage.getItem('sidebarCollapsed') === 'true') {
@@ -567,6 +570,7 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
         sidebar.classList.add('collapsed');
         const toggleBtn = document.getElementById('sidebarToggle');
         if (toggleBtn) toggleBtn.textContent = '▶';
+        document.documentElement.classList.add('sidebar-precollapsed');
     }
 }
 

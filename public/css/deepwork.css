@@ -31,6 +31,56 @@ body {
     top: 0;
 }
 
+html.sidebar-precollapsed .sidebar,
+html.sidebar-precollapsed .sidebar.collapsed {
+    width: 70px;
+}
+
+html.sidebar-precollapsed .main-content {
+    margin-left: 70px;
+    width: calc(100% - 70px);
+}
+
+html.sidebar-precollapsed .sidebar .sidebar-header h2,
+html.sidebar-precollapsed .sidebar .sidebar-header p,
+html.sidebar-precollapsed .sidebar .user-details,
+html.sidebar-precollapsed .sidebar .nav-text,
+html.sidebar-precollapsed .sidebar .logout-btn .btn-label {
+    display: none;
+}
+
+html.sidebar-precollapsed .sidebar .user-avatar {
+    margin: 0 auto;
+}
+
+html.sidebar-precollapsed .sidebar .nav-item {
+    justify-content: center;
+    padding: 12px 0;
+}
+
+html.sidebar-precollapsed .sidebar .nav-icon {
+    margin: 0;
+}
+
+html.sidebar-precollapsed .sidebar .logout-btn {
+    width: 40px;
+    height: 40px;
+    margin: 10px auto;
+    padding: 0;
+    border-radius: 10px;
+}
+
+html.sidebar-precollapsed .sidebar .logout-btn .btn-icon {
+    display: inline-block;
+    margin: 0;
+    font-size: 18px;
+}
+
+html.sidebar-no-transition .sidebar,
+html.sidebar-no-transition .main-content {
+    transition: none !important;
+}
+
 .sidebar-header {
     padding: 30px 20px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -140,6 +190,7 @@ body {
 .main-content {
     flex: 1;
     margin-left: 300px; /* This creates space for the fixed sidebar */
+    transition: margin-left 0.3s ease, width 0.3s ease;
     padding: 30px;
     overflow-y: auto;
     background: #f5f5f5;
@@ -1769,14 +1820,34 @@ body {
     margin: 0;
 }
 
+.sidebar.collapsed ~ .main-content {
+    margin-left: 70px;
+    width: calc(100% - 70px);
+}
+
+.sidebar.collapsed .logout-btn {
+    width: 40px;
+    height: 40px;
+    margin: 10px auto;
+    padding: 0;
+    border-radius: 10px;
+}
+
+.sidebar.collapsed .logout-btn .btn-icon {
+    display: inline-block;
+    margin: 0;
+    font-size: 18px;
+}
+
 .sidebar-toggle {
-    position: absolute;
-    right: -12px;
-    top: 50%;
+    position: static;
+    margin: 12px 14px 6px;
+    align-self: flex-end;
+    flex: none;
     background: white;
     border: 1px solid #e0e0e0;
-    border-radius: 50%;
-    width: 24px;
+    border-radius: 8px;
+    width: 30px;
     height: 24px;
     display: flex;
     align-items: center;
@@ -1785,6 +1856,8 @@ body {
     z-index: 10;
     color: #667eea;
     font-size: 12px;
+    line-height: 1;
+    padding: 0;
 }
 
 .sidebar-toggle:hover {

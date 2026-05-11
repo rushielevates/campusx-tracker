@@ -128,6 +128,18 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.08);
 }
 
+.item-row.has-link {
+    border-color: #c7d2fe;
+    cursor: pointer;
+}
+
+.item-row.has-link .item-title-input {
+    color: #4338ca;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
 .item-row.dragging {
     opacity: 0.5;
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
@@ -169,6 +181,29 @@
     padding: 0 2px;
     opacity: 0;
     transition: opacity 0.2s;
+}
+
+.item-link-btn {
+    width: 24px;
+    height: 24px;
+    border: 1px dashed #94a3b8;
+    background: transparent;
+    color: #64748b;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    transition: all 0.2s;
+}
+
+.item-link-btn:hover,
+.item-link-btn.linked {
+    background: #e0e7ff;
+    border-color: #667eea;
+    color: #4338ca;
 }
 
 .item-row:hover .delete-item-btn {

@@ -2,12 +2,20 @@
 <html>
 <head>
     <title>Deep Work - CampusX ML Tracker</title>
+    <script>
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            document.documentElement.classList.add('sidebar-precollapsed', 'sidebar-no-transition');
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            requestAnimationFrame(() => document.documentElement.classList.remove('sidebar-no-transition'));
+        });
+    </script>
     <link rel="stylesheet" href="css/deepwork.css">
 </head>
 <body>
     <div class="app-container">
         <!-- Sidebar (same as dashboard) -->
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h2>CampusX ML</h2>
                 <p>Track what truly grows you</p>
@@ -20,6 +28,7 @@
                     <span id="user-email"></span>
                 </div>
             </div>
+            <button type="button" class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">&#9664;</button>
 <!-- //onclick="window.location.href='/dashboard.html' -->
            <div class="nav-menu">
                 <div class="nav-item "onclick="window.location.href='/dashboard.html'">
@@ -46,7 +55,10 @@
               
             </div>
 
-            <button class="logout-btn" onclick="logout()">Logout</button>
+            <button class="logout-btn" onclick="logout()">
+                <span class="btn-icon">&#8678;</span>
+                <span class="btn-label">Logout</span>
+            </button>
         </div>
 
         <!-- Main Content -->

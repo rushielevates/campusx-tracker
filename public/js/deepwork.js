@@ -1584,3 +1584,23 @@ async function logout() {
         window.location.href = '/';
     }
 }
+
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    if (!sidebar) return;
+
+    sidebar.classList.toggle('collapsed');
+    const isCollapsed = sidebar.classList.contains('collapsed');
+    if (toggleBtn) toggleBtn.innerHTML = isCollapsed ? '&#9654;' : '&#9664;';
+    localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
+    document.documentElement.classList.toggle('sidebar-precollapsed', isCollapsed);
+}
+
+if (localStorage.getItem('sidebarCollapsed') === 'true') {
+    const sidebar = document.getElementById('sidebar');
+    const toggleBtn = document.getElementById('sidebarToggle');
+    if (sidebar) sidebar.classList.add('collapsed');
+    if (toggleBtn) toggleBtn.innerHTML = '&#9654;';
+    document.documentElement.classList.add('sidebar-precollapsed');
+}

@@ -2,6 +2,14 @@
 <html>
 <head>
     <title>Journey Planner - CampusX ML Tracker</title>
+    <script>
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            document.documentElement.classList.add('sidebar-precollapsed', 'sidebar-no-transition');
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            requestAnimationFrame(() => document.documentElement.classList.remove('sidebar-no-transition'));
+        });
+    </script>
     <link rel="stylesheet" href="css/deepwork.css">
     <link rel="stylesheet" href="css/journey.css">
     <!-- React and React Flow will be loaded via CDN or bundled -->

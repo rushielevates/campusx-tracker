@@ -2,6 +2,14 @@
 <html>
 <head>
     <title>Dashboard - CampusX ML Tracker</title>
+    <script>
+        if (localStorage.getItem('sidebarCollapsed') === 'true') {
+            document.documentElement.classList.add('sidebar-precollapsed', 'sidebar-no-transition');
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            requestAnimationFrame(() => document.documentElement.classList.remove('sidebar-no-transition'));
+        });
+    </script>
     <style>
         /* ALL YOUR EXISTING STYLES REMAIN THE SAME */
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -341,6 +349,56 @@
     font-size: 18px;
 }
 
+html.sidebar-precollapsed .sidebar,
+html.sidebar-precollapsed .sidebar.collapsed {
+    width: 70px;
+}
+
+html.sidebar-precollapsed .sidebar .sidebar-header h2,
+html.sidebar-precollapsed .sidebar .sidebar-header p,
+html.sidebar-precollapsed .sidebar .user-details,
+html.sidebar-precollapsed .sidebar .nav-text,
+html.sidebar-precollapsed .sidebar .import-btn .btn-label,
+html.sidebar-precollapsed .sidebar .logout-btn .btn-label {
+    display: none;
+}
+
+html.sidebar-precollapsed .sidebar .user-avatar {
+    margin: 0 auto;
+}
+
+html.sidebar-precollapsed .sidebar .nav-item {
+    justify-content: center;
+    padding: 12px 0;
+}
+
+html.sidebar-precollapsed .sidebar .nav-icon {
+    margin: 0;
+}
+
+html.sidebar-precollapsed .sidebar .import-btn,
+html.sidebar-precollapsed .sidebar .logout-btn {
+    width: 40px;
+    height: 40px;
+    margin: 10px auto;
+    padding: 0;
+}
+
+html.sidebar-precollapsed .sidebar .logout-btn {
+    margin: auto auto 10px;
+}
+
+html.sidebar-precollapsed .sidebar .import-btn .btn-icon,
+html.sidebar-precollapsed .sidebar .logout-btn .btn-icon {
+    margin: 0;
+    font-size: 18px;
+}
+
+html.sidebar-no-transition .sidebar,
+html.sidebar-no-transition .main-content {
+    transition: none !important;
+}
+
 .sidebar-toggle {
     margin: 12px 14px 6px;
     align-self: flex-end;
@@ -494,9 +552,11 @@ let allPlaylists = []; // Store for reference
     if (sidebar.classList.contains('collapsed')) {
         toggleBtn.textContent = '▶';
         localStorage.setItem('sidebarCollapsed', 'true');
+        document.documentElement.classList.add('sidebar-precollapsed');
     } else {
         toggleBtn.textContent = '◀';
         localStorage.setItem('sidebarCollapsed', 'false');
+        document.documentElement.classList.remove('sidebar-precollapsed');
     }
 }
 
@@ -504,6 +564,7 @@ let allPlaylists = []; // Store for reference
 if (localStorage.getItem('sidebarCollapsed') === 'true') {
     document.getElementById('sidebar').classList.add('collapsed');
     document.getElementById('sidebarToggle').textContent = '▶';
+    document.documentElement.classList.add('sidebar-precollapsed');
 }
 // Show gallery (playlist cards)
 function showGallery() {
