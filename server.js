@@ -7,7 +7,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const MongoStore = require('connect-mongo');
 
-// Load environment variables
+//lets Load environment variables
 dotenv.config();
 
 // Connect to MongoDB
