@@ -111,7 +111,7 @@
         .meta-label { font-size: 12px; color: #666; }
         .meta-value { font-size: 24px; font-weight: bold; color: #667eea; }
         
-        .speed-control { background: #f8f9fa; padding: 20px; border-radius: 10px; margin: 20px 0; }
+        .speed-control { display: none; }
         .speed-control label { display: block; margin-bottom: 10px; font-weight: 600; color: #333; }
         .speed-input { display: flex; align-items: center; gap: 15px; }
         .speed-input input { flex: 1; height: 40px; }
@@ -818,44 +818,30 @@ window.onload = async function() {
             const total = playlist.videos.length;
             const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
             
-            const remainingTime = 'Calculating...';
-            
             view.innerHTML = `
                 <div class="playlist-header">
                     <h1>${playlist.title || 'CampusX ML Playlist'}</h1>
                     <div class="playlist-meta">
                         <div class="meta-item">
                             <div class="meta-label">Videos</div>
-                            <div class="meta-value">${total}</div>
+                            <div class="meta-value" id="playlist-total-count">${total}</div>
                         </div>
                         <div class="meta-item">
                             <div class="meta-label">Completed</div>
-                            <div class="meta-value">${completed}</div>
+                            <div class="meta-value" id="playlist-completed-count">${completed}</div>
                         </div>
                         <div class="meta-item">
                             <div class="meta-label">Progress</div>
-                            <div class="meta-value">${percentage}%</div>
+                            <div class="meta-value" id="playlist-progress-percent">${percentage}%</div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="speed-control">
-                    <label>Playback Speed</label>
-                    <div class="speed-input">
-                        <input type="range" min="0.5" max="2" step="0.25" value="${playlist.playlistSpeed || 1}" onchange="updateSpeed(this.value)">
-                        <span class="speed-value" id="speed-display">${playlist.playlistSpeed || 1}x</span>
-                    </div>
-                    <div class="remaining-time" id="remaining-time">
-                        ⏱️ Remaining time: ${remainingTime}
-                    </div>
-                </div>
-                
                 <div class="videos-list">
                     ${playlist.videos.map((video, index) => `
                         <div class="video-item ${video.completed ? 'completed' : ''} ${video.videoId === currentVideoId ? 'active' : ''}" 
                              onclick="playVideo('${video.videoId}', '${video.title.replace(/'/g, "\\'")}')">
                             <input type="checkbox" class="video-checkbox" ${video.completed ? 'checked' : ''} 
-                                   onclick="event.stopPropagation(); toggleVideoComplete('${video._id}')">
+                                   onclick="event.stopPropagation(); toggleVideoComplete('${video._id}', this)">
                             <span class="video-number">${index + 1}</span>
                             <div class="video-thumbnail">
                                 <img src="${video.thumbnail || 'https://via.placeholder.com/120x68'}" alt="${video.title}">
@@ -1051,98 +1037,83 @@ window.onload = async function() {
        // Toggle video completion - UPDATED VERSION
 // Toggle video completion - UPDATED VERSION WITH COLOR UPDATE FIX
 // Toggle video completion - COMPLETELY REWRITTEN FOR RELIABILITY
-async function toggleVideoComplete(videoId) {
-    if (!currentPlaylist) return;
-    
-    // Get the checkbox and its current state
-    const checkbox = event.target;
+async function toggleVideoComplete(videoId, checkbox) {
+    if (!currentPlaylist || !checkbox) return;
+
     const wasChecked = !checkbox.checked;
+    const newCompleted = checkbox.checked;
     const videoItem = checkbox.closest('.video-item');
-    
-    // Add visual feedback
+
     if (videoItem) {
         videoItem.style.opacity = '0.7';
         videoItem.style.pointerEvents = 'none';
     }
-    
-    console.log(`Toggling video ${videoId} from ${wasChecked ? 'completed' : 'incomplete'} to ${!wasChecked ? 'completed' : 'incomplete'}`);
-    
+
     try {
-        // First API call: Update playlist
         const playlistResponse = await fetch(`/api/playlists/${currentPlaylist._id}/video/${videoId}/toggle`, {
             method: 'POST'
         });
-        
+
         if (!playlistResponse.ok) {
             throw new Error('Failed to update playlist');
         }
-        
+
         const playlistData = await playlistResponse.json();
-        console.log('Playlist updated:', playlistData);
-        
-        // Second API call: Update analytics with the NEW state (opposite of wasChecked)
-        const analyticsResponse = await fetch('/api/analytics/refresh', {
+        const progress = playlistData.progress;
+        const video = currentPlaylist.videos.find(v => v._id === videoId);
+
+        if (video) {
+            video.completed = newCompleted;
+            video.completedAt = newCompleted ? new Date().toISOString() : null;
+        }
+
+        if (videoItem) {
+            videoItem.classList.toggle('completed', newCompleted);
+        }
+
+        updateDashboardStats(progress);
+        updateSidebarPlaylistStats(currentPlaylist._id, progress);
+
+        fetch('/api/analytics/refresh', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 videoId: videoId,
-                completed: !wasChecked, // Send the NEW state
+                completed: newCompleted,
                 playlistId: currentPlaylist._id
             })
-        });
-        
-        if (!analyticsResponse.ok) {
-            console.error('Analytics refresh failed but playlist was updated');
-        } else {
-            const analyticsData = await analyticsResponse.json();
-            console.log('Analytics refreshed with data:', analyticsData);
-            
-            // Store the updated data in localStorage for analytics page
-            const updateEvent = {
-                type: 'VIDEO_TOGGLED',
-                videoId: videoId,
-                completed: !wasChecked,
-                timestamp: Date.now(),
-                calendarData: analyticsData.calendarData,
-                streak: analyticsData.streak
-            };
-            
-            localStorage.setItem('analyticsUpdate', JSON.stringify(updateEvent));
-            sessionStorage.setItem('lastUpdate', Date.now().toString());
-            
-            // Show success feedback
-            showToast('Video status updated!');
+        })
+            .then(response => response.ok ? response.json() : null)
+            .then(analyticsData => {
+                if (!analyticsData) return;
+
+                localStorage.setItem('analyticsUpdate', JSON.stringify({
+                    type: 'VIDEO_TOGGLED',
+                    videoId: videoId,
+                    completed: newCompleted,
+                    timestamp: Date.now(),
+                    calendarData: analyticsData.calendarData,
+                    streak: analyticsData.streak
+                }));
+                sessionStorage.setItem('lastUpdate', Date.now().toString());
+            })
+            .catch(error => console.error('Analytics refresh failed:', error));
+
+        if (currentMode === 'player') {
+            loadPlaylistCards();
         }
-        
-        // Reload playlist to show updated status
-        const scrollPos = document.querySelector('.videos-list')?.scrollTop || 0;
-        await loadPlaylist(currentPlaylist._id);
-        await loadPlaylists(); // Update sidebar
-        
-        // Restore scroll position
-        setTimeout(() => {
-            const videoList = document.querySelector('.videos-list');
-            if (videoList) videoList.scrollTop = scrollPos;
-        }, 100);
-        
     } catch (error) {
         console.error('Error toggling video:', error);
-        
-        // Revert checkbox state on error
         checkbox.checked = wasChecked;
-        
-        // Show error message
-        showToast('Failed to update video status', 'error');
+        if (videoItem) {
+            videoItem.classList.toggle('completed', wasChecked);
+        }
     } finally {
-        // Remove visual feedback
         if (videoItem) {
             videoItem.style.opacity = '1';
             videoItem.style.pointerEvents = 'auto';
         }
     }
-    if (currentMode === 'player') {
-    loadPlaylistCards(); // Update card progress in background
-}
 }
         // Helper function to show toast notifications
 function showToast(message, type = 'success') {
@@ -1192,10 +1163,24 @@ style.textContent = `
 document.head.appendChild(style);
 // Helper function to update dashboard stats immediately
 function updateDashboardStats(progress) {
-    // Update any dashboard stats if needed
-    const completedElement = document.querySelector('.meta-item .meta-value');
-    if (completedElement && progress) {
-        // Stats are updated when playlist reloads
+    if (!progress) return;
+
+    const completedElement = document.getElementById('playlist-completed-count');
+    const totalElement = document.getElementById('playlist-total-count');
+    const percentElement = document.getElementById('playlist-progress-percent');
+
+    if (completedElement) completedElement.textContent = progress.completed;
+    if (totalElement) totalElement.textContent = progress.total;
+    if (percentElement) percentElement.textContent = `${Math.round(progress.percentage)}%`;
+}
+
+function updateSidebarPlaylistStats(playlistId, progress) {
+    if (!playlistId || !progress) return;
+
+    const playlistElement = document.querySelector(`.playlist-item[data-id="${playlistId}"]`);
+    const statsElement = playlistElement?.querySelector('.playlist-stats');
+    if (statsElement) {
+        statsElement.textContent = `${progress.completed}/${progress.total} videos`;
     }
 }
 
