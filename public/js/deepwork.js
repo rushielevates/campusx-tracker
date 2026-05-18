@@ -7,6 +7,8 @@ let taskDescription = '';
 // Week navigation variables
 let currentWeekOffset = 0; // 0 = current week, -1 = last week, -2 = two weeks ago, etc.
 let isLoadingWeekly = false;
+let currentWeeklyChartView = localStorage.getItem('weeklyChartView') || 'bar';
+let weeklyStatsData = [];
 // Load data on page load
 // Load data on page load (KEEP THIS ONE)
 // Load data on page load - PARALLEL VERSION
@@ -734,8 +736,8 @@ async function loadWeeklyStats() {
             prevBtn.disabled = false;
         }
         
-        // Render the chart
-        renderBarChart(data.data);
+        weeklyStatsData = data.data || [];
+        renderWeeklyActivity();
         
     } catch (error) {
         console.error('Error loading weekly stats:', error);
@@ -743,6 +745,10 @@ async function loadWeeklyStats() {
         const chart = document.getElementById('barChart');
         if (chart) {
             chart.innerHTML = '<p style="text-align: center; color: #dc3545; padding: 40px;">Failed to load data. Please try again.</p>';
+        }
+        const timeline = document.getElementById('weeklyTimeline');
+        if (timeline) {
+            timeline.innerHTML = '<p style="text-align: center; color: #dc3545; padding: 40px;">Failed to load data. Please try again.</p>';
         }
     } finally {
         isLoadingWeekly = false;
@@ -786,6 +792,31 @@ async function loadCurrentWeek() {
 
 // Update renderBarChart to handle empty data
 
+function setWeeklyChartView(view) {
+    currentWeeklyChartView = view === 'timeline' ? 'timeline' : 'bar';
+    localStorage.setItem('weeklyChartView', currentWeeklyChartView);
+    renderWeeklyActivity();
+}
+
+function renderWeeklyActivity() {
+    const barChart = document.getElementById('barChart');
+    const timeline = document.getElementById('weeklyTimeline');
+    const barBtn = document.getElementById('barViewBtn');
+    const timelineBtn = document.getElementById('timelineViewBtn');
+
+    if (barBtn) barBtn.classList.toggle('active', currentWeeklyChartView === 'bar');
+    if (timelineBtn) timelineBtn.classList.toggle('active', currentWeeklyChartView === 'timeline');
+
+    if (barChart) barChart.style.display = currentWeeklyChartView === 'bar' ? 'flex' : 'none';
+    if (timeline) timeline.style.display = currentWeeklyChartView === 'timeline' ? 'block' : 'none';
+
+    if (currentWeeklyChartView === 'timeline') {
+        renderTimelineChart(weeklyStatsData);
+    } else {
+        renderBarChart(weeklyStatsData);
+    }
+}
+
 function renderBarChart(stats) {
     const chart = document.getElementById('barChart');
     chart.innerHTML = '';
@@ -821,6 +852,134 @@ function renderBarChart(stats) {
         barContainer.appendChild(value);
         chart.appendChild(barContainer);
     });
+}
+
+function formatTimelineDuration(minutes) {
+    const rounded = Math.max(0, Math.round(minutes || 0));
+    const hours = Math.floor(rounded / 60);
+    const mins = rounded % 60;
+
+    if (hours > 0 && mins > 0) return `${hours}h ${mins}m`;
+    if (hours > 0) return `${hours}h`;
+    return `${mins}m`;
+}
+
+function formatTimelineClock(minutes) {
+    const rounded = Math.max(0, Math.min(1440, Math.round(minutes || 0)));
+    if (rounded === 1440) return '12:00 AM';
+
+    const hours24 = Math.floor(rounded / 60);
+    const mins = rounded % 60;
+    const period = hours24 >= 12 ? 'PM' : 'AM';
+    const hours12 = hours24 % 12 || 12;
+    return `${hours12}:${mins.toString().padStart(2, '0')} ${period}`;
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function safeTimelineColor(color) {
+    const value = String(color || '').trim();
+    return /^#[0-9a-fA-F]{3,8}$/.test(value) ? value : '#667eea';
+}
+
+function getTimelineTaskName(segment) {
+    const existingName = String(segment.taskName || '').trim();
+    if (existingName) return existingName;
+
+    const taskType = String(segment.taskType || 'Study').replace(/-\d{8,}$/, '');
+    const name = taskType
+        .split('-')
+        .filter(Boolean)
+        .map(part => {
+            const lower = part.toLowerCase();
+            if (['dsa', 'sql', 'ml', 'ai'].includes(lower)) return lower.toUpperCase();
+            return lower.charAt(0).toUpperCase() + lower.slice(1);
+        })
+        .join(' ');
+
+    return name || 'Study';
+}
+
+function renderTimelineChart(stats) {
+    const timeline = document.getElementById('weeklyTimeline');
+    if (!timeline) return;
+
+    if (!stats || stats.length === 0) {
+        timeline.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No data yet. Start a timer to see your timeline!</p>';
+        return;
+    }
+
+    const hourTicks = Array.from({ length: 25 }, (_, hour) => {
+        const label = hour === 0 ? '12 AM' :
+            hour === 12 ? '12 PM' :
+            hour < 12 ? `${hour} AM` :
+            `${hour - 12} PM`;
+        return `<span>${label}</span>`;
+    }).join('');
+
+    const rows = stats.map(day => {
+        const sourceSegments = day.segments || [];
+
+        const segments = sourceSegments.map(segment => {
+            const startMinute = Number(segment.startMinute) || 0;
+            let endMinute = Number(segment.endMinute);
+
+            if (!Number.isFinite(endMinute)) {
+                endMinute = startMinute + (Number(segment.minutes) || 0);
+            }
+
+            if (endMinute <= startMinute && segment.minutes > 0) {
+                endMinute = startMinute + Number(segment.minutes);
+            }
+
+            const clampedStart = Math.max(0, Math.min(1440, startMinute));
+            const clampedEnd = Math.max(clampedStart, Math.min(1440, endMinute));
+            const segmentMinutes = Number(segment.minutes) || Math.max(0, clampedEnd - clampedStart);
+            const startPercent = (clampedStart / 1440) * 100;
+            const widthPercent = Math.max(0.35, ((clampedEnd - clampedStart) / 1440) * 100);
+            const taskName = getTimelineTaskName(segment);
+            const description = String(segment.taskDescription || '').trim();
+            const tooltip = `${taskName}: ${formatTimelineDuration(segmentMinutes)} (${segment.startLabel || formatTimelineClock(clampedStart)} - ${segment.endLabel || formatTimelineClock(clampedEnd)})${description ? ` | ${description}` : ''}`;
+            const label = segmentMinutes >= 12 ? escapeHtml(taskName) : '';
+
+            return `
+                <div class="timeline-segment"
+                    style="left: ${startPercent}%; width: ${widthPercent}%; background: ${safeTimelineColor(segment.color)};"
+                    data-tooltip="${escapeHtml(tooltip)}">
+                    <span>${label}</span>
+                </div>
+            `;
+        }).join('');
+
+        const totalDisplay = formatTimelineDuration(day.minutes);
+        const emptyState = segments ? '' : '<div class="timeline-empty">No study blocks</div>';
+
+        return `
+            <div class="timeline-row">
+                <div class="timeline-day">
+                    <strong>${escapeHtml(day.day)}</strong>
+                    <span>${escapeHtml(totalDisplay)}</span>
+                </div>
+                <div class="timeline-track">
+                    ${emptyState}
+                    ${segments}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    timeline.innerHTML = `
+        <div class="timeline-timezone">Times shown in India time (Asia/Kolkata)</div>
+        <div class="timeline-axis">${hourTicks}</div>
+        <div class="timeline-rows">${rows}</div>
+    `;
 }
 
 function showMockChart() {

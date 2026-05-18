@@ -3,6 +3,157 @@ const router = express.Router();
 const DeepWorkSession = require('../models/DeepWorkSession');
 const User = require('../models/User');
 
+const APP_TIME_ZONE = 'Asia/Kolkata';
+const APP_TIME_ZONE_OFFSET_MINUTES = 330;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function toAppDateKey(date) {
+    return new Date(date.getTime() + APP_TIME_ZONE_OFFSET_MINUTES * 60000)
+        .toISOString()
+        .split('T')[0];
+}
+
+function appDateKeyToUtcStart(dateKey) {
+    return new Date(`${dateKey}T00:00:00+05:30`);
+}
+
+function addDaysToDateKey(dateKey, days) {
+    return toAppDateKey(new Date(appDateKeyToUtcStart(dateKey).getTime() + days * DAY_MS));
+}
+
+function getAppDayOfWeek(dateKey) {
+    return new Date(appDateKeyToUtcStart(dateKey).getTime() + APP_TIME_ZONE_OFFSET_MINUTES * 60000).getUTCDay();
+}
+
+function getSessionEffectiveEnd(session) {
+    const startTime = new Date(session.startTime);
+    let endTime = session.endTime ? new Date(session.endTime) : null;
+
+    if (!endTime && session.activeSession) {
+        endTime = new Date();
+    }
+
+    if ((!endTime || endTime <= startTime) && session.durationMinutes > 0) {
+        endTime = new Date(startTime.getTime() + session.durationMinutes * 60000);
+    }
+
+    return endTime || startTime;
+}
+
+function minutesFromAppDayStart(date) {
+    const localDate = new Date(date.getTime() + APP_TIME_ZONE_OFFSET_MINUTES * 60000);
+    return localDate.getUTCHours() * 60 + localDate.getUTCMinutes() + (localDate.getUTCSeconds() / 60);
+}
+
+function formatTimeFromMinutes(minutes) {
+    if (Math.round(minutes) >= 1440) return '12:00 AM';
+    const normalized = ((Math.round(minutes) % 1440) + 1440) % 1440;
+    const hours24 = Math.floor(normalized / 60);
+    const mins = normalized % 60;
+    const period = hours24 >= 12 ? 'PM' : 'AM';
+    const hours12 = hours24 % 12 || 12;
+    return `${hours12}:${mins.toString().padStart(2, '0')} ${period}`;
+}
+
+function fallbackTaskName(taskType) {
+    if (!taskType) return 'Study';
+    const withoutTimestamp = String(taskType).replace(/-\d{8,}$/, '');
+    return withoutTimestamp
+        .split('-')
+        .filter(Boolean)
+        .map(part => {
+            const lower = part.toLowerCase();
+            if (['dsa', 'sql', 'ml', 'ai'].includes(lower)) return lower.toUpperCase();
+            return lower.charAt(0).toUpperCase() + lower.slice(1);
+        })
+        .join(' ') || 'Study';
+}
+
+function getTaskTypeDetailsMap(taskTypes = []) {
+    const taskTypeMap = new Map();
+    taskTypes.forEach(task => {
+        taskTypeMap.set(task.id, {
+            name: task.name,
+            icon: task.icon || '⚙️',
+            color: task.color || '#667eea'
+        });
+    });
+    return taskTypeMap;
+}
+
+function buildSessionSegmentsForWeek(sessions, weekStartDateKey, taskTypes = []) {
+    const taskTypeMap = getTaskTypeDetailsMap(taskTypes);
+    const segmentsByDate = new Map();
+
+    for (let i = 0; i < 7; i++) {
+        segmentsByDate.set(addDaysToDateKey(weekStartDateKey, i), []);
+    }
+
+    sessions.forEach(session => {
+        const startTime = new Date(session.startTime);
+        const effectiveEnd = getSessionEffectiveEnd(session);
+
+        if (effectiveEnd <= startTime) return;
+
+        let currentDateKey = toAppDateKey(startTime);
+        const lastDateKey = toAppDateKey(new Date(effectiveEnd.getTime() - 1));
+        const taskType = session.taskType || 'other';
+        const taskDetails = taskTypeMap.get(taskType) || {
+            name: fallbackTaskName(taskType),
+            icon: '⚙️',
+            color: '#667eea'
+        };
+
+        while (currentDateKey <= lastDateKey) {
+            if (segmentsByDate.has(currentDateKey)) {
+                const dayStart = appDateKeyToUtcStart(currentDateKey);
+                const dayEnd = new Date(dayStart.getTime() + DAY_MS);
+                const segmentStart = new Date(Math.max(startTime.getTime(), dayStart.getTime()));
+                const segmentEnd = new Date(Math.min(effectiveEnd.getTime(), dayEnd.getTime()));
+                const isWholeSessionSegment = segmentStart.getTime() === startTime.getTime() &&
+                    segmentEnd.getTime() === effectiveEnd.getTime();
+                const minutes = isWholeSessionSegment && session.durationMinutes > 0
+                    ? session.durationMinutes
+                    : Math.max(0, Math.round((segmentEnd - segmentStart) / 60000));
+
+                if (minutes > 0) {
+                    const startsAtDayStart = segmentStart.getTime() === dayStart.getTime();
+                    const endsAtDayEnd = segmentEnd.getTime() === dayEnd.getTime();
+                    const startMinute = startsAtDayStart ? 0 : minutesFromAppDayStart(segmentStart);
+                    const endMinute = endsAtDayEnd ? 1440 : minutesFromAppDayStart(segmentEnd);
+
+                    segmentsByDate.get(currentDateKey).push({
+                        id: session._id.toString(),
+                        taskType,
+                        taskName: taskDetails.name,
+                        taskIcon: taskDetails.icon,
+                        color: taskDetails.color,
+                        taskDescription: session.taskDescription || taskDetails.name,
+                        startMinute,
+                        endMinute,
+                        startTime: segmentStart.toISOString(),
+                        endTime: segmentEnd.toISOString(),
+                        startLabel: formatTimeFromMinutes(startMinute),
+                        endLabel: formatTimeFromMinutes(endMinute),
+                        minutes,
+                        hours: (minutes / 60).toFixed(1),
+                        isManual: session.isManualEntry || false,
+                        isActive: session.activeSession || false
+                    });
+                }
+            }
+
+            currentDateKey = addDaysToDateKey(currentDateKey, 1);
+        }
+    });
+
+    for (const segments of segmentsByDate.values()) {
+        segments.sort((a, b) => a.startMinute - b.startMinute);
+    }
+
+    return segmentsByDate;
+}
+
 const auth = async (req, res, next) => {
     console.log('DeepWork Auth Check - Session ID:', req.session?.id);
     console.log('DeepWork Auth Check - User ID:', req.session?.userId);
@@ -384,39 +535,39 @@ router.get('/weekly-stats', auth, async (req, res) => {
         // Get week offset from query parameter (0 = current week, -1 = last week, etc.)
         const weekOffset = parseInt(req.query.weekOffset) || 0;
         
-        // Calculate the target date based on offset
-        const today = new Date();
-        const targetDate = new Date(today);
-        targetDate.setDate(today.getDate() + (weekOffset * 7));
+        // Calculate the target week in India time. Sessions are stored as UTC dates,
+        // but all chart buckets should represent the user's local day.
+        const todayDateKey = toAppDateKey(new Date());
+        const targetDateKey = addDaysToDateKey(todayDateKey, weekOffset * 7);
+        const dayOfWeek = getAppDayOfWeek(targetDateKey); // 0 = Sunday, 1 = Monday, etc.
+        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const mondayDateKey = addDaysToDateKey(targetDateKey, -daysToSubtract);
+        const sundayDateKey = addDaysToDateKey(mondayDateKey, 6);
+        const monday = appDateKeyToUtcStart(mondayDateKey);
+        const sundayEnd = new Date(appDateKeyToUtcStart(addDaysToDateKey(sundayDateKey, 1)).getTime() - 1);
         
-        // Calculate Monday of the target week
-        const monday = new Date(targetDate);
-        const dayOfWeek = targetDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
-        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Adjust to Monday
-        monday.setDate(targetDate.getDate() - daysToSubtract);
-        monday.setHours(0, 0, 0, 0);
-        
-        // Calculate Sunday of the week
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        sunday.setHours(23, 59, 59, 999);
-        
-        // Get sessions for this week
+        // Get sessions overlapping this week. This includes sessions that start before
+        // midnight and continue into a visible India-time day.
         const sessions = await DeepWorkSession.find({
             userId: req.session.userId,
-            startTime: { $gte: monday, $lte: sunday }
+            startTime: { $lte: sundayEnd },
+            $or: [
+                { endTime: { $gte: monday } },
+                { endTime: null },
+                { activeSession: true }
+            ]
         });
         
         // Get user's dailyStats (includes manual edits)
         const user = await User.findById(req.session.userId);
         const userDailyStats = user.deepWorkStats?.dailyStats || [];
+        const taskTypes = user.deepWorkStats?.customTaskTypes || [];
+        const segmentsByDate = buildSessionSegmentsForWeek(sessions, mondayDateKey, taskTypes);
         
         // Create a map of dates from userDailyStats for quick lookup
         const editedMinutesMap = new Map();
         userDailyStats.forEach(stat => {
-            const date = new Date(stat.date);
-            date.setHours(0, 0, 0, 0);
-            editedMinutesMap.set(date.getTime(), stat.totalMinutes || 0);
+            editedMinutesMap.set(toAppDateKey(new Date(stat.date)), stat.totalMinutes || 0);
         });
         
         // Group by day for the week
@@ -424,38 +575,39 @@ router.get('/weekly-stats', auth, async (req, res) => {
         const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
         
         for (let i = 0; i < 7; i++) {
-            const date = new Date(monday);
-            date.setDate(monday.getDate() + i);
-            date.setHours(0, 0, 0, 0);
-            
-            const nextDate = new Date(date);
-            nextDate.setDate(date.getDate() + 1);
+            const dateKey = addDaysToDateKey(mondayDateKey, i);
+            const date = appDateKeyToUtcStart(dateKey);
+            const nextDate = appDateKeyToUtcStart(addDaysToDateKey(dateKey, 1));
             
             // Get sessions for this day
-            const daySessions = sessions.filter(s => 
-                s.startTime >= date && s.startTime < nextDate
-            );
+            const daySessions = sessions.filter(s => {
+                const sessionStart = new Date(s.startTime);
+                const sessionEnd = getSessionEffectiveEnd(s);
+                return sessionStart < nextDate && sessionEnd > date;
+            });
             
             // Calculate from sessions
-            const sessionMinutes = daySessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+            const daySegments = segmentsByDate.get(dateKey) || [];
+            const sessionMinutes = daySegments.reduce((sum, segment) => sum + (segment.minutes || 0), 0);
             
             // Get edited minutes from map (if any)
-            const editedMinutes = editedMinutesMap.get(date.getTime()) || 0;
+            const editedMinutes = editedMinutesMap.get(dateKey) || 0;
             
             // PRIORITIZE edited minutes if they exist
             const totalMinutes = editedMinutes > 0 ? editedMinutes : sessionMinutes;
-            
+
             const avgFocus = daySessions.length > 0 
                 ? Math.round(daySessions.reduce((sum, s) => sum + (s.focusScore || 0), 0) / daySessions.length)
                 : 0;
             
             weeklyData.push({
-                day: days[date.getDay()],
-                date: date.toISOString().split('T')[0],
+                day: days[getAppDayOfWeek(dateKey)],
+                date: dateKey,
                 minutes: totalMinutes,
                 hours: (totalMinutes / 60).toFixed(1),
                 sessions: daySessions.length,
-                focusScore: avgFocus
+                focusScore: avgFocus,
+                segments: daySegments
             });
         }
         
@@ -463,15 +615,18 @@ router.get('/weekly-stats', auth, async (req, res) => {
         const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         
-        const weekStartFormatted = `${monthNames[monday.getMonth()]} ${monday.getDate()}`;
-        const weekEndFormatted = `${monthNames[sunday.getMonth()]} ${sunday.getDate()}, ${sunday.getFullYear()}`;
+        const mondayLocal = new Date(monday.getTime() + APP_TIME_ZONE_OFFSET_MINUTES * 60000);
+        const sundayLocal = new Date(appDateKeyToUtcStart(sundayDateKey).getTime() + APP_TIME_ZONE_OFFSET_MINUTES * 60000);
+        const weekStartFormatted = `${monthNames[mondayLocal.getUTCMonth()]} ${mondayLocal.getUTCDate()}`;
+        const weekEndFormatted = `${monthNames[sundayLocal.getUTCMonth()]} ${sundayLocal.getUTCDate()}, ${sundayLocal.getUTCFullYear()}`;
         
         res.json({
-            weekStart: monday.toISOString().split('T')[0],
-            weekEnd: sunday.toISOString().split('T')[0],
+            weekStart: mondayDateKey,
+            weekEnd: sundayDateKey,
             weekRangeDisplay: `${weekStartFormatted} - ${weekEndFormatted}`,
             weekOffset: weekOffset,
             isCurrentWeek: weekOffset === 0,
+            timeZone: APP_TIME_ZONE,
             data: weeklyData
         });
         

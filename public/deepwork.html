@@ -121,6 +121,11 @@
 <div class="chart-section">
     <div class="chart-header">
         <h2>Weekly Activity</h2>
+        <div class="chart-header-actions">
+        <div class="chart-view-toggle" aria-label="Weekly activity view">
+            <button type="button" class="chart-view-btn active" id="barViewBtn" onclick="setWeeklyChartView('bar')">Bars</button>
+            <button type="button" class="chart-view-btn" id="timelineViewBtn" onclick="setWeeklyChartView('timeline')">Timeline</button>
+        </div>
         <div class="week-navigation">
             <button class="nav-week-btn" id="prevWeekBtn" onclick="loadPreviousWeek()" title="Previous Week">
                 ◀ Prev
@@ -133,8 +138,10 @@
                 Next ▶
             </button>
         </div>
+        </div>
     </div>
     <div class="bar-chart" id="barChart"></div>
+    <div class="weekly-timeline" id="weeklyTimeline" style="display: none;"></div>
 </div>
             <!-- Weekly Summary -->
 <!-- Today's Progress & Weekly Progress Cards -->
