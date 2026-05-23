@@ -141,6 +141,10 @@
         </div>
     </div>
     <div class="bar-chart" id="barChart"></div>
+    <div class="weekly-compare-legend" id="weeklyCompareLegend">
+        <span><span class="legend-dot current-week-dot"></span>This week</span>
+        <span><span class="legend-dot previous-week-dot"></span>Last week</span>
+    </div>
     <div class="weekly-timeline" id="weeklyTimeline" style="display: none;"></div>
 </div>
             <!-- Weekly Summary -->
@@ -304,7 +308,7 @@
     <!-- Task Manager Modal -->
 <div class="modal" id="taskManagerModal">
     <div class="modal-content task-manager-content">
-        <h3>Manage Task Types</h3>
+        <h3>Manage Categories</h3>
         <p class="modal-subtitle">Drag ⋮⋮ to reorder</p>
         
         <div class="task-list" id="taskList">
@@ -312,10 +316,10 @@
         </div>
         
         <div class="add-task-form">
-            <h4>Add New Task Type</h4>
+            <h4>Add New Category</h4>
             <div class="add-task-row">
                 <input type="text" id="newTaskIcon" placeholder="Icon (e.g., 🎨)" maxlength="2" class="task-icon-input" value="⚙️">
-                <input type="text" id="newTaskName" placeholder="Task name (e.g., Design)">
+                <input type="text" id="newTaskName" placeholder="Category name">
                 <button onclick="addNewTask()" class="primary add-btn">Add</button>
             </div>
         </div>

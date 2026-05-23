@@ -338,6 +338,85 @@ html.sidebar-no-transition .main-content {
     color: #999;
 }
 
+.compare-bar-container {
+    width: 68px;
+}
+
+.bar-pair {
+    height: 180px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 7px;
+    padding-top: 22px;
+}
+
+.compare-bar {
+    width: 19px;
+    min-height: 2px;
+    border-radius: 5px 5px 0 0;
+    border: 1px solid rgba(255,255,255,0.8);
+    position: relative;
+}
+
+.current-week-bar {
+    background: #1D9E75;
+}
+
+.previous-week-bar {
+    background: #6B8FD6;
+}
+
+.bar-top-label {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 5px);
+    transform: translateX(-50%);
+    color: #687083;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.compare-bar:hover .bar-top-label,
+.compare-bar:focus .bar-top-label {
+    opacity: 1;
+}
+
+.weekly-compare-legend {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    margin-top: 14px;
+    color: #666;
+    font-size: 12px;
+}
+
+.weekly-compare-legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.current-week-dot {
+    background: #1D9E75;
+}
+
+.previous-week-dot {
+    background: #6B8FD6;
+}
+
 /* ===== SUMMARY SECTION ===== */
 .summary-section {
     background: white;
@@ -2251,4 +2330,191 @@ html.sidebar-no-transition .main-content {
     text-align: center;
     color: #666;
     padding: 40px;
+}
+
+/* Polished category manager modal */
+#taskManagerModal {
+    background: rgba(17, 24, 39, 0.46);
+    backdrop-filter: blur(3px);
+}
+
+#taskManagerModal .task-manager-content {
+    width: min(560px, calc(100vw - 32px));
+    max-width: 560px;
+    max-height: min(82vh, 720px);
+    margin: 7vh auto;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 16px;
+    box-shadow: 0 24px 70px rgba(17, 24, 39, 0.24);
+}
+
+#taskManagerModal .task-manager-content h3 {
+    margin: 0;
+    padding: 24px 28px 6px;
+    font-size: 22px;
+    line-height: 1.2;
+    color: #1f2937;
+}
+
+#taskManagerModal .modal-subtitle {
+    padding: 0 28px 18px;
+    margin: 0;
+    color: #6b7280;
+    font-size: 13px;
+    line-height: 1.45;
+    border-bottom: 1px solid #edf0f5;
+}
+
+#taskManagerModal .task-list {
+    margin: 0;
+    padding: 18px 20px;
+    max-height: 330px;
+    overflow-y: auto;
+    background: #fbfcff;
+}
+
+#taskManagerModal .task-type-item {
+    display: grid;
+    grid-template-columns: 24px 38px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+    background: white;
+    border: 1px solid #e9ecf3;
+    border-radius: 12px;
+    cursor: grab;
+    box-shadow: 0 1px 3px rgba(17, 24, 39, 0.05);
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+
+#taskManagerModal .task-type-item:hover {
+    border-color: rgba(102, 126, 234, 0.42);
+    box-shadow: 0 8px 20px rgba(102, 126, 234, 0.12);
+    transform: translateY(-1px);
+}
+
+#taskManagerModal .task-type-item:last-child {
+    margin-bottom: 0;
+}
+
+#taskManagerModal .task-drag {
+    width: 24px;
+    color: #a0a7b4;
+    font-size: 18px;
+    text-align: center;
+}
+
+#taskManagerModal .task-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: #eef2ff;
+    color: #4f46e5;
+    font-size: 18px;
+}
+
+#taskManagerModal .task-name {
+    min-width: 0;
+    height: 38px;
+    padding: 8px 11px;
+    border: 1px solid #dde3ee;
+    border-radius: 9px;
+    background: #fff;
+    color: #1f2937;
+    font-size: 14px;
+}
+
+#taskManagerModal .task-name:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.14);
+}
+
+#taskManagerModal .delete-task-btn {
+    height: 36px;
+    padding: 0 12px;
+    border-radius: 9px;
+    background: #fff1f2;
+    color: #be123c;
+    border: 1px solid #fecdd3;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+#taskManagerModal .delete-task-btn:hover {
+    background: #be123c;
+    border-color: #be123c;
+    color: white;
+}
+
+#taskManagerModal .add-task-form {
+    margin: 0;
+    padding: 20px 28px;
+    border-top: 1px solid #edf0f5;
+    border-radius: 0;
+    background: white;
+}
+
+#taskManagerModal .add-task-form h4 {
+    margin: 0 0 12px;
+    color: #374151;
+    font-size: 14px;
+}
+
+#taskManagerModal .add-task-row {
+    display: grid;
+    grid-template-columns: 66px 1fr auto;
+    gap: 10px;
+    align-items: center;
+}
+
+#taskManagerModal .add-task-row input[type="text"] {
+    height: 40px;
+    margin: 0;
+    border: 1px solid #dde3ee;
+    border-radius: 9px;
+}
+
+#taskManagerModal .task-icon-input {
+    width: 66px !important;
+    text-align: center;
+}
+
+#taskManagerModal .add-task-row .add-btn,
+#taskManagerModal .modal-buttons button {
+    height: 40px;
+    border-radius: 9px;
+    font-weight: 700;
+}
+
+#taskManagerModal .modal-buttons {
+    padding: 16px 28px 24px;
+    border-top: 1px solid #edf0f5;
+    background: white;
+}
+
+#taskManagerModal .modal-buttons button {
+    background: #667eea;
+    color: white;
+    min-width: 96px;
+}
+
+@media (max-width: 640px) {
+    #taskManagerModal .task-type-item {
+        grid-template-columns: 24px 38px 1fr;
+    }
+
+    #taskManagerModal .delete-task-btn {
+        grid-column: 3;
+        justify-self: start;
+    }
+
+    #taskManagerModal .add-task-row {
+        grid-template-columns: 60px 1fr;
+    }
+
+    #taskManagerModal .add-task-row .add-btn {
+        grid-column: 1 / -1;
+    }
 }

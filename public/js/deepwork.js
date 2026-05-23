@@ -9,6 +9,7 @@ let currentWeekOffset = 0; // 0 = current week, -1 = last week, -2 = two weeks a
 let isLoadingWeekly = false;
 let currentWeeklyChartView = localStorage.getItem('weeklyChartView') || 'bar';
 let weeklyStatsData = [];
+let previousWeeklyStatsData = [];
 // Load data on page load
 // Load data on page load (KEEP THIS ONE)
 // Load data on page load - PARALLEL VERSION
@@ -711,15 +712,21 @@ async function loadWeeklyStats() {
         if (chartContainer) chartContainer.classList.add('loading');
         
         console.log(`Loading weekly stats for offset: ${currentWeekOffset}`);
-        const response = await fetch(`/api/deepwork/weekly-stats?weekOffset=${currentWeekOffset}`, {
-            credentials: 'include'
-        });
+        const [response, previousResponse] = await Promise.all([
+            fetch(`/api/deepwork/weekly-stats?weekOffset=${currentWeekOffset}`, {
+                credentials: 'include'
+            }),
+            fetch(`/api/deepwork/weekly-stats?weekOffset=${currentWeekOffset - 1}`, {
+                credentials: 'include'
+            })
+        ]);
         
-        if (!response.ok) {
+        if (!response.ok || !previousResponse.ok) {
             throw new Error('Failed to load stats');
         }
         
         const data = await response.json();
+        const previousData = await previousResponse.json();
         console.log('Weekly stats:', data);
         
         // Update week range display
@@ -737,6 +744,7 @@ async function loadWeeklyStats() {
         }
         
         weeklyStatsData = data.data || [];
+        previousWeeklyStatsData = previousData.data || [];
         renderWeeklyActivity();
         
     } catch (error) {
@@ -750,6 +758,8 @@ async function loadWeeklyStats() {
         if (timeline) {
             timeline.innerHTML = '<p style="text-align: center; color: #dc3545; padding: 40px;">Failed to load data. Please try again.</p>';
         }
+        const legend = document.getElementById('weeklyCompareLegend');
+        if (legend) legend.style.display = 'none';
     } finally {
         isLoadingWeekly = false;
         if (chartContainer) chartContainer.classList.remove('loading');
@@ -801,6 +811,7 @@ function setWeeklyChartView(view) {
 function renderWeeklyActivity() {
     const barChart = document.getElementById('barChart');
     const timeline = document.getElementById('weeklyTimeline');
+    const compareLegend = document.getElementById('weeklyCompareLegend');
     const barBtn = document.getElementById('barViewBtn');
     const timelineBtn = document.getElementById('timelineViewBtn');
 
@@ -809,15 +820,16 @@ function renderWeeklyActivity() {
 
     if (barChart) barChart.style.display = currentWeeklyChartView === 'bar' ? 'flex' : 'none';
     if (timeline) timeline.style.display = currentWeeklyChartView === 'timeline' ? 'block' : 'none';
+    if (compareLegend) compareLegend.style.display = currentWeeklyChartView === 'bar' ? 'flex' : 'none';
 
     if (currentWeeklyChartView === 'timeline') {
         renderTimelineChart(weeklyStatsData);
     } else {
-        renderBarChart(weeklyStatsData);
+        renderBarChart(weeklyStatsData, previousWeeklyStatsData);
     }
 }
 
-function renderBarChart(stats) {
+function renderBarChart(stats, previousStats = []) {
     const chart = document.getElementById('barChart');
     chart.innerHTML = '';
     
@@ -826,18 +838,34 @@ function renderBarChart(stats) {
         return;
     }
     
-    const maxMinutes = Math.max(...stats.map(s => s.minutes), 1);
+    const maxMinutes = Math.max(
+        ...stats.map(s => s.minutes || 0),
+        ...previousStats.map(s => s.minutes || 0),
+        1
+    );
     
-    stats.forEach(day => {
-        const height = maxMinutes > 0 ? (day.minutes / maxMinutes) * 180 : 0;
+    stats.forEach((day, index) => {
+        const previousDay = previousStats[index] || {};
+        const currentHeight = maxMinutes > 0 ? ((day.minutes || 0) / maxMinutes) * 180 : 0;
+        const previousHeight = maxMinutes > 0 ? ((previousDay.minutes || 0) / maxMinutes) * 180 : 0;
         
         const barContainer = document.createElement('div');
-        barContainer.className = 'bar-container';
+        barContainer.className = 'bar-container compare-bar-container';
+
+        const barPair = document.createElement('div');
+        barPair.className = 'bar-pair';
+
+        const previousBar = document.createElement('div');
+        previousBar.className = 'bar compare-bar previous-week-bar';
+        previousBar.style.height = previousHeight + 'px';
+        previousBar.setAttribute('data-tooltip', `Last week: ${previousDay.hours || '0.0'}h`);
+        previousBar.innerHTML = `<span class="bar-top-label">${previousDay.hours || '0.0'}h</span>`;
         
-        const bar = document.createElement('div');
-        bar.className = 'bar';
-        bar.style.height = height + 'px';
-        bar.setAttribute('data-tooltip', `${day.hours}h (${day.sessions} sessions, ${day.focusScore}% focus)`);
+        const currentBar = document.createElement('div');
+        currentBar.className = 'bar compare-bar current-week-bar';
+        currentBar.style.height = currentHeight + 'px';
+        currentBar.setAttribute('data-tooltip', `This week: ${day.hours}h`);
+        currentBar.innerHTML = `<span class="bar-top-label">${day.hours}h</span>`;
         
         const label = document.createElement('div');
         label.className = 'bar-label';
@@ -847,7 +875,9 @@ function renderBarChart(stats) {
         value.className = 'bar-value';
         value.textContent = day.hours + 'h';
         
-        barContainer.appendChild(bar);
+        barPair.appendChild(previousBar);
+        barPair.appendChild(currentBar);
+        barContainer.appendChild(barPair);
         barContainer.appendChild(label);
         barContainer.appendChild(value);
         chart.appendChild(barContainer);
@@ -1263,12 +1293,12 @@ async function loadTaskList() {
             const taskList = document.getElementById('taskList');
             taskList.innerHTML = taskTypes.map(task => {
                 return `
-                <div class="task-item" data-id="${task.id}">
+                <div class="task-type-item" data-id="${task.id}">
                     <div class="task-drag">⋮⋮</div>
                     <div class="task-icon">${task.icon}</div>
                     <input type="text" class="task-name" value="${task.name}" 
-                           onchange="updateTask('${task.id}', this.value)">
-                    <button class="delete-task-btn" onclick="deleteTask('${task.id}')">
+                           onchange="updateTaskType('${task.id}', this.value)">
+                    <button class="delete-task-btn" onclick="deleteTaskType('${task.id}')">
                         Delete
                     </button>
                 </div>
@@ -1323,7 +1353,7 @@ async function addNewTask() {
 }
 
 // Update task
-async function updateTask(id, newName) {
+async function updateTaskType(id, newName) {
     try {
         await fetch(`/api/deepwork/task-types/${id}`, {
             method: 'PUT',
@@ -1353,7 +1383,7 @@ async function updateTaskColor(id, color) {
 
 // Delete task
 // Delete task - NOW ALLOWS DELETING ANY TASK
-async function deleteTask(id) {
+async function deleteTaskType(id) {
     if (!confirm('Are you sure you want to delete this task type?')) return;
     
     try {
@@ -1365,6 +1395,11 @@ async function deleteTask(id) {
         if (response.ok) {
             await loadTaskList();
             await loadTaskTypes(); // Update dropdown
+            await Promise.all([
+                loadWeeklyStats(),
+                loadWeeklyReport(currentWeekOffset),
+                loadCategoryBreakdown(currentWeekOffset)
+            ]);
         } else {
             const error = await response.json();
             alert('Error: ' + error.error);
@@ -1379,7 +1414,7 @@ function makeTaskSortable() {
     const taskList = document.getElementById('taskList');
     let draggedItem = null;
     
-    taskList.querySelectorAll('.task-item').forEach(item => {
+    taskList.querySelectorAll('.task-type-item').forEach(item => {
         item.draggable = true;
         
         item.addEventListener('dragstart', (e) => {
@@ -1494,7 +1529,7 @@ async function loadTasks() {
                 <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} 
                        onchange="toggleTask('${task._id}')">
                 <span class="task-title ${task.completed ? 'completed' : ''}">${task.title}</span>
-                <button class="task-delete-btn" onclick="deleteTask('${task._id}')">Delete</button>
+                <button class="task-delete-btn" onclick="deleteTodoTask('${task._id}')">Delete</button>
             </div>
         `).join('');
         
@@ -1537,7 +1572,7 @@ async function toggleTask(id) {
     }
 }
 
-async function deleteTask(id) {
+async function deleteTodoTask(id) {
     if (!confirm('Delete this task?')) return;
     try {
         await fetch(`/api/tasks/${id}`, {
