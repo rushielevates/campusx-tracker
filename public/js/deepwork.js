@@ -34,6 +34,7 @@ window.onload = async function() {
         loadTodayProgress(),        // Today's compact stats
         loadUserGoal(),             // Goal slider
         loadCategoryBreakdown(0),     // Category breakdown
+        loadWeeklyConstraint(),
          loadTasks(),                // ← ADD THIS INSIDE
         loadNotes()                 // ← ADD THIS INSIDE
     ]);
@@ -41,6 +42,31 @@ window.onload = async function() {
     console.log('✅ All dashboard data loaded in parallel!');
     console.log('🔵 Deep Work page loaded - END');
 };
+async function loadWeeklyConstraint() {
+    const banner = document.getElementById('weeklyFocusConstraint');
+    if (!banner) return;
+
+    try {
+        const response = await fetch('/api/analytics/weekly-review/constraint', {
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to load weekly constraint');
+
+        const data = await response.json();
+        if (data.hasConstraint && data.constraint) {
+            banner.textContent = data.constraint;
+            banner.style.display = 'block';
+        } else {
+            banner.textContent = '';
+            banner.style.display = 'none';
+        }
+    } catch (error) {
+        console.error('Error loading weekly constraint:', error);
+        banner.style.display = 'none';
+    }
+}
+
 // ===== CATEGORY-BASED TIME EDITING =====
 
 // Store original values for comparison
