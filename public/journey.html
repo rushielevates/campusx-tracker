@@ -65,7 +65,13 @@
                 <div class="stage-tabs" id="stageTabs">
                     <!-- Stages will be dynamically added -->
                 </div>
-                <button class="add-stage-btn" onclick="addNewStage()">+ Add Stage</button>
+                <div class="stage-actions">
+                    <button class="stage-action-btn" onclick="exportActiveStageJson()">JSON</button>
+                    <button class="stage-action-btn" onclick="exportActiveStagePdf()">PDF</button>
+                    <button class="stage-action-btn" onclick="document.getElementById('stageImportInput').click()">Import</button>
+                    <button class="add-stage-btn" onclick="addNewStage()">+ Add Stage</button>
+                </div>
+                <input type="file" id="stageImportInput" accept=".json,.journey.json,application/json" hidden onchange="importStageFromFile(this.files[0]); this.value = '';">
             </div>
 
             <!-- React Flow Canvas Container -->

@@ -451,6 +451,32 @@
     padding: 10px 0;
 }
 
+.stage-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.stage-action-btn {
+    padding: 8px 12px;
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.stage-action-btn:hover {
+    background: #eef2ff;
+    border-color: #667eea;
+    color: #4338ca;
+}
+
 .stage-tab {
     display: inline-flex;
     align-items: center;

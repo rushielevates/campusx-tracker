@@ -558,6 +558,468 @@ async function addNewStage() {
     }
 }
 
+function getActiveStage() {
+    return currentJourney?.stages?.find(stage => stage.id === activeStageId) || null;
+}
+
+function exportActiveStageJson() {
+    const stage = getActiveStage();
+    if (!stage) {
+        alert('No active stage to export.');
+        return;
+    }
+
+    const exportData = {
+        type: 'campusx-journey-stage',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        stage: createShareableStage(stage)
+    };
+
+    downloadBlob(
+        JSON.stringify(exportData, null, 2),
+        `${slugify(stage.name || 'journey-stage')}.journey.json`,
+        'application/json'
+    );
+}
+
+function exportActiveStagePdf() {
+    const stage = getActiveStage();
+    if (!stage) {
+        alert('No active stage to export.');
+        return;
+    }
+
+    const pdfBlob = createStagePdf(stage);
+    downloadBlob(pdfBlob, `${slugify(stage.name || 'journey-stage')}.pdf`, 'application/pdf');
+}
+
+async function importStageFromFile(file) {
+    if (!file) return;
+
+    try {
+        const rawText = await file.text();
+        const parsed = JSON.parse(rawText);
+        const sourceStage = parsed?.type === 'campusx-journey-stage' ? parsed.stage : parsed;
+        const importedStage = buildImportedStage(sourceStage);
+
+        if (!importedStage) {
+            alert('This does not look like a valid Journey stage file.');
+            return;
+        }
+
+        if (!currentJourney.stages) currentJourney.stages = [];
+        currentJourney.stages.push(importedStage);
+        activeStageId = importedStage.id;
+        currentJourney.activeStageId = importedStage.id;
+
+        await saveCurrentStage();
+        setupStageTabs();
+        renderCanvas();
+        alert(`Imported "${importedStage.name}" into your journey.`);
+    } catch (error) {
+        console.error('Error importing stage:', error);
+        alert('Could not import this stage. Please use a valid .journey.json file.');
+    }
+}
+
+function createShareableStage(stage) {
+    return {
+        name: stage.name || 'Imported Stage',
+        mainCards: (stage.mainCards || []).map(card => ({
+            title: card.title || 'Untitled Topic',
+            columnNames: {
+                priority: card.columnNames?.priority || 'Priority',
+                secondary: card.columnNames?.secondary || 'Secondary'
+            },
+            items: (card.items || []).map(item => ({
+                title: item.title || 'Untitled item',
+                linkTitle: item.linkTitle || '',
+                linkUrl: item.linkUrl || '',
+                column: item.column || 'priority',
+                order: Number.isFinite(item.order) ? item.order : 0
+            })),
+            resources: (card.resources || []).map(resource => ({
+                title: resource.title || '',
+                url: resource.url || ''
+            }))
+        }))
+    };
+}
+
+function buildImportedStage(sourceStage) {
+    if (!sourceStage || !Array.isArray(sourceStage.mainCards)) return null;
+
+    const stageId = makeId('stage');
+    const nextOrder = (currentJourney?.stages?.length || 0) + 1;
+    return {
+        id: stageId,
+        name: sourceStage.name ? `${String(sourceStage.name).trim()} (Imported)` : `Imported Stage ${nextOrder}`,
+        order: nextOrder,
+        mainCards: sourceStage.mainCards.map((card, cardIndex) => {
+            const cardId = makeId('main');
+            return {
+                id: cardId,
+                title: card.title || `Topic ${cardIndex + 1}`,
+                columnNames: {
+                    priority: card.columnNames?.priority || 'Priority',
+                    secondary: card.columnNames?.secondary || 'Secondary'
+                },
+                items: (card.items || []).map((item, itemIndex) => ({
+                    id: makeId('item'),
+                    title: item.title || `Item ${itemIndex + 1}`,
+                    linkTitle: item.linkTitle || '',
+                    linkUrl: item.linkUrl || '',
+                    column: item.column === 'secondary' ? 'secondary' : 'priority',
+                    order: Number.isFinite(item.order) ? item.order : itemIndex
+                })),
+                resources: (card.resources || []).map(resource => ({
+                    id: makeId('resource'),
+                    title: resource.title || '',
+                    url: resource.url || ''
+                }))
+            };
+        })
+    };
+}
+
+function buildStagePdfLines(stage) {
+    const lines = [
+        stage.name || 'Journey Stage',
+        `Exported: ${new Date().toLocaleString()}`,
+        ''
+    ];
+
+    const cards = stage.mainCards || [];
+    if (cards.length === 0) {
+        lines.push('No topics in this stage yet.');
+        return lines;
+    }
+
+    cards.forEach((card, cardIndex) => {
+        lines.push(`${cardIndex + 1}. ${card.title || 'Untitled Topic'}`);
+
+        const priorityName = card.columnNames?.priority || 'Priority';
+        const secondaryName = card.columnNames?.secondary || 'Secondary';
+        appendPdfItems(lines, priorityName, (card.items || []).filter(item => item.column !== 'secondary'));
+        appendPdfItems(lines, secondaryName, (card.items || []).filter(item => item.column === 'secondary'));
+
+        const resources = card.resources || [];
+        if (resources.length > 0) {
+            lines.push('  Resources');
+            resources.forEach(resource => {
+                lines.push(`    - ${resource.title || resource.url || 'Resource'}`);
+                if (resource.url) lines.push(`      ${resource.url}`);
+            });
+        }
+
+        lines.push('');
+    });
+
+    return lines;
+}
+
+function createStagePdf(stage) {
+    const pageWidth = 612;
+    const pageHeight = 792;
+    const margin = 48;
+    const contentWidth = pageWidth - margin * 2;
+    const objects = [];
+    const pages = [];
+    const addObject = content => {
+        objects.push(content);
+        return objects.length;
+    };
+
+    const catalogId = addObject('<< /Type /Catalog /Pages 2 0 R >>');
+    const pagesId = addObject('');
+    const fontId = addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+    const boldFontId = addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
+
+    let content = [];
+    let annotations = [];
+    let y = pageHeight - margin;
+
+    function beginPage() {
+        content = [];
+        annotations = [];
+        y = pageHeight - margin;
+    }
+
+    function finishPage() {
+        const stream = content.join('\n');
+        const contentId = addObject(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
+        const annotationRefs = annotations.length > 0 ? `/Annots [${annotations.map(id => `${id} 0 R`).join(' ')}]` : '';
+        const pageId = addObject(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${fontId} 0 R /F2 ${boldFontId} 0 R >> >> ${annotationRefs} /Contents ${contentId} 0 R >>`);
+        pages.push(pageId);
+    }
+
+    function ensureSpace(height) {
+        if (y - height >= margin) return;
+        finishPage();
+        beginPage();
+    }
+
+    function drawText(text, x, textY, size = 10, font = 'F1', color = [31, 41, 55]) {
+        const [r, g, b] = color.map(value => (value / 255).toFixed(3));
+        content.push(`BT /${font} ${size} Tf ${r} ${g} ${b} rg ${x} ${textY} Td ${pdfText(text)} Tj ET`);
+    }
+
+    function drawRect(x, rectY, width, height, fill, stroke = null) {
+        const [fr, fg, fb] = fill.map(value => (value / 255).toFixed(3));
+        const fillCommand = `${fr} ${fg} ${fb} rg`;
+        if (stroke) {
+            const [sr, sg, sb] = stroke.map(value => (value / 255).toFixed(3));
+            content.push(`${fillCommand} ${sr} ${sg} ${sb} RG ${x} ${rectY} ${width} ${height} re B`);
+        } else {
+            content.push(`${fillCommand} ${x} ${rectY} ${width} ${height} re f`);
+        }
+    }
+
+    function drawLink(text, url, x, textY, size = 9) {
+        drawText(text, x, textY, size, 'F1', [67, 56, 202]);
+        const rectWidth = Math.min(estimateTextWidth(text, size), contentWidth - (x - margin));
+        const safeUrl = normalizeUrl(url);
+        const annotationId = addObject(`<< /Type /Annot /Subtype /Link /Rect [${x} ${textY - 2} ${x + rectWidth} ${textY + size + 2}] /Border [0 0 0] /A << /S /URI /URI ${pdfText(safeUrl)} >> >>`);
+        annotations.push(annotationId);
+    }
+
+    function writeWrappedText(text, x, size, maxWidth, options = {}) {
+        const lines = wrapTextForWidth(text, size, maxWidth);
+        lines.forEach(line => {
+            ensureSpace(size + 8);
+            drawText(line, x, y, size, options.font || 'F1', options.color || [31, 41, 55]);
+            y -= options.lineHeight || size + 5;
+        });
+    }
+
+    beginPage();
+
+    drawRect(0, pageHeight - 124, pageWidth, 124, [247, 248, 255]);
+    drawText('CampusX Journey Planner', margin, pageHeight - 58, 11, 'F2', [67, 56, 202]);
+    writeWrappedText(stage.name || 'Journey Stage', margin, 24, contentWidth, { font: 'F2', color: [17, 24, 39], lineHeight: 28 });
+    drawText(`Exported ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, margin, pageHeight - 106, 9, 'F1', [102, 112, 133]);
+    y = pageHeight - 148;
+
+    const cards = stage.mainCards || [];
+    if (cards.length === 0) {
+        drawRect(margin, y - 70, contentWidth, 70, [255, 255, 255], [226, 232, 240]);
+        drawText('No topics in this stage yet.', margin + 18, y - 40, 12, 'F2', [71, 84, 103]);
+        finishPage();
+        return finalizePdf(objects, catalogId, pagesId, pages);
+    }
+
+    cards.forEach((card, cardIndex) => {
+        const priorityItems = (card.items || []).filter(item => item.column !== 'secondary').sort((a, b) => (a.order || 0) - (b.order || 0));
+        const secondaryItems = (card.items || []).filter(item => item.column === 'secondary').sort((a, b) => (a.order || 0) - (b.order || 0));
+        const resources = card.resources || [];
+        const estimatedHeight = 64 + (priorityItems.length + secondaryItems.length) * 34 + resources.length * 26;
+
+        ensureSpace(Math.min(estimatedHeight, 260));
+        drawRect(margin, y - 34, contentWidth, 36, [255, 255, 255], [226, 232, 240]);
+        drawText(`${cardIndex + 1}. ${card.title || 'Untitled Topic'}`, margin + 14, y - 22, 14, 'F2', [31, 41, 55]);
+        y -= 52;
+
+        writePdfColumn(card.columnNames?.priority || 'Priority', priorityItems);
+        writePdfColumn(card.columnNames?.secondary || 'Secondary', secondaryItems);
+
+        if (resources.length > 0) {
+            ensureSpace(24);
+            drawText('Resources', margin + 14, y, 11, 'F2', [71, 84, 103]);
+            y -= 18;
+            resources.forEach(resource => {
+                const label = resource.title || resource.url || 'Resource';
+                ensureSpace(24);
+                drawText(`- ${label}`, margin + 26, y, 9, 'F1', [31, 41, 55]);
+                y -= 13;
+                if (resource.url) {
+                    drawLink(resource.url, resource.url, margin + 36, y, 8);
+                    y -= 16;
+                }
+            });
+        }
+
+        y -= 12;
+    });
+
+    finishPage();
+    return finalizePdf(objects, catalogId, pagesId, pages);
+
+    function writePdfColumn(title, items) {
+        ensureSpace(28);
+        drawRect(margin + 14, y - 18, contentWidth - 28, 22, [244, 248, 255], [219, 231, 251]);
+        drawText(title, margin + 24, y - 11, 10, 'F2', [67, 56, 202]);
+        y -= 30;
+
+        if (items.length === 0) {
+            ensureSpace(18);
+            drawText('- No items', margin + 28, y, 9, 'F1', [102, 112, 133]);
+            y -= 18;
+            return;
+        }
+
+        items.forEach(item => {
+            ensureSpace(36);
+            drawText(`- ${item.title || 'Untitled item'}`, margin + 28, y, 10, 'F1', [31, 41, 55]);
+            y -= 14;
+            if (item.linkUrl) {
+                const label = item.linkTitle || item.linkUrl;
+                const linkText = label === item.linkUrl ? normalizeUrl(item.linkUrl) : `${label}: ${normalizeUrl(item.linkUrl)}`;
+                wrapTextForWidth(linkText, 8, contentWidth - 58).forEach(line => {
+                    ensureSpace(14);
+                    drawLink(line, item.linkUrl, margin + 38, y, 8);
+                    y -= 14;
+                });
+            }
+            y -= 5;
+        });
+    }
+}
+
+function appendPdfItems(lines, heading, items) {
+    const sortedItems = [...items].sort((a, b) => (a.order || 0) - (b.order || 0));
+    lines.push(`  ${heading}`);
+    if (sortedItems.length === 0) {
+        lines.push('    - No items');
+        return;
+    }
+
+    sortedItems.forEach(item => {
+        lines.push(`    - ${item.title || 'Untitled item'}`);
+        if (item.linkUrl) lines.push(`      Link: ${normalizeUrl(item.linkUrl)}`);
+    });
+}
+
+function createTextPdf(sourceLines) {
+    const wrappedLines = sourceLines.flatMap(line => wrapPdfLine(line, 88));
+    const pageLineCount = 42;
+    const pages = [];
+    for (let i = 0; i < wrappedLines.length; i += pageLineCount) {
+        pages.push(wrappedLines.slice(i, i + pageLineCount));
+    }
+    if (pages.length === 0) pages.push(['Journey Stage']);
+
+    const objects = [];
+    const addObject = content => {
+        objects.push(content);
+        return objects.length;
+    };
+
+    const catalogId = addObject('<< /Type /Catalog /Pages 2 0 R >>');
+    const pagesId = addObject('');
+    const fontId = addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+    const pageIds = [];
+
+    pages.forEach(pageLines => {
+        const content = [
+            'BT',
+            '/F1 11 Tf',
+            '50 790 Td',
+            '14 TL',
+            ...pageLines.map((line, index) => `${index === 0 ? '' : 'T* '}${pdfText(line)} Tj`),
+            'ET'
+        ].join('\n');
+        const contentId = addObject(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+        const pageId = addObject(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${contentId} 0 R >>`);
+        pageIds.push(pageId);
+    });
+
+    objects[pagesId - 1] = `<< /Type /Pages /Kids [${pageIds.map(id => `${id} 0 R`).join(' ')}] /Count ${pageIds.length} >>`;
+
+    let pdf = '%PDF-1.4\n';
+    const offsets = [0];
+    objects.forEach((object, index) => {
+        offsets.push(pdf.length);
+        pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+    });
+    const xrefOffset = pdf.length;
+    pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+    offsets.slice(1).forEach(offset => {
+        pdf += `${String(offset).padStart(10, '0')} 00000 n \n`;
+    });
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+    return new Blob([pdf], { type: 'application/pdf' });
+}
+
+function finalizePdf(objects, catalogId, pagesId, pageIds) {
+    objects[pagesId - 1] = `<< /Type /Pages /Kids [${pageIds.map(id => `${id} 0 R`).join(' ')}] /Count ${pageIds.length} >>`;
+
+    let pdf = '%PDF-1.4\n';
+    const offsets = [0];
+    objects.forEach((object, index) => {
+        offsets.push(pdf.length);
+        pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+    });
+
+    const xrefOffset = pdf.length;
+    pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+    offsets.slice(1).forEach(offset => {
+        pdf += `${String(offset).padStart(10, '0')} 00000 n \n`;
+    });
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+    return new Blob([pdf], { type: 'application/pdf' });
+}
+
+function wrapTextForWidth(text, fontSize, maxWidth) {
+    const maxLength = Math.max(12, Math.floor(maxWidth / (fontSize * 0.52)));
+    return wrapPdfLine(text, maxLength);
+}
+
+function estimateTextWidth(text, fontSize) {
+    return String(text || '').length * fontSize * 0.52;
+}
+
+function wrapPdfLine(line, maxLength) {
+    const cleanLine = String(line || '').replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '?');
+    if (cleanLine.length <= maxLength) return [cleanLine];
+
+    const words = cleanLine.split(' ');
+    const lines = [];
+    let current = '';
+    words.forEach(word => {
+        if (!current) {
+            current = word;
+        } else if ((current + ' ' + word).length <= maxLength) {
+            current += ' ' + word;
+        } else {
+            lines.push(current);
+            current = `  ${word}`;
+        }
+    });
+    if (current) lines.push(current);
+    return lines;
+}
+
+function pdfText(text) {
+    const cleanText = String(text || '').replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '?');
+    return `(${cleanText.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)')})`;
+}
+
+function downloadBlob(content, filename, type) {
+    const blob = content instanceof Blob ? content : new Blob([content], { type });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+function makeId(prefix) {
+    return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function slugify(value) {
+    const slug = String(value || 'journey-stage')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    return slug || 'journey-stage';
+}
+
 // ===== UTILITY FUNCTIONS =====
 function escapeHtml(str) {
     if (!str) return '';
