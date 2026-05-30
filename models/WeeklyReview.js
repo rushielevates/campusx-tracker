@@ -11,6 +11,7 @@ const weeklyReviewSchema = new mongoose.Schema({
         sessionsLongEnough: { type: String, default: '' },
         categorySplit: { type: String, default: '' },
         bestBlock: { type: String, default: '' },
+        protectingTime: { type: String, default: '' },
         nextWeekConstraint: { type: String, default: '' }
     },
     isCompleted: { type: Boolean, default: false },

@@ -11,6 +11,7 @@ const REVIEW_QUESTIONS = [
     'sessionsLongEnough',
     'categorySplit',
     'bestBlock',
+    'protectingTime',
     'nextWeekConstraint'
 ];
 

@@ -102,10 +102,18 @@ function setupStageTabs() {
     
     const sortedStages = [...currentJourney.stages].sort((a, b) => a.order - b.order);
     sortedStages.forEach(stage => {
-        const tab = document.createElement('button');
+        const tab = document.createElement('div');
         tab.className = `stage-tab ${activeStageId === stage.id ? 'active' : ''}`;
-        tab.textContent = stage.name;
+        tab.dataset.stageId = stage.id;
+        tab.innerHTML = `
+            <button type="button" class="stage-tab-label">${escapeHtml(stage.name)}</button>
+            <button type="button" class="stage-delete-btn" title="Delete stage" aria-label="Delete ${escapeHtml(stage.name)}">&times;</button>
+        `;
         tab.onclick = () => switchStage(stage.id);
+        tab.querySelector('.stage-delete-btn').onclick = (event) => {
+            event.stopPropagation();
+            deleteStage(stage.id);
+        };
         container.appendChild(tab);
     });
 }
@@ -130,8 +138,7 @@ async function switchStage(stageId) {
 function updateStageTabs() {
     const tabs = document.querySelectorAll('.stage-tab');
     tabs.forEach(tab => {
-        const stage = currentJourney.stages.find(s => s.name === tab.textContent);
-        if (stage) tab.classList.toggle('active', stage.id === activeStageId);
+        tab.classList.toggle('active', tab.dataset.stageId === activeStageId);
     });
 }
 
@@ -249,15 +256,27 @@ function renderCanvas() {
 function renderItem(item, mainCardId) {
     const hasLink = !!item.linkUrl;
     const linkTitle = item.linkTitle || item.linkUrl || '';
-    return `
-        <div class="item-row ${hasLink ? 'has-link' : ''}" data-item-id="${item.id}" onclick="openItemLink('${mainCardId}', '${item.id}')">
-            <span class="drag-handle" onclick="event.stopPropagation()">&#8942;&#8942;</span>
+    const itemTitle = item.title || 'Untitled item';
+    const titleControl = hasLink ? `
+            <button type="button" class="item-title-link"
+                    onclick="event.stopPropagation(); openItemLink('${mainCardId}', '${item.id}')"
+                    title="Open link: ${escapeHtml(linkTitle)}">
+                <span class="item-title-text">${escapeHtml(itemTitle)}</span>
+                <span class="item-open-indicator" aria-hidden="true">&#8599;</span>
+            </button>
+        ` : `
             <input type="text" class="item-title-input" 
-                   value="${escapeHtml(item.title)}"
+                   value="${escapeHtml(itemTitle)}"
                    onchange="updateItemTitle('${mainCardId}', '${item.id}', this.value)"
                    onclick="event.stopPropagation()"
-                   title="${hasLink ? 'Open link: ' + escapeHtml(linkTitle) : 'No link attached'}"
+                   title="No link attached"
                    placeholder="Item">
+        `;
+
+    return `
+        <div class="item-row ${hasLink ? 'has-link' : ''}" data-item-id="${item.id}">
+            <span class="drag-handle" onclick="event.stopPropagation()">&#8942;&#8942;</span>
+            ${titleControl}
             <button class="item-link-btn ${hasLink ? 'linked' : ''}" onclick="event.stopPropagation(); editItemLink('${mainCardId}', '${item.id}')" title="${hasLink ? 'Edit link' : 'Add link'}">
                 ${hasLink ? '&#128279;' : '+'}
             </button>
@@ -571,6 +590,42 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
         const toggleBtn = document.getElementById('sidebarToggle');
         if (toggleBtn) toggleBtn.textContent = '▶';
         document.documentElement.classList.add('sidebar-precollapsed');
+    }
+}
+
+async function deleteStage(stageId) {
+    if (!currentJourney?.stages || currentJourney.stages.length <= 1) {
+        alert('Keep at least one stage in your journey.');
+        return;
+    }
+
+    const stage = currentJourney.stages.find(s => s.id === stageId);
+    if (!stage) return;
+
+    if (!confirm(`Delete "${stage.name}" and everything inside it?`)) return;
+
+    try {
+        const response = await fetch(`/api/journey/stage/${encodeURIComponent(stageId)}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to delete stage');
+
+        currentJourney.stages = currentJourney.stages.filter(s => s.id !== stageId);
+
+        if (activeStageId === stageId) {
+            const nextStage = [...currentJourney.stages].sort((a, b) => a.order - b.order)[0];
+            activeStageId = nextStage?.id || null;
+            currentJourney.activeStageId = activeStageId;
+        }
+
+        setupStageTabs();
+        renderCanvas();
+        await saveCurrentStage();
+    } catch (error) {
+        console.error('Error deleting stage:', error);
+        alert('Could not delete this stage. Please try again.');
     }
 }
 
