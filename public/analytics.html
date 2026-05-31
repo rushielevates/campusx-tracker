@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Analytics - CampusX ML Tracker</title>
+    <title>Analytics - Deep Track</title>
     <script>
         if (localStorage.getItem('sidebarCollapsed') === 'true') {
             document.documentElement.classList.add('sidebar-precollapsed', 'sidebar-no-transition');
@@ -15,10 +15,11 @@
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; background: #f5f5f5; color: #222; overflow: hidden; }
         .app-container { display: flex; height: 100vh; }
         .sidebar { width: 300px; height: 100vh; flex: none; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; transition: width 0.3s ease; overflow-x: hidden; overflow-y: auto; }
-        .sidebar-header { padding: 30px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .sidebar-header { padding: 24px 18px 26px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .sidebar-header-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
         .sidebar-header h2 { font-size: 24px; margin-bottom: 5px; }
         .sidebar-header p { opacity: 0.9; font-size: 14px; }
-        .user-info { padding: 20px; display: flex; align-items: center; border-bottom: 1px solid #e0e0e0; }
+        .user-info { display: none; }
         .user-avatar { width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-right: 15px; }
         .user-details { display: flex; flex-direction: column; min-width: 0; }
         .user-details span:first-child { font-weight: 600; color: #333; }
@@ -27,12 +28,14 @@
         .nav-item { padding: 12px 15px; margin-bottom: 5px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.3s; color: #555; }
         .nav-item:hover { background: #f0f0f0; transform: translateX(5px); }
         .nav-item.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-        .nav-icon { font-size: 20px; width: 24px; text-align: center; }
+        .nav-icon { font-size: 20px; width: 24px; text-align: center; display: inline-flex; align-items: center; justify-content: center; }
+        .nav-icon img { width: 20px; height: 20px; display: block; object-fit: contain; }
         .nav-text { font-size: 15px; font-weight: 500; }
         .logout-btn { margin: 20px; padding: 10px; background: none; border: 2px solid #dc3545; color: #dc3545; border-radius: 10px; cursor: pointer; }
         .logout-btn:hover { background: #dc3545; color: white; }
-        .sidebar-toggle { margin: 12px 14px 6px; align-self: flex-end; flex: none; background: white; border: 1px solid #e0e0e0; border-radius: 8px; width: 30px; height: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; color: #667eea; font-size: 12px; line-height: 1; }
-        .sidebar-toggle:hover { background: #667eea; color: white; border-color: #667eea; }
+        .sidebar-toggle { margin: 0; flex: none; background: rgba(255,255,255,0.16); border: 1px solid rgba(255,255,255,0.35); border-radius: 8px; width: 34px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; line-height: 1; }
+        .sidebar-toggle:hover { background: rgba(255,255,255,0.28); border-color: rgba(255,255,255,0.6); }
+        .sidebar-toggle img { width: 18px; height: 18px; display: block; object-fit: contain; }
         .sidebar.collapsed { width: 70px; }
         .sidebar.collapsed .sidebar-header h2,
         .sidebar.collapsed .sidebar-header p,
@@ -172,7 +175,12 @@
     <div class="app-container">
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <h2>CampusX ML</h2>
+                <div class="sidebar-header-top">
+                    <h2>Deep Track</h2>
+                    <button type="button" class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="Toggle sidebar" aria-label="Toggle sidebar">
+                        <img src="images/icons/layouting.png" alt="">
+                    </button>
+                </div>
                 <p>Track what truly grows you</p>
             </div>
 
@@ -184,23 +192,21 @@
                 </div>
             </div>
 
-            <button type="button" class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">&#9664;</button>
-
             <div class="nav-menu">
                 <div class="nav-item" onclick="window.location.href='/dashboard.html'">
-                    <span class="nav-icon">📺</span><span class="nav-text">Dashboard</span>
+                    <span class="nav-icon"><img src="images/icons/dashboard.png" alt=""></span><span class="nav-text">Dashboard</span>
                 </div>
                 <div class="nav-item active">
-                    <span class="nav-icon">📊</span><span class="nav-text">Analytics</span>
+                    <span class="nav-icon"><img src="images/icons/bar-chart.png" alt=""></span><span class="nav-text">Analytics</span>
                 </div>
                 <div class="nav-item" onclick="window.location.href='/deepwork.html'">
-                    <span class="nav-icon">⏱️</span><span class="nav-text">Deep Work</span>
+                    <span class="nav-icon"><img src="images/icons/clock.png" alt=""></span><span class="nav-text">Deep Work</span>
                 </div>
                 <div class="nav-item" onclick="window.location.href='/journey.html'">
-                    <span class="nav-icon">🗺️</span><span class="nav-text">Journey Planner</span>
+                    <span class="nav-icon"><img src="images/icons/plan.png" alt=""></span><span class="nav-text">Journey Planner</span>
                 </div>
                 <div class="nav-item" onclick="window.location.href='/profile.html'">
-                    <span class="nav-icon">👤</span><span class="nav-text">Profile</span>
+                    <span class="nav-icon"><img src="images/icons/user.png" alt=""></span><span class="nav-text">Profile</span>
                 </div>
             </div>
 
@@ -742,21 +748,17 @@
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
-            const toggleBtn = document.getElementById('sidebarToggle');
             if (!sidebar) return;
 
             sidebar.classList.toggle('collapsed');
             const isCollapsed = sidebar.classList.contains('collapsed');
-            if (toggleBtn) toggleBtn.innerHTML = isCollapsed ? '&#9654;' : '&#9664;';
             localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
             document.documentElement.classList.toggle('sidebar-precollapsed', isCollapsed);
         }
 
         if (localStorage.getItem('sidebarCollapsed') === 'true') {
             const sidebar = document.getElementById('sidebar');
-            const toggleBtn = document.getElementById('sidebarToggle');
             if (sidebar) sidebar.classList.add('collapsed');
-            if (toggleBtn) toggleBtn.innerHTML = '&#9654;';
             document.documentElement.classList.add('sidebar-precollapsed');
         }
 

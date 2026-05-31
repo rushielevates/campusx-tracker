@@ -9,6 +9,31 @@ const auth = async (req, res, next) => {
     next();
 };
 
+function hasJourneyContent(stages = []) {
+    return stages.some(stage => {
+        const mainCards = Array.isArray(stage.mainCards) ? stage.mainCards : [];
+        return mainCards.some(card => {
+            const hasTitle = typeof card.title === 'string' && card.title.trim() && card.title.trim() !== 'New Topic';
+            const hasItems = Array.isArray(card.items) && card.items.length > 0;
+            const hasResources = Array.isArray(card.resources) && card.resources.length > 0;
+            return hasTitle || hasItems || hasResources;
+        });
+    });
+}
+
+function normalizeStages(stages) {
+    if (!Array.isArray(stages) || stages.length === 0) {
+        return null;
+    }
+
+    return stages.map((stage, index) => ({
+        id: stage.id || `stage_${Date.now()}_${index}`,
+        name: stage.name || `Stage ${index + 1}`,
+        order: Number.isFinite(Number(stage.order)) ? Number(stage.order) : index + 1,
+        mainCards: Array.isArray(stage.mainCards) ? stage.mainCards : []
+    }));
+}
+
 // Get user's journey
 router.get('/', auth, async (req, res) => {
     try {
@@ -41,10 +66,29 @@ router.get('/', auth, async (req, res) => {
 router.put('/', auth, async (req, res) => {
     try {
         const { stages, activeStageId } = req.body;
+        const normalizedStages = normalizeStages(stages);
+
+        if (!normalizedStages) {
+            return res.status(400).json({ error: 'Journey must include at least one stage' });
+        }
+
+        const stageIds = normalizedStages.map(stage => stage.id);
+        const nextActiveStageId = stageIds.includes(activeStageId) ? activeStageId : stageIds[0];
+        const existingJourney = await Journey.findOne({ userId: req.session.userId });
+
+        if (
+            existingJourney &&
+            hasJourneyContent(existingJourney.stages) &&
+            !hasJourneyContent(normalizedStages)
+        ) {
+            return res.status(409).json({
+                error: 'Refusing to replace an existing journey with an empty one'
+            });
+        }
         
         const journey = await Journey.findOneAndUpdate(
             { userId: req.session.userId },
-            { stages, activeStageId, updatedAt: new Date() },
+            { stages: normalizedStages, activeStageId: nextActiveStageId, updatedAt: new Date() },
             { new: true, upsert: true }
         );
         
@@ -87,6 +131,14 @@ router.delete('/stage/:stageId', auth, async (req, res) => {
     try {
         const { stageId } = req.params;
         const journey = await Journey.findOne({ userId: req.session.userId });
+
+        if (!journey) {
+            return res.status(404).json({ error: 'Journey not found' });
+        }
+
+        if (journey.stages.length <= 1) {
+            return res.status(400).json({ error: 'Keep at least one stage in your journey' });
+        }
         
         journey.stages = journey.stages.filter(s => s.id !== stageId);
         

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Journey Planner - CampusX ML Tracker</title>
+    <title>Journey Planner - Deep Track</title>
     <script>
         if (localStorage.getItem('sidebarCollapsed') === 'true') {
             document.documentElement.classList.add('sidebar-precollapsed', 'sidebar-no-transition');
@@ -19,7 +19,12 @@
         <!-- Sidebar (same collapsible structure) -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <h2>CampusX ML</h2>
+                <div class="sidebar-header-top">
+                    <h2>Deep Track</h2>
+                    <button type="button" class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="Toggle sidebar" aria-label="Toggle sidebar">
+                        <img src="images/icons/layouting.png" alt="">
+                    </button>
+                </div>
                 <p>Your Learning Journey</p>
             </div>
             <div class="user-info">
@@ -29,26 +34,25 @@
                     <span id="user-email">journey@campusx.app</span>
                 </div>
             </div>
-            <button type="button" class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">&#9664;</button>
             <div class="nav-menu">
                 <div class="nav-item" onclick="window.location.href='/dashboard.html'">
-                    <span class="nav-icon">&#128250;</span>
+                    <span class="nav-icon"><img src="images/icons/dashboard.png" alt=""></span>
                     <span class="nav-text">Dashboard</span>
                 </div>
                 <div class="nav-item" onclick="window.location.href='/analytics.html'">
-                    <span class="nav-icon">&#128202;</span>
+                    <span class="nav-icon"><img src="images/icons/bar-chart.png" alt=""></span>
                     <span class="nav-text">Analytics</span>
                 </div>
                 <div class="nav-item" onclick="window.location.href='/deepwork.html'">
-                    <span class="nav-icon">&#9201;&#65039;</span>
+                    <span class="nav-icon"><img src="images/icons/clock.png" alt=""></span>
                     <span class="nav-text">Deep Work</span>
                 </div>
                 <div class="nav-item active">
-                    <span class="nav-icon">&#128506;&#65039;</span>
+                    <span class="nav-icon"><img src="images/icons/plan.png" alt=""></span>
                     <span class="nav-text">Journey Planner</span>
                 </div>
                 <div class="nav-item" onclick="window.location.href='/profile.html'">
-                    <span class="nav-icon">&#128100;</span>
+                    <span class="nav-icon"><img src="images/icons/user.png" alt=""></span>
                     <span class="nav-text">Profile</span>
                 </div>
             </div>
@@ -65,11 +69,16 @@
                 <div class="stage-tabs" id="stageTabs">
                     <!-- Stages will be dynamically added -->
                 </div>
-                <div class="stage-actions">
-                    <button class="stage-action-btn" onclick="exportActiveStageJson()">JSON</button>
-                    <button class="stage-action-btn" onclick="exportActiveStagePdf()">PDF</button>
-                    <button class="stage-action-btn" onclick="document.getElementById('stageImportInput').click()">Import</button>
-                    <button class="add-stage-btn" onclick="addNewStage()">+ Add Stage</button>
+                <div class="stage-actions" id="stageActions">
+                    <button type="button" class="stage-menu-btn" id="stageMenuBtn" onclick="toggleJourneyActionsMenu(event)" title="Journey actions" aria-label="Journey actions" aria-expanded="false">
+                        <img src="images/icons/menu-bar.png" alt="">
+                    </button>
+                    <div class="stage-actions-menu" id="stageActionsMenu">
+                        <button type="button" onclick="closeJourneyActionsMenu(); addNewStage();">Add Stage</button>
+                        <button type="button" onclick="closeJourneyActionsMenu(); exportActiveStageJson();">Export as JSON</button>
+                        <button type="button" onclick="closeJourneyActionsMenu(); exportActiveStagePdf();">Export as PDF</button>
+                        <button type="button" onclick="closeJourneyActionsMenu(); document.getElementById('stageImportInput').click();">Import from JSON</button>
+                    </div>
                 </div>
                 <input type="file" id="stageImportInput" accept=".json,.journey.json,application/json" hidden onchange="importStageFromFile(this.files[0]); this.value = '';">
             </div>

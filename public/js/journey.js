@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 async function initJourneyPlanner() {
     console.log('🚀 Initializing Journey Planner...');
     await loadJourneyData();
+    if (!currentJourney) return;
     setupStageTabs();
     renderCanvas();
 }
@@ -34,11 +35,16 @@ async function initJourneyPlanner() {
 async function loadJourneyData() {
     try {
         const response = await fetch('/api/journey', { credentials: 'include' });
+        if (response.status === 401) {
+            window.location.href = '/';
+            return;
+        }
         if (!response.ok) throw new Error('Failed to load journey');
         
         currentJourney = await response.json();
         
         // Migrate old data structure
+        currentJourney.stages = Array.isArray(currentJourney.stages) ? currentJourney.stages : [];
         currentJourney.stages.forEach(stage => {
             stage.mainCards = stage.mainCards || [];
             stage.mainCards.forEach(card => {
@@ -64,33 +70,20 @@ async function loadJourneyData() {
         console.log('Journey loaded:', currentJourney);
     } catch (error) {
         console.error('Error loading journey:', error);
-        await createDefaultJourney();
+        showJourneyLoadError();
     }
 }
 
-async function createDefaultJourney() {
-    const defaultStages = [{
-        id: `stage_${Date.now()}`,
-        name: 'Stage I: Foundation',
-        order: 1,
-        mainCards: []
-    }];
-    
-    try {
-        const response = await fetch('/api/journey', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ stages: defaultStages, activeStageId: defaultStages[0].id })
-        });
-        
-        if (response.ok) {
-            currentJourney = await response.json();
-            activeStageId = currentJourney.activeStageId;
-        }
-    } catch (error) {
-        console.error('Error creating default journey:', error);
-    }
+function showJourneyLoadError() {
+    const container = document.getElementById('journey-canvas');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="empty-canvas">
+            <p>Could not load your journey right now. Your saved journey was not overwritten.</p>
+            <button class="add-main-btn" onclick="window.location.reload()">Retry</button>
+        </div>
+    `;
 }
 
 function setupStageTabs() {
@@ -145,7 +138,7 @@ function updateStageTabs() {
 async function saveCurrentStage() {
     if (!currentJourney || !activeStageId) return;
     
-    await fetch('/api/journey', {
+    const response = await fetch('/api/journey', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -154,6 +147,17 @@ async function saveCurrentStage() {
             activeStageId: activeStageId 
         })
     });
+
+    if (response.status === 401) {
+        window.location.href = '/';
+        return;
+    }
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        alert(error.error || 'Failed to save journey. Please refresh before making more changes.');
+        throw new Error(error.error || 'Failed to save journey');
+    }
 }
 
 function renderCanvas() {
@@ -195,7 +199,9 @@ function renderCanvas() {
                     <input type="text" class="main-card-title" value="${escapeHtml(mainCard.title)}" 
                            onchange="updateMainCardTitle('${mainCard.id}', this.value)"
                            placeholder="Topic Title">
-                    <button class="delete-main-btn" onclick="deleteMainCard('${mainCard.id}')">🗑️</button>
+                    <button class="delete-main-btn" onclick="deleteMainCard('${mainCard.id}')" title="Delete topic" aria-label="Delete topic">
+                        <img src="images/icons/delete.png" alt="">
+                    </button>
                 </div>
                 
                 <!-- Two Column Layout -->
@@ -1035,12 +1041,8 @@ function escapeHtml(str) {
 // ===== SIDEBAR FUNCTIONS =====
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
-    const toggleBtn = document.getElementById('sidebarToggle');
     sidebar.classList.toggle('collapsed');
     const isCollapsed = sidebar.classList.contains('collapsed');
-    if (toggleBtn) {
-        toggleBtn.textContent = isCollapsed ? '▶' : '◀';
-    }
     localStorage.setItem('sidebarCollapsed', isCollapsed ? 'true' : 'false');
     document.documentElement.classList.toggle('sidebar-precollapsed', isCollapsed);
 }
@@ -1049,11 +1051,37 @@ if (localStorage.getItem('sidebarCollapsed') === 'true') {
     const sidebar = document.getElementById('sidebar');
     if (sidebar) {
         sidebar.classList.add('collapsed');
-        const toggleBtn = document.getElementById('sidebarToggle');
-        if (toggleBtn) toggleBtn.textContent = '▶';
         document.documentElement.classList.add('sidebar-precollapsed');
     }
 }
+
+function toggleJourneyActionsMenu(event) {
+    if (event) event.stopPropagation();
+    const actions = document.getElementById('stageActions');
+    const button = document.getElementById('stageMenuBtn');
+    if (!actions) return;
+
+    const isOpen = actions.classList.toggle('open');
+    if (button) button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
+function closeJourneyActionsMenu() {
+    const actions = document.getElementById('stageActions');
+    const button = document.getElementById('stageMenuBtn');
+    if (actions) actions.classList.remove('open');
+    if (button) button.setAttribute('aria-expanded', 'false');
+}
+
+document.addEventListener('click', (event) => {
+    const actions = document.getElementById('stageActions');
+    if (actions && !actions.contains(event.target)) {
+        closeJourneyActionsMenu();
+    }
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeJourneyActionsMenu();
+});
 
 async function deleteStage(stageId) {
     if (!currentJourney?.stages || currentJourney.stages.length <= 1) {
