@@ -38,6 +38,10 @@ const userSchema = new mongoose.Schema({
         weeklyGoal: { type: Number, default: 1200 }, // 20 hours in minutes
         weeklyProgress: { type: Number, default: 0 },
         goalWeekStart: { type: Date },
+        weeklyGoals: [{
+            weekStart: { type: Date, required: true },
+            goalMinutes: { type: Number, required: true }
+        }],
         
         // Daily stats for bar chart
         dailyStats: [{

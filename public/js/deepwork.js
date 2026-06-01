@@ -10,6 +10,7 @@ let isLoadingWeekly = false;
 let currentWeeklyChartView = localStorage.getItem('weeklyChartView') || 'bar';
 let weeklyStatsData = [];
 let previousWeeklyStatsData = [];
+let currentReportWeekStart = null;
 // Load data on page load
 // Load data on page load (KEEP THIS ONE)
 // Load data on page load - PARALLEL VERSION
@@ -32,7 +33,6 @@ window.onload = async function() {
         loadWeeklyStats(),          // Bar chart
         loadWeeklyReport(0),         // Weekly progress card
         loadTodayProgress(),        // Today's compact stats
-        loadUserGoal(),             // Goal slider
         loadCategoryBreakdown(0),     // Category breakdown
         loadWeeklyConstraint(),
          loadTasks(),                // ← ADD THIS INSIDE
@@ -289,8 +289,8 @@ async function saveAllCategoryEdits() {
         await Promise.all([
             loadTodayProgress(),
             loadWeeklyStats(),
-            loadWeeklyReport(),
-            loadCategoryBreakdown()
+            loadWeeklyReport(currentWeekOffset),
+            loadCategoryBreakdown(currentWeekOffset)
         ]);
         
         alert('Time updated successfully!');
@@ -680,8 +680,10 @@ function stopTimer() {
     localStorage.removeItem('deepWorkSessionId');
     localStorage.removeItem('deepWorkStartTime');
         return Promise.all([
+            loadTodayProgress(),
             loadWeeklyStats(),
-            loadWeeklyReport()
+            loadWeeklyReport(currentWeekOffset),
+            loadCategoryBreakdown(currentWeekOffset)
         ]);
     })
     .catch(error => {
@@ -1095,13 +1097,19 @@ async function loadWeeklyReport(weekOffset = 0) {
         }
         
         const report = await response.json();
+        if (weekOffset !== currentWeekOffset) return;
         console.log('Weekly report:', report);
+        currentReportWeekStart = report.weekStart;
         
         // Update week range
         document.getElementById('weekRange').textContent = report.weekRangeDisplay || 'This Week';
         
         // Main progress
         document.getElementById('weeklyTotal').textContent = report.totalHours + 'h';
+        document.getElementById('goalTarget').textContent = (report.goal.target / 60).toFixed(1).replace(/\.0$/, '') + 'h';
+        document.getElementById('goalValue').textContent = (report.goal.target / 60).toFixed(1).replace(/\.0$/, '') + 'h';
+        const goalInput = document.getElementById('goalHoursInput');
+        if (goalInput) goalInput.value = (report.goal.target / 60).toFixed(1).replace(/\.0$/, '');
         document.getElementById('goalProgressFill').style.width = (report.goal.percentage || 0) + '%';
         document.getElementById('goalPercentage').textContent = (report.goal.percentage || 0) + '%';
         
@@ -1208,34 +1216,35 @@ function setGoal() {
     }
 }
 // ===== GOAL FUNCTIONS =====
-async function loadUserGoal() {
+async function loadUserGoal(weekOffset = currentWeekOffset) {
     try {
-        const response = await fetch('/api/deepwork/get-goal', {
+        const response = await fetch(`/api/deepwork/get-goal?weekOffset=${weekOffset}`, {
             credentials: 'include'
         });
         
         if (response.ok) {
             const data = await response.json();
-            const goalHours = Math.round(data.weeklyGoal / 60);
+            const goalHours = (data.weeklyGoal / 60).toFixed(1).replace(/\.0$/, '');
             
             document.getElementById('goalTarget').textContent = goalHours + 'h';
             document.getElementById('goalValue').textContent = goalHours + 'h';
-            document.getElementById('goalSlider').value = goalHours;
+            const goalInput = document.getElementById('goalHoursInput');
+            if (goalInput) goalInput.value = goalHours;
         }
     } catch (error) {
         console.error('Error loading goal:', error);
     }
 }
 
-async function updateGoal(hours) {
+async function updateGoal(hours, weekOffset = currentWeekOffset) {
     try {
-        const weeklyGoalMinutes = hours * 60;
+        const weeklyGoalMinutes = Math.round(Number(hours) * 60);
         
         const response = await fetch('/api/deepwork/set-goal', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ weeklyGoalMinutes })
+            body: JSON.stringify({ weeklyGoalMinutes, weekOffset, weekStart: currentReportWeekStart })
         });
         
         if (response.ok) {
@@ -1244,23 +1253,37 @@ async function updateGoal(hours) {
             document.getElementById('goalValue').textContent = data.weeklyGoalHours + 'h';
             
             // Refresh weekly report to update percentage
-            await loadWeeklyReport();
+            await loadWeeklyReport(weekOffset);
+        } else {
+            const error = await response.json().catch(() => ({}));
+            alert(error.error || 'Failed to update weekly target');
         }
     } catch (error) {
         console.error('Error updating goal:', error);
     }
 }
 
-// Add event listener for slider
-document.getElementById('goalSlider').addEventListener('input', function(e) {
-    const hours = e.target.value;
-    document.getElementById('goalValue').textContent = hours + 'h';
-});
+function saveWeeklyGoalFromInput() {
+    const input = document.getElementById('goalHoursInput');
+    const hours = Number(input?.value);
+    if (!Number.isFinite(hours) || hours < 1 || hours > 100) {
+        alert('Please enter a valid goal between 1 and 100 hours');
+        return;
+    }
 
-document.getElementById('goalSlider').addEventListener('change', function(e) {
-    const hours = e.target.value;
-    updateGoal(hours);
-});
+    document.getElementById('goalValue').textContent = `${hours}h`;
+    updateGoal(hours, currentWeekOffset);
+}
+
+const goalHoursInput = document.getElementById('goalHoursInput');
+if (goalHoursInput) {
+    goalHoursInput.addEventListener('input', function(e) {
+        document.getElementById('goalValue').textContent = `${e.target.value || 0}h`;
+    });
+    goalHoursInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') saveWeeklyGoalFromInput();
+    });
+}
 // ===== TASK TYPE MANAGEMENT =====
 
 // Load task types into dropdown
@@ -1315,27 +1338,140 @@ async function loadTaskList() {
             const taskTypes = data.taskTypes;
             
             taskTypes.sort((a, b) => (a.order || 0) - (b.order || 0));
+            window.taskTypes = taskTypes;
             
             const taskList = document.getElementById('taskList');
-            taskList.innerHTML = taskTypes.map(task => {
-                return `
-                <div class="task-type-item" data-id="${task.id}">
-                    <div class="task-drag">⋮⋮</div>
-                    <div class="task-icon">${task.icon}</div>
-                    <input type="text" class="task-name" value="${task.name}" 
-                           onchange="updateTaskType('${task.id}', this.value)">
-                    <button class="delete-task-btn" onclick="deleteTaskType('${task.id}')">
-                        Delete
-                    </button>
-                </div>
-            `}).join('');
-            
+            taskList.innerHTML = taskTypes.map(task => renderTaskTypeRow(task)).join('');
+
             // Make sortable
             makeTaskSortable();
         }
     } catch (error) {
         console.error('Error loading task list:', error);
     }
+}
+
+function normalizeTaskColor(color) {
+    const value = String(color || '').trim();
+    return /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#667eea';
+}
+
+function renderTaskTypeRow(task) {
+    const id = escapeHtml(task.id);
+    const rawId = String(task.id || '');
+    const name = escapeHtml(task.name || 'Untitled');
+    const icon = escapeHtml(task.icon || '⚙️');
+    const color = normalizeTaskColor(task.color);
+    const menuId = `task-menu-${rawId.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+
+    return `
+        <div class="task-type-item" data-id="${id}">
+            <div class="task-drag" title="Drag to reorder">⋮⋮</div>
+            <div class="task-color-swatch" style="background: ${color};" title="Timeline color"></div>
+            <div class="task-icon" style="color: ${color}; background: ${color}1a;">${icon}</div>
+            <div class="task-summary">
+                <div class="task-name-label">${name}</div>
+                <div class="task-color-label">${color}</div>
+            </div>
+            <div class="task-row-actions">
+                <input type="color" class="task-hidden-color" value="${color}" aria-label="Change ${name} color"
+                    onchange="changeTaskColor('${id}', this.value)">
+                <button type="button" class="task-menu-btn" onclick="toggleTaskMenu(event, '${menuId}')" aria-label="Category options">
+                    <img src="images/icons/setting.png" alt="">
+                </button>
+                <div class="task-menu" id="${menuId}">
+                    <button type="button" onclick="editTaskName('${id}')">Change name</button>
+                    <button type="button" onclick="editTaskIcon('${id}')">Change icon</button>
+                    <button type="button" onclick="openTaskColorPicker(this)">Change color</button>
+                    <button type="button" class="danger" onclick="deleteTaskType('${id}')">Delete</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function getTaskById(id) {
+    return (window.taskTypes || []).find(task => task.id === id);
+}
+
+function toggleTaskMenu(event, menuId) {
+    event.stopPropagation();
+    const menu = document.getElementById(menuId);
+    if (!menu) return;
+    const row = menu.closest('.task-type-item');
+    const shouldOpen = !menu.classList.contains('open');
+
+    document.querySelectorAll('#taskManagerModal .task-menu.open').forEach(openMenu => {
+        if (openMenu !== menu) openMenu.classList.remove('open');
+    });
+    document.querySelectorAll('#taskManagerModal .task-type-item.menu-open').forEach(openRow => {
+        if (openRow !== row) openRow.classList.remove('menu-open');
+    });
+
+    menu.classList.toggle('open', shouldOpen);
+    if (row) row.classList.toggle('menu-open', shouldOpen);
+}
+
+function closeTaskMenus() {
+    document.querySelectorAll('#taskManagerModal .task-menu.open').forEach(menu => {
+        menu.classList.remove('open');
+    });
+    document.querySelectorAll('#taskManagerModal .task-type-item.menu-open').forEach(row => {
+        row.classList.remove('menu-open');
+    });
+}
+
+document.addEventListener('click', (event) => {
+    if (!event.target.closest('#taskManagerModal .task-row-actions')) {
+        closeTaskMenus();
+    }
+});
+
+async function refreshTaskViews() {
+    await loadTaskTypes();
+    await Promise.all([
+        loadWeeklyStats(),
+        loadCategoryBreakdown(currentWeekOffset)
+    ]);
+}
+
+async function editTaskName(id) {
+    closeTaskMenus();
+    const task = getTaskById(id);
+    const nextName = prompt('Category name', task?.name || '');
+    if (nextName === null) return;
+
+    const name = nextName.trim();
+    if (!name) {
+        alert('Please enter a category name');
+        return;
+    }
+
+    await updateTaskType(id, { name });
+    await loadTaskList();
+}
+
+async function editTaskIcon(id) {
+    closeTaskMenus();
+    const task = getTaskById(id);
+    const nextIcon = prompt('Category icon', task?.icon || '⚙️');
+    if (nextIcon === null) return;
+
+    const icon = nextIcon.trim() || '⚙️';
+    await updateTaskType(id, { icon });
+    await loadTaskList();
+}
+
+function openTaskColorPicker(button) {
+    closeTaskMenus();
+    const row = button.closest('.task-type-item');
+    const picker = row?.querySelector('.task-hidden-color');
+    if (picker) picker.click();
+}
+
+async function changeTaskColor(id, color) {
+    await updateTaskType(id, { color: normalizeTaskColor(color) });
+    await loadTaskList();
 }
 
 // Add new task
@@ -1349,8 +1485,7 @@ async function addNewTask() {
         return;
     }
     
-    // Use a default color based on the icon or a standard color
-    const color = '#667eea'; // Default color
+    const color = normalizeTaskColor(document.getElementById('newTaskColor')?.value);
     
     try {
         const response = await fetch('/api/deepwork/task-types/add', {
@@ -1364,6 +1499,7 @@ async function addNewTask() {
             // Clear inputs
             document.getElementById('newTaskIcon').value = '⚙️';
             document.getElementById('newTaskName').value = '';
+            document.getElementById('newTaskColor').value = '#667eea';
             
             // Refresh lists
             await loadTaskList();
@@ -1379,32 +1515,31 @@ async function addNewTask() {
 }
 
 // Update task
-async function updateTaskType(id, newName) {
+async function updateTaskType(id, updates) {
+    const payload = typeof updates === 'string' ? { name: updates } : updates;
+
     try {
-        await fetch(`/api/deepwork/task-types/${id}`, {
+        const response = await fetch(`/api/deepwork/task-types/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
-            body: JSON.stringify({ name: newName })
+            body: JSON.stringify(payload)
         });
-        await loadTaskTypes(); // Update dropdown
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to update category');
+        }
+
+        await refreshTaskViews();
     } catch (error) {
         console.error('Error updating task:', error);
+        alert('Failed to update category. Please try again.');
     }
 }
 
 async function updateTaskColor(id, color) {
-    try {
-        await fetch(`/api/deepwork/task-types/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ color })
-        });
-        await loadTaskTypes(); // Update dropdown
-    } catch (error) {
-        console.error('Error updating task color:', error);
-    }
+    await changeTaskColor(id, color);
 }
 
 // Delete task

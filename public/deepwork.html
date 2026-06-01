@@ -232,13 +232,9 @@
                     <span>Weekly Target</span>
                     <span class="goal-value" id="goalValue">25h</span>
                 </div>
-                <div class="goal-slider-container">
-                    <input type="range" id="goalSlider" min="10" max="50" value="25" step="1" class="goal-slider">
-                    <div class="goal-slider-labels">
-                        <span>10h</span>
-                        <span>25h</span>
-                        <span>50h</span>
-                    </div>
+                <div class="goal-input-container">
+                    <input type="number" id="goalHoursInput" min="1" max="100" step="0.5" value="25" class="goal-hours-input" aria-label="Weekly target hours">
+                    <button type="button" class="goal-save-btn" onclick="saveWeeklyGoalFromInput()">Set</button>
                 </div>
             </div>
         </div>
@@ -314,7 +310,7 @@
 <div class="modal" id="taskManagerModal">
     <div class="modal-content task-manager-content">
         <h3>Manage Categories</h3>
-        <p class="modal-subtitle">Drag ⋮⋮ to reorder</p>
+        <p class="modal-subtitle">Drag to reorder. Use each row menu to edit name, icon, color, or delete.</p>
         
         <div class="task-list" id="taskList">
             <!-- Tasks will be loaded here -->
@@ -325,6 +321,7 @@
             <div class="add-task-row">
                 <input type="text" id="newTaskIcon" placeholder="Icon (e.g., 🎨)" maxlength="2" class="task-icon-input" value="⚙️">
                 <input type="text" id="newTaskName" placeholder="Category name">
+                <input type="color" id="newTaskColor" value="#667eea" class="task-color-input" aria-label="Category color">
                 <button onclick="addNewTask()" class="primary add-btn">Add</button>
             </div>
         </div>

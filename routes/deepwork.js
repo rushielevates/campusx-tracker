@@ -6,6 +6,7 @@ const User = require('../models/User');
 const APP_TIME_ZONE = 'Asia/Kolkata';
 const APP_TIME_ZONE_OFFSET_MINUTES = 330;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_WEEKLY_GOAL_MINUTES = 1500;
 
 function toAppDateKey(date) {
     return new Date(date.getTime() + APP_TIME_ZONE_OFFSET_MINUTES * 60000)
@@ -53,6 +54,58 @@ function formatTimeFromMinutes(minutes) {
     const period = hours24 >= 12 ? 'PM' : 'AM';
     const hours12 = hours24 % 12 || 12;
     return `${hours12}:${mins.toString().padStart(2, '0')} ${period}`;
+}
+
+function getWeekBoundsForOffset(weekOffset = 0) {
+    const { mondayDateKey, sundayDateKey } = getWeekDateKeysForOffset(weekOffset);
+    return {
+        monday: appDateKeyToUtcStart(mondayDateKey),
+        sunday: new Date(appDateKeyToUtcStart(addDaysToDateKey(sundayDateKey, 1)).getTime() - 1),
+        mondayDateKey,
+        sundayDateKey
+    };
+}
+
+function getWeekDateKeysForOffset(weekOffset = 0) {
+    const todayDateKey = toAppDateKey(new Date());
+    const targetDateKey = addDaysToDateKey(todayDateKey, weekOffset * 7);
+    const dayOfWeek = getAppDayOfWeek(targetDateKey);
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const mondayDateKey = addDaysToDateKey(targetDateKey, -daysToSubtract);
+    const sundayDateKey = addDaysToDateKey(mondayDateKey, 6);
+
+    return { mondayDateKey, sundayDateKey };
+}
+
+function normalizeWeekStartKey(weekStart) {
+    if (typeof weekStart === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
+        return weekStart;
+    }
+
+    if (weekStart) {
+        const parsed = new Date(weekStart);
+        if (!Number.isNaN(parsed.getTime())) return toAppDateKey(parsed);
+    }
+
+    return null;
+}
+
+function getGoalForWeek(user, weekStartKey) {
+    const savedGoal = user.deepWorkStats?.weeklyGoals?.find(goal => {
+        return normalizeWeekStartKey(goal.weekStart) === weekStartKey;
+    });
+
+    if (savedGoal?.goalMinutes) {
+        return savedGoal.goalMinutes;
+    }
+
+    if (user.deepWorkStats?.goalWeekStart && user.deepWorkStats?.weeklyGoal) {
+        if (normalizeWeekStartKey(user.deepWorkStats.goalWeekStart) === weekStartKey) {
+            return user.deepWorkStats.weeklyGoal;
+        }
+    }
+
+    return DEFAULT_WEEKLY_GOAL_MINUTES;
 }
 
 function fallbackTaskName(taskType) {
@@ -640,20 +693,7 @@ router.get('/weekly-stats', auth, async (req, res) => {
 router.get('/weekly-report', auth, async (req, res) => {
     try {
         const weekOffset = parseInt(req.query.weekOffset) || 0;
-        const today = new Date();
-        const targetDate = new Date(today);
-        targetDate.setDate(today.getDate() + (weekOffset * 7));
-        // Calculate Monday of current week (assuming week starts Monday)
-        const monday = new Date(targetDate);
-        const dayOfWeek = targetDate.getDay();
-        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        monday.setDate(targetDate.getDate() - daysToSubtract);
-        monday.setHours(0, 0, 0, 0);
-        
-        // Calculate Sunday (end of week)
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        sunday.setHours(23, 59, 59, 999);
+        const { monday, sunday, mondayDateKey, sundayDateKey } = getWeekBoundsForOffset(weekOffset);
         
         // Get all sessions for this week
         const sessions = await DeepWorkSession.find({
@@ -666,19 +706,17 @@ router.get('/weekly-report', auth, async (req, res) => {
         const totalHours = (totalMinutes / 60).toFixed(1);
         const totalSessions = sessions.length;
         
-       // Calculate number of days that have passed in the current week
-const currentDayIndex = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const todayDateKey = toAppDateKey(new Date());
+        let avgDivisor = 7;
 
-// Convert to days passed (Monday = 1, Tuesday = 2, ... Sunday = 7)
-let daysPassed;
-if (currentDayIndex === 0) { // Sunday
-    daysPassed = 7; // Full week
-} else {
-    daysPassed = currentDayIndex; // Monday=1, Tuesday=2, etc.
-}
+        if (weekOffset === 0) {
+            const currentDayIndex = getAppDayOfWeek(todayDateKey);
+            avgDivisor = currentDayIndex === 0 ? 7 : currentDayIndex;
+        } else if (weekOffset > 0) {
+            avgDivisor = 0;
+        }
 
-// Calculate average based on actual days passed
-const avgDailyMinutes = Math.round(totalMinutes / daysPassed);
+        const avgDailyMinutes = avgDivisor > 0 ? Math.round(totalMinutes / avgDivisor) : 0;
         
         // Format for display
         const avgDailyHours = Math.floor(avgDailyMinutes / 60);
@@ -749,12 +787,12 @@ const avgDailyMinutes = Math.round(totalMinutes / daysPassed);
         
         // Get user's weekly goal
         const user = await User.findById(req.session.userId);
-        const weeklyGoal = user.deepWorkStats?.weeklyGoal || 1500;
+        const weeklyGoal = getGoalForWeek(user, mondayDateKey);
         
         // Send response with all data INCLUDING goal
         res.json({
-            weekStart: monday.toISOString().split('T')[0],
-            weekEnd: sunday.toISOString().split('T')[0],
+            weekStart: mondayDateKey,
+            weekEnd: sundayDateKey,
             weekRangeDisplay: `${monthNames[monday.getMonth()]} ${monday.getDate()} - ${monthNames[sunday.getMonth()]} ${sunday.getDate()}, ${sunday.getFullYear()}`,
             totalHours: totalHours,
             totalMinutes: totalMinutes,
@@ -1039,10 +1077,13 @@ async function updateUserDailyStats(userId) {
 // Get user's current goal
 router.get('/get-goal', auth, async (req, res) => {
     try {
+        const weekOffset = parseInt(req.query.weekOffset) || 0;
+        const weekStartKey = normalizeWeekStartKey(req.query.weekStart) || getWeekDateKeysForOffset(weekOffset).mondayDateKey;
         const user = await User.findById(req.session.userId);
-        const weeklyGoal = user.deepWorkStats?.weeklyGoal || 1500;
+        const weeklyGoal = getGoalForWeek(user, weekStartKey);
         
         res.json({
+            weekStart: weekStartKey,
             weeklyGoal: weeklyGoal,
             weeklyGoalHours: (weeklyGoal / 60).toFixed(1)
         });
@@ -1269,6 +1310,9 @@ router.post('/edit-today', auth, async (req, res) => {
 router.post('/set-goal', auth, async (req, res) => {
     try {
         const { weeklyGoalMinutes } = req.body;
+        const weekOffset = parseInt(req.body.weekOffset) || 0;
+        const weekStartKey = normalizeWeekStartKey(req.body.weekStart) || getWeekDateKeysForOffset(weekOffset).mondayDateKey;
+        const monday = appDateKeyToUtcStart(weekStartKey);
         
         // Validate (between 1 and 100 hours)
         if (weeklyGoalMinutes < 60 || weeklyGoalMinutes > 6000) {
@@ -1280,12 +1324,34 @@ router.post('/set-goal', auth, async (req, res) => {
         if (!user.deepWorkStats) {
             user.deepWorkStats = {};
         }
+
+        if (!Array.isArray(user.deepWorkStats.weeklyGoals)) {
+            user.deepWorkStats.weeklyGoals = [];
+        }
         
-        user.deepWorkStats.weeklyGoal = weeklyGoalMinutes;
+        const existingGoal = user.deepWorkStats.weeklyGoals.find(goal => {
+            return normalizeWeekStartKey(goal.weekStart) === weekStartKey;
+        });
+
+        if (existingGoal) {
+            existingGoal.goalMinutes = weeklyGoalMinutes;
+        } else {
+            user.deepWorkStats.weeklyGoals.push({
+                weekStart: monday,
+                goalMinutes: weeklyGoalMinutes
+            });
+        }
+
+        if (weekOffset === 0) {
+            user.deepWorkStats.weeklyGoal = weeklyGoalMinutes;
+            user.deepWorkStats.goalWeekStart = monday;
+        }
+
         await user.save();
         
         res.json({ 
             success: true, 
+            weekStart: weekStartKey,
             weeklyGoal: weeklyGoalMinutes,
             weeklyGoalHours: (weeklyGoalMinutes / 60).toFixed(1)
         });
