@@ -176,10 +176,7 @@ app.use((req, res, next) => {
     }
 });
 
-// ===== 5. Static files =====
-app.use(express.static(path.join(__dirname, 'public')));
-
-// ===== 6. DEBUG ROUTES =====
+// ===== 5. DEBUG ROUTES =====
 app.get('/debug-session', (req, res) => {
     console.log('=== DEBUG SESSION ENDPOINT HIT ===');
     res.json({
@@ -207,6 +204,17 @@ app.get('/api/test', (req, res) => {
     });
 });
 
+// ===== 6. FRONTEND HOME ROUTE =====
+app.get('/', (req, res) => {
+    if (req.session?.userId) {
+        return res.redirect('/dashboard.html');
+    }
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ===== 7. Static files =====
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
+
 // ===== 7. API ROUTES =====
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/playlists', require('./routes/playlist'));
@@ -226,13 +234,6 @@ try {
 }
 
 // ===== 9. FRONTEND ROUTES =====
-app.get('/', (req, res) => {
-    if (req.session?.userId) {
-        return res.redirect('/dashboard.html');
-    }
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
 app.get('/dashboard.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
