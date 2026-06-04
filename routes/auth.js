@@ -18,7 +18,14 @@ router.post('/register', async (req, res) => {
         const user = new User({ username, email, password });
         await user.save();
         req.session.userId = user._id;
-        res.status(201).json({ user: { username, email } });
+        req.session.save((err) => {
+            if (err) {
+                console.error('Session save error:', err);
+                return res.status(500).json({ error: 'Failed to save session' });
+            }
+
+            res.status(201).json({ user: { username, email } });
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -58,8 +65,6 @@ router.post('/login', async (req, res) => {
             console.log('✅ Session saved successfully');
             console.log('Verifying session - userId:', req.session.userId);
 
-             // ←←← ADD THIS LINE HERE ←←←
-    res.setHeader('Set-Cookie', `connect.sid=${req.session.id}; Path=/; HttpOnly; Secure; SameSite=None`);
             // Send success response
             res.json({ 
                 success: true,

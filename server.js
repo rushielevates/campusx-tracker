@@ -25,6 +25,7 @@ mongoose.connection.on('error', (err) => {
 });
 
 const app = express();
+app.set('trust proxy', 1);
 
 // ===== 1. CORS FIRST =====
 const corsOptions = {
@@ -44,22 +45,18 @@ app.use(session({
     resave: false,
     saveUninitialized: false,
     name: 'connect.sid',
-    genid: (req) => {
-        const cookieId = req.headers.cookie?.match(/connect\.sid=([^;]+)/)?.[1];
-        return cookieId || require('crypto').randomBytes(16).toString('hex');
-    },
     store: MongoStore.create({
         mongoUrl: process.env.MONGODB_URI,
         collectionName: 'sessions',
-        ttl: 24 * 60 * 60
+        ttl: 30 * 24 * 60 * 60
     }),
     cookie: { 
-        secure: false, 
+        secure: 'auto', 
         httpOnly: true,
-        sameSite: 'none',
-        maxAge: 24 * 60 * 60 * 1000
+        sameSite: 'lax',
+        maxAge: 30 * 24 * 60 * 60 * 1000
     },
-    rolling: false,
+    rolling: true,
     unset: 'destroy'
 }));
 
@@ -230,6 +227,9 @@ try {
 
 // ===== 9. FRONTEND ROUTES =====
 app.get('/', (req, res) => {
+    if (req.session?.userId) {
+        return res.redirect('/dashboard.html');
+    }
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
