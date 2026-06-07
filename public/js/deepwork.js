@@ -977,9 +977,11 @@ function renderTimelineChart(stats) {
     const hourTicks = Array.from({ length: 25 }, (_, hour) => {
         const label = hour === 0 ? '12 AM' :
             hour === 12 ? '12 PM' :
+            hour === 24 ? '12 AM' :
             hour < 12 ? `${hour} AM` :
             `${hour - 12} PM`;
-        return `<span>${label}</span>`;
+        const edgeClass = hour === 0 ? ' start' : hour === 24 ? ' end' : '';
+        return `<span class="timeline-hour${edgeClass}" style="left: ${(hour / 24) * 100}%">${label}</span>`;
     }).join('');
 
     const rows = stats.map(day => {
@@ -1038,10 +1040,57 @@ function renderTimelineChart(stats) {
         <div class="timeline-axis">
             <span class="timeline-axis-spacer" aria-hidden="true"></span>
             <span class="timeline-axis-gutter" aria-hidden="true"></span>
-            ${hourTicks}
+            <div class="timeline-axis-track">${hourTicks}</div>
         </div>
         <div class="timeline-rows">${rows}</div>
     `;
+
+    attachTimelineTooltips(timeline);
+}
+
+function attachTimelineTooltips(timeline) {
+    const segments = timeline.querySelectorAll('.timeline-segment[data-tooltip]');
+    segments.forEach(segment => {
+        segment.addEventListener('mouseenter', showTimelineTooltip);
+        segment.addEventListener('mousemove', positionTimelineTooltip);
+        segment.addEventListener('mouseleave', hideTimelineTooltip);
+    });
+}
+
+function showTimelineTooltip(event) {
+    hideTimelineTooltip();
+    const tooltip = document.createElement('div');
+    tooltip.className = 'timeline-floating-tooltip';
+    tooltip.id = 'timelineFloatingTooltip';
+    tooltip.textContent = event.currentTarget.dataset.tooltip || '';
+    document.body.appendChild(tooltip);
+    positionTimelineTooltip(event);
+}
+
+function positionTimelineTooltip(event) {
+    const tooltip = document.getElementById('timelineFloatingTooltip');
+    if (!tooltip) return;
+
+    const padding = 12;
+    const segmentRect = event.currentTarget.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const segmentCenter = segmentRect.left + segmentRect.width / 2;
+    let left = segmentCenter - tooltipRect.width / 2;
+    left = Math.max(padding, Math.min(window.innerWidth - tooltipRect.width - padding, left));
+
+    let top = segmentRect.top - tooltipRect.height - 12;
+    if (top < padding) {
+        top = segmentRect.bottom + 12;
+    }
+    top = Math.max(padding, Math.min(window.innerHeight - tooltipRect.height - padding, top));
+
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+}
+
+function hideTimelineTooltip() {
+    const tooltip = document.getElementById('timelineFloatingTooltip');
+    if (tooltip) tooltip.remove();
 }
 
 function showMockChart() {

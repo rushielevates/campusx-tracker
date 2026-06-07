@@ -1944,6 +1944,9 @@ html.sidebar-no-transition .main-content {
 }
 
 .weekly-timeline {
+    --timeline-day-width: 78px;
+    --timeline-gutter-width: 18px;
+    --timeline-track-width: 1152px;
     margin-top: 24px;
     overflow-x: auto;
     padding-bottom: 8px;
@@ -1951,16 +1954,58 @@ html.sidebar-no-transition .main-content {
 
 .timeline-axis {
     display: grid;
-    grid-template-columns: 78px 18px repeat(25, minmax(42px, 1fr));
-    min-width: 1146px;
+    grid-template-columns: var(--timeline-day-width) var(--timeline-gutter-width) var(--timeline-track-width);
+    width: max-content;
+    min-width: calc(var(--timeline-day-width) + var(--timeline-gutter-width) + var(--timeline-track-width));
     margin-bottom: 8px;
     color: #888;
     font-size: 10px;
 }
 
-.timeline-axis span:not(.timeline-axis-spacer) {
+.timeline-axis-track {
+    position: relative;
+    height: 22px;
+    box-sizing: border-box;
+    border-left: 1px solid transparent;
+    border-right: 1px solid transparent;
+}
+
+.timeline-hour {
+    position: absolute;
+    top: 8px;
     transform: translateX(-50%);
     white-space: nowrap;
+    line-height: 1;
+}
+
+.timeline-hour.start {
+    transform: translateX(-1px);
+}
+
+.timeline-hour.end {
+    transform: translateX(calc(-100% + 1px));
+}
+
+.timeline-hour::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -7px;
+    width: 1px;
+    height: 5px;
+    background: rgba(0,0,0,0.18);
+    transform: translateX(-50%);
+}
+
+.timeline-hour.start::before {
+    left: 1px;
+    transform: none;
+}
+
+.timeline-hour.end::before {
+    left: auto;
+    right: 1px;
+    transform: none;
 }
 
 .timeline-axis-spacer {
@@ -1973,7 +2018,8 @@ html.sidebar-no-transition .main-content {
 }
 
 .timeline-rows {
-    min-width: 1146px;
+    min-width: calc(var(--timeline-day-width) + var(--timeline-gutter-width) + var(--timeline-track-width));
+    width: max-content;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -1981,7 +2027,7 @@ html.sidebar-no-transition .main-content {
 
 .timeline-row {
     display: grid;
-    grid-template-columns: 78px 18px 1fr;
+    grid-template-columns: var(--timeline-day-width) var(--timeline-gutter-width) var(--timeline-track-width);
     gap: 0;
     align-items: center;
 }
@@ -2018,6 +2064,7 @@ html.sidebar-no-transition .main-content {
 .timeline-track {
     position: relative;
     height: 38px;
+    box-sizing: border-box;
     border-radius: 8px;
     background:
         repeating-linear-gradient(
@@ -2073,21 +2120,21 @@ html.sidebar-no-transition .main-content {
 }
 
 .timeline-segment:hover::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    width: max-content;
-    max-width: 220px;
-    background: rgba(0,0,0,0.84);
+    content: none;
+}
+
+.timeline-floating-tooltip {
+    position: fixed;
+    z-index: 2147483647;
+    max-width: 260px;
+    background: rgba(0,0,0,0.88);
     color: white;
     padding: 7px 9px;
     border-radius: 6px;
     font-size: 12px;
     line-height: 1.35;
-    white-space: normal;
     pointer-events: none;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.2);
 }
 
 @media (max-width: 900px) {

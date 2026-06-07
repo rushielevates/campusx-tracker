@@ -111,9 +111,9 @@ router.get('/profile', auth, async (req, res) => {
 
 router.get('/weekly-review', auth, async (req, res) => {
     try {
-        const weekOffset = Number.isFinite(Number(req.query.weekOffset))
+        const weekOffset = req.query.weekOffset !== undefined && Number.isFinite(Number(req.query.weekOffset))
             ? Number(req.query.weekOffset)
-            : -1;
+            : getDefaultReviewWeekOffset();
         const week = getWeekRangeForOffset(weekOffset);
         const review = await WeeklyReview.findOne({
             userId: req.session.userId,
@@ -377,6 +377,14 @@ function getWeekRangeForOffset(weekOffset) {
     const dayOfWeek = getAppDayOfWeek(targetKey);
     const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     return getWeekRangeFromStart(addDaysToDateKey(targetKey, -daysToSubtract));
+}
+
+function getDefaultReviewWeekOffset() {
+    const now = new Date();
+    const appNow = new Date(now.getTime() + APP_TIME_ZONE_OFFSET_MINUTES * 60000);
+    const dayOfWeek = appNow.getUTCDay();
+    const minutesSinceMidnight = appNow.getUTCHours() * 60 + appNow.getUTCMinutes();
+    return dayOfWeek === 0 && minutesSinceMidnight >= 18 * 60 ? 0 : -1;
 }
 
 function getWeekRangeFromStart(weekStart) {

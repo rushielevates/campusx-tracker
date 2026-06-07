@@ -48,6 +48,40 @@
     background: #fef2f2;
 }
 
+.main-card-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+}
+
+.move-main-btn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid #d8deea;
+    background: #f8fafc;
+    color: #475569;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.move-main-btn:hover:not(:disabled) {
+    background: #eef2ff;
+    border-color: #667eea;
+    color: #4338ca;
+}
+
+.move-main-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
 /* ===== TWO COLUMN LAYOUT ===== */
 .columns-container {
     display: grid;
@@ -824,6 +858,40 @@
 
 .delete-main-btn:hover {
     background: #fee;
+}
+
+.main-card-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+}
+
+.move-main-btn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid #d8deea;
+    background: #f8fafc;
+    color: #475569;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.move-main-btn:hover:not(:disabled) {
+    background: #eef2ff;
+    border-color: #667eea;
+    color: #4338ca;
+}
+
+.move-main-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
 }
 
 .delete-main-btn img {

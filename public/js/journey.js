@@ -43,18 +43,43 @@ async function loadJourneyData() {
         
         currentJourney = await response.json();
         
-        // Migrate old data structure
+        // Migrate old data structure and repair duplicate ids.
         currentJourney.stages = Array.isArray(currentJourney.stages) ? currentJourney.stages : [];
+        const stageIds = new Set();
+        let repairedIds = false;
         currentJourney.stages.forEach(stage => {
+            if (!stage.id || stageIds.has(stage.id)) {
+                stage.id = makeId('stage');
+                repairedIds = true;
+            }
+            stageIds.add(stage.id);
+
             stage.mainCards = stage.mainCards || [];
-            stage.mainCards.forEach(card => {
+            const mainCardIds = new Set();
+            stage.mainCards.forEach((card, cardIndex) => {
+                if (!card.id || mainCardIds.has(card.id)) {
+                    card.id = makeId('main');
+                    repairedIds = true;
+                }
+                mainCardIds.add(card.id);
+                if (!Number.isFinite(card.order)) {
+                    card.order = cardIndex;
+                    repairedIds = true;
+                }
+
                 // Initialize column names if missing
                 if (!card.columnNames) {
                     card.columnNames = { priority: 'Priority', secondary: 'Secondary' };
                 }
                 // Convert old items without column property
                 if (card.items) {
+                    const itemIds = new Set();
                     card.items.forEach(item => {
+                        if (!item.id || itemIds.has(item.id)) {
+                            item.id = makeId('item');
+                            repairedIds = true;
+                        }
+                        itemIds.add(item.id);
                         if (!item.column) item.column = 'priority';
                         if (item.linkTitle === undefined) item.linkTitle = '';
                         if (item.linkUrl === undefined) item.linkUrl = '';
@@ -66,7 +91,13 @@ async function loadJourneyData() {
             });
         });
         
-        activeStageId = currentJourney.activeStageId || currentJourney.stages[0]?.id;
+        activeStageId = currentJourney.stages.some(stage => stage.id === currentJourney.activeStageId)
+            ? currentJourney.activeStageId
+            : currentJourney.stages[0]?.id;
+        currentJourney.activeStageId = activeStageId;
+        if (repairedIds && activeStageId) {
+            await saveCurrentStage();
+        }
         console.log('Journey loaded:', currentJourney);
     } catch (error) {
         console.error('Error loading journey:', error);
@@ -185,7 +216,8 @@ function renderCanvas() {
     
     let html = '<div class="main-cards-container">';
     
-    mainCards.forEach((mainCard) => {
+    const sortedMainCards = [...mainCards].sort((a, b) => (a.order || 0) - (b.order || 0));
+    sortedMainCards.forEach((mainCard, mainCardIndex) => {
         const items = mainCard.items || [];
         const columnNames = mainCard.columnNames || { priority: 'Priority', secondary: 'Secondary' };
         
@@ -199,9 +231,13 @@ function renderCanvas() {
                     <input type="text" class="main-card-title" value="${escapeHtml(mainCard.title)}" 
                            onchange="updateMainCardTitle('${mainCard.id}', this.value)"
                            placeholder="Topic Title">
-                    <button class="delete-main-btn" onclick="deleteMainCard('${mainCard.id}')" title="Delete topic" aria-label="Delete topic">
-                        <img src="images/icons/delete.png" alt="">
-                    </button>
+                    <div class="main-card-actions">
+                        <button class="move-main-btn" onclick="moveMainCard('${mainCard.id}', -1)" ${mainCardIndex === 0 ? 'disabled' : ''} title="Move topic up" aria-label="Move topic up">&#8593;</button>
+                        <button class="move-main-btn" onclick="moveMainCard('${mainCard.id}', 1)" ${mainCardIndex === sortedMainCards.length - 1 ? 'disabled' : ''} title="Move topic down" aria-label="Move topic down">&#8595;</button>
+                        <button class="delete-main-btn" onclick="deleteMainCard('${mainCard.id}')" title="Delete topic" aria-label="Delete topic">
+                            <img src="images/icons/delete.png" alt="">
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Two Column Layout -->
@@ -254,7 +290,7 @@ function renderCanvas() {
     container.innerHTML = html;
     
     // Initialize drag and drop for each main card's columns
-    mainCards.forEach(card => {
+    sortedMainCards.forEach(card => {
         initDragAndDrop(card.id);
     });
 }
@@ -409,11 +445,12 @@ async function addMainCard() {
     if (!activeStage.mainCards) activeStage.mainCards = [];
     
     const newCard = {
-        id: `main_${Date.now()}`,
+        id: makeId('main'),
         title: 'New Topic',
         columnNames: { priority: 'Priority', secondary: 'Secondary' },
         items: [],
-        resources: []
+        resources: [],
+        order: activeStage.mainCards.length
     };
     
     activeStage.mainCards.push(newCard);
@@ -428,8 +465,38 @@ async function deleteMainCard(mainCardId) {
     if (!activeStage) return;
     
     activeStage.mainCards = activeStage.mainCards.filter(c => c.id !== mainCardId);
+    normalizeMainCardOrders(activeStage);
     await saveCurrentStage();
     renderCanvas();
+}
+
+async function moveMainCard(mainCardId, direction) {
+    const activeStage = currentJourney.stages.find(s => s.id === activeStageId);
+    if (!activeStage?.mainCards) return;
+
+    const sortedCards = [...activeStage.mainCards].sort((a, b) => (a.order || 0) - (b.order || 0));
+    const currentIndex = sortedCards.findIndex(card => card.id === mainCardId);
+    const targetIndex = currentIndex + direction;
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= sortedCards.length) return;
+
+    const [movedCard] = sortedCards.splice(currentIndex, 1);
+    sortedCards.splice(targetIndex, 0, movedCard);
+    sortedCards.forEach((card, index) => {
+        card.order = index;
+    });
+    activeStage.mainCards = sortedCards;
+
+    await saveCurrentStage();
+    renderCanvas();
+}
+
+function normalizeMainCardOrders(stage) {
+    if (!stage?.mainCards) return;
+    [...stage.mainCards]
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
+        .forEach((card, index) => {
+            card.order = index;
+        });
 }
 
 async function updateMainCardTitle(mainCardId, newTitle) {
@@ -457,13 +524,15 @@ async function addItem(mainCardId, column) {
     if (!mainCard) return;
     
     if (!mainCard.items) mainCard.items = [];
+    const itemName = prompt('Enter item name:', 'New item');
+    if (itemName === null) return;
     
     // Get current count for this column to set order
     const columnItems = mainCard.items.filter(i => i.column === column);
     
     const newItem = {
-        id: `item_${Date.now()}`,
-        title: 'New item',
+        id: makeId('item'),
+        title: itemName.trim() || 'New item',
         linkTitle: '',
         linkUrl: '',
         column: column,
@@ -513,6 +582,7 @@ async function editItemLink(mainCardId, itemId) {
     const { item } = findJourneyItem(mainCardId, itemId);
     if (!item) return;
 
+    const hadLink = !!item.linkUrl;
     const url = prompt('Enter item link. Leave empty to remove the link:', item.linkUrl || '');
     if (url === null) return;
 
@@ -525,11 +595,14 @@ async function editItemLink(mainCardId, itemId) {
         return;
     }
 
-    const title = prompt('Enter link label:', item.linkTitle || item.title || 'Open link');
-    if (title === null) return;
-
     item.linkUrl = trimmedUrl;
-    item.linkTitle = title.trim() || item.title || trimmedUrl;
+    if (hadLink) {
+        const title = prompt('Enter link label:', item.linkTitle || item.title || 'Open link');
+        if (title === null) return;
+        item.linkTitle = title.trim() || item.title || trimmedUrl;
+    } else {
+        item.linkTitle = item.title || trimmedUrl;
+    }
     await saveCurrentStage();
     renderCanvas();
 }

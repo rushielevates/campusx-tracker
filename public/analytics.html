@@ -346,7 +346,7 @@
         let analyticsData = null;
         let selectedYear = new Date().getFullYear();
         let activityData = {};
-        let reviewWeekOffset = -1;
+        let reviewWeekOffset = getDefaultReviewWeekOffset();
         let weeklyReviewData = null;
 
         window.onload = async function() {
@@ -590,8 +590,16 @@
 
         function changeReviewWeek(offset) {
             reviewWeekOffset += offset;
-            if (reviewWeekOffset > -1) reviewWeekOffset = -1;
+            const maxReviewWeekOffset = getDefaultReviewWeekOffset();
+            if (reviewWeekOffset > maxReviewWeekOffset) reviewWeekOffset = maxReviewWeekOffset;
             loadWeeklyReview();
+        }
+
+        function getDefaultReviewWeekOffset() {
+            const istNow = new Date(Date.now() + 330 * 60 * 1000);
+            const dayOfWeek = istNow.getUTCDay();
+            const minutesSinceMidnight = istNow.getUTCHours() * 60 + istNow.getUTCMinutes();
+            return dayOfWeek === 0 && minutesSinceMidnight >= 18 * 60 ? 0 : -1;
         }
 
         function renderWeeklyReview(data) {
