@@ -1949,29 +1949,31 @@ html.sidebar-no-transition .main-content {
     padding-bottom: 8px;
 }
 
-.timeline-timezone {
-    font-size: 12px;
-    color: #777;
-    margin-bottom: 10px;
-}
-
 .timeline-axis {
     display: grid;
-    grid-template-columns: repeat(25, minmax(42px, 1fr));
-    min-width: 980px;
-    margin-left: 88px;
+    grid-template-columns: 78px 18px repeat(25, minmax(42px, 1fr));
+    min-width: 1146px;
     margin-bottom: 8px;
     color: #888;
     font-size: 10px;
 }
 
-.timeline-axis span {
+.timeline-axis span:not(.timeline-axis-spacer) {
     transform: translateX(-50%);
     white-space: nowrap;
 }
 
+.timeline-axis-spacer {
+    position: sticky;
+    left: 0;
+    z-index: 4;
+    display: block;
+    background: white;
+    box-shadow: 10px 0 12px -12px rgba(0,0,0,0.35);
+}
+
 .timeline-rows {
-    min-width: 1068px;
+    min-width: 1146px;
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -1979,16 +1981,29 @@ html.sidebar-no-transition .main-content {
 
 .timeline-row {
     display: grid;
-    grid-template-columns: 72px 1fr;
-    gap: 16px;
+    grid-template-columns: 78px 18px 1fr;
+    gap: 0;
     align-items: center;
 }
 
 .timeline-day {
+    position: sticky;
+    left: 0;
+    z-index: 3;
+    width: 78px;
+    padding: 0 8px;
     display: flex;
     flex-direction: column;
     gap: 3px;
     color: #333;
+    align-self: stretch;
+    justify-content: center;
+    background: white;
+    box-shadow: 10px 0 12px -12px rgba(0,0,0,0.35);
+}
+
+.timeline-gutter {
+    min-width: 18px;
 }
 
 .timeline-day strong {

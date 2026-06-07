@@ -1025,6 +1025,7 @@ function renderTimelineChart(stats) {
                     <strong>${escapeHtml(day.day)}</strong>
                     <span>${escapeHtml(totalDisplay)}</span>
                 </div>
+                <div class="timeline-gutter" aria-hidden="true"></div>
                 <div class="timeline-track">
                     ${emptyState}
                     ${segments}
@@ -1034,8 +1035,11 @@ function renderTimelineChart(stats) {
     }).join('');
 
     timeline.innerHTML = `
-        <div class="timeline-timezone">Times shown in India time (Asia/Kolkata)</div>
-        <div class="timeline-axis">${hourTicks}</div>
+        <div class="timeline-axis">
+            <span class="timeline-axis-spacer" aria-hidden="true"></span>
+            <span class="timeline-axis-gutter" aria-hidden="true"></span>
+            ${hourTicks}
+        </div>
         <div class="timeline-rows">${rows}</div>
     `;
 }
