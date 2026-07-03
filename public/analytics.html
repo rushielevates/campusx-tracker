@@ -155,6 +155,41 @@
         .review-answer textarea { width: 100%; min-height: 86px; border: 1px solid #d0d5dd; border-radius: 8px; padding: 10px; resize: vertical; font: inherit; color: #222; background: white; box-shadow: inset 0 1px 2px rgba(15,23,42,0.04); }
         .review-answer textarea:focus { outline: 2px solid rgba(29,158,117,0.18); border-color: #1D9E75; }
         .review-answer.constraint-answer { grid-column: 1 / -1; }
+        .schedule-panel { margin-bottom: 14px; }
+        .schedule-form-grid { display: grid; grid-template-columns: minmax(190px, 1.25fr) repeat(2, minmax(120px, 0.75fr)); gap: 12px; margin-top: 12px; }
+        .schedule-field { display: flex; flex-direction: column; gap: 7px; }
+        .schedule-field label, .schedule-repeat-label { color: #344054; font-size: 12px; font-weight: 800; }
+        .schedule-field select, .schedule-field input { min-height: 40px; border: 1px solid #d0d5dd; border-radius: 8px; padding: 8px 10px; background: white; color: #1f2937; font: inherit; font-weight: 650; }
+        .schedule-repeat { margin-top: 12px; }
+        .schedule-days { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .schedule-day-btn { min-width: 58px; min-height: 38px; border: 1px solid #d0d5dd; border-radius: 8px; background: white; color: #344054; font-weight: 800; cursor: pointer; }
+        .schedule-day-btn.active { border-color: #1D9E75; background: #e9fbf4; color: #117455; }
+        .schedule-preview { margin-top: 14px; padding: 12px; border: 1px solid #e5e7eb; border-radius: 10px; background: #f8fafc; }
+        .schedule-preview-title { color: #475467; font-size: 12px; font-weight: 800; margin-bottom: 8px; }
+        .schedule-preview-axis { display: grid; grid-template-columns: repeat(6, 1fr); color: #667085; font-size: 11px; font-weight: 800; margin-bottom: 6px; }
+        .schedule-preview-track { position: relative; height: 36px; border-radius: 8px; background: #eef2f7; overflow: hidden; }
+        .schedule-preview-block { position: absolute; top: 6px; bottom: 6px; border-radius: 7px; color: white; font-size: 12px; font-weight: 800; padding: 6px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border: 1px solid rgba(255,255,255,0.45); }
+        .schedule-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+        .schedule-save-btn { min-height: 38px; padding: 8px 14px; border: none; border-radius: 8px; background: #1D9E75; color: white; font-weight: 800; cursor: pointer; }
+        .schedule-save-btn:disabled { opacity: 0.65; cursor: wait; }
+        .schedule-status { display: none; margin-top: 10px; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 750; }
+        .schedule-status.success { display: block; background: #e9fbf4; color: #117455; border: 1px solid #b7ead6; }
+        .schedule-status.error { display: block; background: #fff1f0; color: #b42318; border: 1px solid #fecdca; }
+        .schedule-status a { display: inline-flex; align-items: center; justify-content: center; margin-left: 8px; min-height: 30px; padding: 6px 10px; border-radius: 7px; background: #1D9E75; color: white; font-weight: 900; text-decoration: none; }
+        .schedule-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+        .schedule-list-item { display: grid; grid-template-columns: 10px 1fr auto auto; gap: 10px; align-items: center; padding: 9px 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: white; color: #344054; font-size: 12px; }
+        .schedule-list-item.editing { border-color: #1D9E75; background: #f3fdf9; }
+        .schedule-list-color { width: 10px; height: 28px; border-radius: 999px; }
+        .schedule-list-title { font-weight: 800; color: #1f2937; }
+        .schedule-list-meta { color: #667085; margin-top: 2px; }
+        .schedule-list-duration { color: #667085; font-weight: 700; }
+        .schedule-list-actions { display: flex; gap: 6px; }
+        .schedule-list-btn { min-height: 28px; padding: 5px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; cursor: pointer; border: 1px solid #d0d5dd; background: white; color: #344054; }
+        .schedule-list-btn.edit:hover { border-color: #1D9E75; color: #117455; }
+        .schedule-list-btn.delete:hover { border-color: #f04438; color: #b42318; }
+        .schedule-edit-banner { display: none; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding: 8px 12px; border-radius: 8px; background: #eef7f2; border: 1px solid #b7ead6; color: #117455; font-size: 12px; font-weight: 700; }
+        .schedule-edit-banner.active { display: flex; }
+        .schedule-edit-cancel { border: none; background: transparent; color: #117455; font-weight: 800; cursor: pointer; text-decoration: underline; }
         .feedback-toast { position: fixed; right: 22px; bottom: 22px; background: #111827; color: white; padding: 10px 14px; border-radius: 8px; z-index: 1000; box-shadow: 0 10px 26px rgba(15,23,42,0.18); font-size: 13px; font-weight: 700; animation: slideIn 0.2s, fadeOut 0.25s 1.8s forwards; pointer-events: none; }
         .feedback-toast.success { background: #157f5e; }
         .feedback-toast.error { background: #b42318; }
@@ -167,6 +202,7 @@
             .sidebar { width: 100%; height: auto; overflow-y: visible; }
             .main-content { height: auto; padding: 20px; overflow-y: visible; }
             .review-metric-grid, .review-card-grid, .review-answer-grid { grid-template-columns: 1fr; }
+            .schedule-form-grid { grid-template-columns: 1fr; }
             .review-bar-row { grid-template-columns: 95px 1fr 58px; }
         }
     </style>
@@ -308,6 +344,43 @@
                         </div>
                     </div>
 
+                    <div class="review-panel schedule-panel">
+                        <h3>Schedule for next week</h3>
+                        <div class="review-panel-subtitle">Reserve task blocks that will appear as planned background on the Deepwork timeline.</div>
+                        <div class="schedule-form-grid">
+                            <div class="schedule-field">
+                                <label for="scheduleTaskType">Deepwork task</label>
+                                <select id="scheduleTaskType"></select>
+                            </div>
+                            <div class="schedule-field">
+                                <label for="scheduleStartTime">Start</label>
+                                <input id="scheduleStartTime" type="time" value="06:00">
+                            </div>
+                            <div class="schedule-field">
+                                <label for="scheduleEndTime">End</label>
+                                <input id="scheduleEndTime" type="time" value="08:30">
+                            </div>
+                        </div>
+                        <div class="schedule-repeat">
+                            <div class="schedule-repeat-label">Repeat on</div>
+                            <div class="schedule-days" id="scheduleDays"></div>
+                        </div>
+                        <div class="schedule-preview">
+                            <div class="schedule-preview-title">Timeline preview</div>
+                            <div class="schedule-preview-axis"><span>4:00</span><span>6:00</span><span>8:00</span><span>10:00</span><span>12:00</span><span>14:00</span></div>
+                            <div class="schedule-preview-track" id="schedulePreviewTrack"></div>
+                        </div>
+                        <div class="schedule-edit-banner" id="scheduleEditBanner">
+                            <span>Editing a reserved block</span>
+                            <button type="button" class="schedule-edit-cancel" onclick="cancelScheduleEdit()">Cancel edit</button>
+                        </div>
+                        <div class="schedule-actions">
+                            <button class="schedule-save-btn" id="scheduleReserveBtn" onclick="reserveScheduleBlock()">Reserve block</button>
+                        </div>
+                        <div class="schedule-status" id="scheduleStatus"></div>
+                        <div class="schedule-list" id="scheduleList"></div>
+                    </div>
+
                     <div class="review-panel">
                         <h3>Weekly review answers</h3>
                         <div class="review-answer-grid">
@@ -348,11 +421,18 @@
         let activityData = {};
         let reviewWeekOffset = getDefaultReviewWeekOffset();
         let weeklyReviewData = null;
+        let scheduleTaskTypes = [];
+        let selectedScheduleDays = [0, 1, 2, 3, 4];
+        let weeklyScheduleBlocks = [];
+        let editingScheduleBlockId = null;
+        const scheduleDayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
         window.onload = async function() {
             document.getElementById('yearLabel').textContent = selectedYear;
             await loadUserInfo();
             await loadAnalytics();
+            initScheduleDays();
+            await loadScheduleTaskTypes();
             await loadWeeklyReview();
 
             window.addEventListener('storage', (event) => {
@@ -581,6 +661,7 @@
 
                 weeklyReviewData = await response.json();
                 renderWeeklyReview(weeklyReviewData);
+                await loadWeeklySchedule();
                 if (status) status.textContent = '';
             } catch (error) {
                 console.error('Error loading weekly review:', error);
@@ -629,6 +710,360 @@
             document.getElementById('answerBestBlock').value = answers.bestBlock || '';
             document.getElementById('answerProtectingTime').value = answers.protectingTime || '';
             document.getElementById('answerNextWeekConstraint').value = answers.nextWeekConstraint || '';
+        }
+
+        function initScheduleDays() {
+            const container = document.getElementById('scheduleDays');
+            if (!container) return;
+
+            container.innerHTML = scheduleDayNames.map((day, index) => `
+                <button type="button" class="schedule-day-btn ${selectedScheduleDays.includes(index) ? 'active' : ''}" onclick="toggleScheduleDay(${index})">${day}</button>
+            `).join('');
+        }
+
+        function toggleScheduleDay(dayIndex) {
+            if (selectedScheduleDays.includes(dayIndex)) {
+                selectedScheduleDays = selectedScheduleDays.filter(day => day !== dayIndex);
+            } else {
+                selectedScheduleDays = [...selectedScheduleDays, dayIndex].sort((a, b) => a - b);
+            }
+            initScheduleDays();
+        }
+
+        async function loadScheduleTaskTypes() {
+            try {
+                const response = await fetch('/api/deepwork/task-types');
+                if (!response.ok) throw new Error('Failed to load Deepwork tasks');
+                const data = await response.json();
+                scheduleTaskTypes = (data.taskTypes || []).filter(task => task.isActive !== false)
+                    .sort((a, b) => (a.order || 0) - (b.order || 0));
+                renderScheduleTaskSelect();
+                bindSchedulePreviewInputs();
+                updateSchedulePreview();
+            } catch (error) {
+                console.error('Error loading schedule tasks:', error);
+                showToast('Unable to load Deepwork tasks', 'error');
+            }
+        }
+
+        function renderScheduleTaskSelect() {
+            const select = document.getElementById('scheduleTaskType');
+            if (!select) return;
+            select.innerHTML = scheduleTaskTypes.length
+                ? scheduleTaskTypes.map(task => `<option value="${escapeHtml(task.id)}">${escapeHtml(task.name)}</option>`).join('')
+                : '<option value="">No Deepwork tasks yet</option>';
+        }
+
+        function bindSchedulePreviewInputs() {
+            ['scheduleTaskType', 'scheduleStartTime', 'scheduleEndTime'].forEach(id => {
+                const element = document.getElementById(id);
+                if (element && !element.dataset.previewBound) {
+                    element.addEventListener('input', updateSchedulePreview);
+                    element.dataset.previewBound = 'true';
+                }
+            });
+        }
+
+        function updateSchedulePreview() {
+            const track = document.getElementById('schedulePreviewTrack');
+            if (!track) return;
+
+            const task = getSelectedScheduleTask();
+            const startMinute = timeInputToMinutes(document.getElementById('scheduleStartTime')?.value || '06:00');
+            const endMinute = timeInputToMinutes(document.getElementById('scheduleEndTime')?.value || '08:30');
+            const previewStart = 4 * 60;
+            const previewEnd = 14 * 60;
+            const visibleStart = Math.max(previewStart, startMinute);
+            const visibleEnd = Math.min(previewEnd, endMinute);
+
+            if (!task || visibleEnd <= visibleStart) {
+                track.innerHTML = '';
+                return;
+            }
+
+            const left = ((visibleStart - previewStart) / (previewEnd - previewStart)) * 100;
+            const width = ((visibleEnd - visibleStart) / (previewEnd - previewStart)) * 100;
+            track.innerHTML = `
+                <div class="schedule-preview-block" style="left: ${left}%; width: ${width}%; background: ${safeColor(task.color)};">
+                    ${escapeHtml(task.name)} - ${formatClock(startMinute)}-${formatClock(endMinute)}
+                </div>
+            `;
+        }
+
+        async function loadWeeklySchedule() {
+            const targetWeekStart = getScheduleTargetWeekStart();
+            if (!targetWeekStart) return;
+            try {
+                const response = await fetch(`/api/analytics/weekly-review/schedule?targetWeekStart=${encodeURIComponent(targetWeekStart)}`);
+                if (!response.ok) throw new Error('Failed to load weekly schedule');
+                const data = await response.json();
+                weeklyScheduleBlocks = data.blocks || [];
+                renderWeeklyScheduleList();
+            } catch (error) {
+                console.error('Error loading weekly schedule:', error);
+            }
+        }
+
+        function renderWeeklyScheduleList() {
+            const list = document.getElementById('scheduleList');
+            if (!list) return;
+
+            if (!weeklyScheduleBlocks.length) {
+                list.innerHTML = '<div class="review-hint">No reserved blocks for next week yet.</div>';
+                return;
+            }
+
+            list.innerHTML = weeklyScheduleBlocks.map(block => `
+                <div class="schedule-list-item ${editingScheduleBlockId === block._id ? 'editing' : ''}">
+                    <div class="schedule-list-color" style="background: ${safeColor(block.color)};"></div>
+                    <div>
+                        <div class="schedule-list-title">${escapeHtml(block.taskName)}</div>
+                        <div class="schedule-list-meta">${escapeHtml(formatRepeatDays(block.repeatDays || []))} - ${formatClock(block.startMinute)}-${formatClock(block.endMinute)}</div>
+                    </div>
+                    <div class="schedule-list-duration">${escapeHtml(formatMinutes((block.endMinute || 0) - (block.startMinute || 0)))}</div>
+                    <div class="schedule-list-actions">
+                        <button type="button" class="schedule-list-btn edit" title="Edit" onclick="editScheduleBlock('${block._id}')">Edit</button>
+                        <button type="button" class="schedule-list-btn delete" title="Delete" onclick="deleteScheduleBlock('${block._id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function reserveScheduleBlock() {
+            const targetWeekStart = getScheduleTargetWeekStart();
+            if (!targetWeekStart) {
+                setScheduleStatus('Weekly review is still loading. Try again in a moment.', 'error');
+                showToast('Review still loading', 'error');
+                return;
+            }
+
+            const task = getSelectedScheduleTask();
+            const startMinute = timeInputToMinutes(document.getElementById('scheduleStartTime')?.value);
+            const endMinute = timeInputToMinutes(document.getElementById('scheduleEndTime')?.value);
+            const reserveBtn = document.getElementById('scheduleReserveBtn');
+
+            if (!task) {
+                setScheduleStatus('Select a Deepwork task before reserving.', 'error');
+                showToast('Select a Deepwork task', 'error');
+                return;
+            }
+
+            if (selectedScheduleDays.length === 0) {
+                setScheduleStatus('Select at least one repeat day.', 'error');
+                showToast('Select at least one day', 'error');
+                return;
+            }
+
+            if (!Number.isInteger(startMinute) || !Number.isInteger(endMinute) || endMinute <= startMinute) {
+                setScheduleStatus('Choose a valid same-day start and end time.', 'error');
+                showToast('Choose a valid same-day time block', 'error');
+                return;
+            }
+
+            const isEditing = Boolean(editingScheduleBlockId);
+
+            try {
+                if (reserveBtn) {
+                    reserveBtn.disabled = true;
+                    reserveBtn.textContent = isEditing ? 'Updating...' : 'Reserving...';
+                }
+
+                const url = isEditing
+                    ? `/api/analytics/weekly-review/schedule/${encodeURIComponent(editingScheduleBlockId)}`
+                    : '/api/analytics/weekly-review/schedule';
+
+                const response = await fetch(url, {
+                    method: isEditing ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sourceReviewWeekStart: weeklyReviewData?.weekStart || null,
+                        targetWeekStart,
+                        taskTypeId: task.id,
+                        startMinute,
+                        endMinute,
+                        repeatDays: selectedScheduleDays
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({}));
+                    throw new Error(error.error || (isEditing ? 'Failed to update block' : 'Failed to reserve block'));
+                }
+                showToast(isEditing ? 'Block updated' : 'Block reserved for next week', 'success');
+                const wasEditing = isEditing;
+                cancelScheduleEdit();
+                await loadWeeklySchedule();
+                resetScheduleForm();
+                if (!wasEditing) {
+                    const timelineUrl = getDeepworkTimelineUrl(targetWeekStart);
+                    setScheduleStatus(`Reserved and added to Deepwork Timeline. <a href="${timelineUrl}">Open timeline</a>`, 'success');
+                } else {
+                    setScheduleStatus('Block updated on the Deepwork Timeline.', 'success');
+                }
+            } catch (error) {
+                console.error('Error saving block:', error);
+                setScheduleStatus(error.message || 'Save failed. Try again.', 'error');
+                showToast(error.message || 'Save failed', 'error');
+            } finally {
+                if (reserveBtn) {
+                    reserveBtn.disabled = false;
+                    reserveBtn.textContent = editingScheduleBlockId ? 'Update block' : 'Reserve block';
+                }
+            }
+        }
+
+        function editScheduleBlock(blockId) {
+            const block = weeklyScheduleBlocks.find(item => item._id === blockId);
+            if (!block) return;
+
+            editingScheduleBlockId = blockId;
+
+            const taskSelect = document.getElementById('scheduleTaskType');
+            if (taskSelect) taskSelect.value = block.taskTypeId;
+
+            const startInput = document.getElementById('scheduleStartTime');
+            const endInput = document.getElementById('scheduleEndTime');
+            if (startInput) startInput.value = minutesToTimeInput(block.startMinute);
+            if (endInput) endInput.value = minutesToTimeInput(block.endMinute);
+
+            selectedScheduleDays = [...(block.repeatDays || [])].sort((a, b) => a - b);
+            initScheduleDays();
+            updateSchedulePreview();
+
+            const banner = document.getElementById('scheduleEditBanner');
+            if (banner) banner.classList.add('active');
+
+            const reserveBtn = document.getElementById('scheduleReserveBtn');
+            if (reserveBtn) reserveBtn.textContent = 'Update block';
+
+            renderWeeklyScheduleList();
+            document.querySelector('.schedule-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function cancelScheduleEdit() {
+            editingScheduleBlockId = null;
+            const banner = document.getElementById('scheduleEditBanner');
+            if (banner) banner.classList.remove('active');
+            const reserveBtn = document.getElementById('scheduleReserveBtn');
+            if (reserveBtn) reserveBtn.textContent = 'Reserve block';
+            renderWeeklyScheduleList();
+        }
+
+        async function deleteScheduleBlock(blockId) {
+            const block = weeklyScheduleBlocks.find(item => item._id === blockId);
+            if (!block) return;
+            if (!confirm(`Delete the reserved "${block.taskName}" block?`)) return;
+
+            try {
+                const response = await fetch(`/api/analytics/weekly-review/schedule/${encodeURIComponent(blockId)}`, {
+                    method: 'DELETE'
+                });
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({}));
+                    throw new Error(error.error || 'Failed to delete block');
+                }
+                if (editingScheduleBlockId === blockId) cancelScheduleEdit();
+                await loadWeeklySchedule();
+                showToast('Block deleted', 'success');
+            } catch (error) {
+                console.error('Error deleting block:', error);
+                showToast(error.message || 'Delete failed', 'error');
+            }
+        }
+
+        function getScheduleTargetWeekStart() {
+            return weeklyReviewData?.review?.appliesToWeekStart || getNextIstMondayKey();
+        }
+
+        function minutesToTimeInput(minutes) {
+            const normalized = Math.max(0, Math.min(1439, Number(minutes) || 0));
+            const hours = Math.floor(normalized / 60);
+            const mins = normalized % 60;
+            return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+        }
+
+        function resetScheduleForm() {
+            const startInput = document.getElementById('scheduleStartTime');
+            const endInput = document.getElementById('scheduleEndTime');
+            if (startInput) startInput.value = '06:00';
+            if (endInput) endInput.value = '08:30';
+            selectedScheduleDays = [0, 1, 2, 3, 4];
+            initScheduleDays();
+            updateSchedulePreview();
+        }
+
+        function getDeepworkTimelineUrl(targetWeekStart) {
+            const weekOffset = getWeekOffsetFromWeekStart(targetWeekStart);
+            localStorage.setItem('weeklyChartView', 'timeline');
+            localStorage.setItem('deepworkWeekOffset', String(weekOffset));
+            return `/deepwork.html?view=timeline&weekOffset=${weekOffset}&scheduled=1`;
+        }
+
+        function setScheduleStatus(message, type = 'success') {
+            const status = document.getElementById('scheduleStatus');
+            if (!status) return;
+            status.className = `schedule-status ${type}`;
+            status.innerHTML = message;
+        }
+
+        function getWeekOffsetFromWeekStart(weekStart) {
+            const currentWeekStart = getCurrentIstMondayKey();
+            const target = appDateKeyToUtcMs(weekStart);
+            const current = appDateKeyToUtcMs(currentWeekStart);
+            if (!Number.isFinite(target) || !Number.isFinite(current)) return 0;
+            return Math.round((target - current) / (7 * 24 * 60 * 60 * 1000));
+        }
+
+        function getCurrentIstMondayKey() {
+            const istNow = new Date(Date.now() + 330 * 60 * 1000);
+            const dayOfWeek = istNow.getUTCDay();
+            const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+            istNow.setUTCDate(istNow.getUTCDate() - daysToSubtract);
+            return `${istNow.getUTCFullYear()}-${String(istNow.getUTCMonth() + 1).padStart(2, '0')}-${String(istNow.getUTCDate()).padStart(2, '0')}`;
+        }
+
+        function getNextIstMondayKey() {
+            const mondayMs = appDateKeyToUtcMs(getCurrentIstMondayKey()) + 7 * 24 * 60 * 60 * 1000;
+            const nextMonday = new Date(mondayMs + 330 * 60 * 1000);
+            return `${nextMonday.getUTCFullYear()}-${String(nextMonday.getUTCMonth() + 1).padStart(2, '0')}-${String(nextMonday.getUTCDate()).padStart(2, '0')}`;
+        }
+
+        function appDateKeyToUtcMs(dateKey) {
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dateKey || ''))) return NaN;
+            return new Date(`${dateKey}T00:00:00+05:30`).getTime();
+        }
+
+        function getSelectedScheduleTask() {
+            const selectedId = document.getElementById('scheduleTaskType')?.value;
+            return scheduleTaskTypes.find(task => task.id === selectedId) || scheduleTaskTypes[0] || null;
+        }
+
+        function timeInputToMinutes(value) {
+            const match = /^(\d{2}):(\d{2})$/.exec(String(value || ''));
+            if (!match) return null;
+            return Number(match[1]) * 60 + Number(match[2]);
+        }
+
+        function formatClock(minutes) {
+            const normalized = Math.max(0, Math.min(1440, Number(minutes) || 0));
+            if (normalized >= 1440) return '12:00 AM';
+            let hours = Math.floor(normalized / 60);
+            const mins = normalized % 60;
+            const period = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12 || 12;
+            return `${hours}:${String(mins).padStart(2, '0')} ${period}`;
+        }
+
+        function formatRepeatDays(days) {
+            const cleanDays = Array.isArray(days)
+                ? days
+                : String(days || '').split(/[\s,]+/).filter(Boolean);
+            return cleanDays.map(day => scheduleDayNames[Number(day)]).filter(Boolean).join(', ') || 'No days';
+        }
+
+        function safeColor(color) {
+            const value = String(color || '').trim();
+            return /^#[0-9a-f]{6}$/i.test(value) ? value : '#667eea';
         }
 
         function renderMetric(label, value, note) {

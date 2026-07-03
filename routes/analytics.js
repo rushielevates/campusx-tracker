@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const DeepWorkSession = require('../models/DeepWorkSession');
 const WeeklyReview = require('../models/WeeklyReview');
+const ScheduledDeepWorkBlock = require('../models/ScheduledDeepWorkBlock');
 
 const APP_TIME_ZONE_OFFSET_MINUTES = 330;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -186,6 +187,154 @@ router.get('/weekly-review/constraint', auth, async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching weekly constraint:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.get('/weekly-review/schedule', auth, async (req, res) => {
+    try {
+        const targetWeekStart = normalizeWeekStartInput(req.query.targetWeekStart);
+        if (!targetWeekStart) {
+            return res.status(400).json({ error: 'Valid targetWeekStart is required' });
+        }
+
+        const blocks = await ScheduledDeepWorkBlock.find({
+            userId: req.session.userId,
+            targetWeekStart
+        }).sort({ startMinute: 1 }).lean();
+
+        res.json({ blocks });
+    } catch (error) {
+        console.error('Error fetching weekly schedule:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/weekly-review/schedule', auth, async (req, res) => {
+    try {
+        const {
+            sourceReviewWeekStart,
+            targetWeekStart,
+            taskTypeId,
+            startMinute,
+            endMinute,
+            repeatDays
+        } = req.body;
+
+        const cleanTargetWeekStart = normalizeWeekStartInput(targetWeekStart);
+        if (!cleanTargetWeekStart) {
+            return res.status(400).json({ error: 'Valid targetWeekStart is required' });
+        }
+
+        const cleanStart = Number(startMinute);
+        const cleanEnd = Number(endMinute);
+        if (!Number.isInteger(cleanStart) || !Number.isInteger(cleanEnd) || cleanStart < 0 || cleanEnd > 1440 || cleanEnd <= cleanStart) {
+            return res.status(400).json({ error: 'Start and end time must be a same-day block' });
+        }
+
+        const cleanRepeatDays = Array.isArray(repeatDays)
+            ? [...new Set(repeatDays.map(Number).filter(day => Number.isInteger(day) && day >= 0 && day <= 6))]
+            : [];
+        if (cleanRepeatDays.length === 0) {
+            return res.status(400).json({ error: 'Select at least one day' });
+        }
+
+        const user = await User.findById(req.session.userId);
+        const taskType = user?.deepWorkStats?.customTaskTypes?.find(task => task.id === taskTypeId);
+        if (!taskType) {
+            return res.status(400).json({ error: 'Select a valid Deepwork task' });
+        }
+
+        const block = await ScheduledDeepWorkBlock.create({
+            userId: req.session.userId,
+            targetWeekStart: cleanTargetWeekStart,
+            sourceReviewWeekStart: normalizeWeekStartInput(sourceReviewWeekStart),
+            taskTypeId: taskType.id,
+            taskName: taskType.name,
+            taskIcon: taskType.icon || '',
+            color: taskType.color || '#667eea',
+            startMinute: cleanStart,
+            endMinute: cleanEnd,
+            repeatDays: cleanRepeatDays.sort((a, b) => a - b),
+            updatedAt: new Date()
+        });
+
+        res.status(201).json({ success: true, block });
+    } catch (error) {
+        console.error('Error saving weekly schedule:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.put('/weekly-review/schedule/:id', auth, async (req, res) => {
+    try {
+        const { targetWeekStart, taskTypeId, startMinute, endMinute, repeatDays } = req.body;
+
+        const cleanTargetWeekStart = normalizeWeekStartInput(targetWeekStart);
+        if (!cleanTargetWeekStart) {
+            return res.status(400).json({ error: 'Valid targetWeekStart is required' });
+        }
+
+        const cleanStart = Number(startMinute);
+        const cleanEnd = Number(endMinute);
+        if (!Number.isInteger(cleanStart) || !Number.isInteger(cleanEnd) || cleanStart < 0 || cleanEnd > 1440 || cleanEnd <= cleanStart) {
+            return res.status(400).json({ error: 'Start and end time must be a same-day block' });
+        }
+
+        const cleanRepeatDays = Array.isArray(repeatDays)
+            ? [...new Set(repeatDays.map(Number).filter(day => Number.isInteger(day) && day >= 0 && day <= 6))]
+            : [];
+        if (cleanRepeatDays.length === 0) {
+            return res.status(400).json({ error: 'Select at least one day' });
+        }
+
+        const user = await User.findById(req.session.userId);
+        const taskType = user?.deepWorkStats?.customTaskTypes?.find(task => task.id === taskTypeId);
+        if (!taskType) {
+            return res.status(400).json({ error: 'Select a valid Deepwork task' });
+        }
+
+        const block = await ScheduledDeepWorkBlock.findOneAndUpdate(
+            { _id: req.params.id, userId: req.session.userId },
+            {
+                targetWeekStart: cleanTargetWeekStart,
+                taskTypeId: taskType.id,
+                taskName: taskType.name,
+                taskIcon: taskType.icon || '',
+                color: taskType.color || '#667eea',
+                startMinute: cleanStart,
+                endMinute: cleanEnd,
+                repeatDays: cleanRepeatDays.sort((a, b) => a - b),
+                updatedAt: new Date()
+            },
+            { new: true }
+        );
+
+        if (!block) {
+            return res.status(404).json({ error: 'Scheduled block not found' });
+        }
+
+        res.json({ success: true, block });
+    } catch (error) {
+        console.error('Error updating weekly schedule:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.delete('/weekly-review/schedule/:id', auth, async (req, res) => {
+    try {
+        const block = await ScheduledDeepWorkBlock.findOneAndDelete({
+            _id: req.params.id,
+            userId: req.session.userId
+        });
+
+        if (!block) {
+            return res.status(404).json({ error: 'Scheduled block not found' });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting weekly schedule:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -377,6 +526,10 @@ function getWeekRangeForOffset(weekOffset) {
     const dayOfWeek = getAppDayOfWeek(targetKey);
     const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     return getWeekRangeFromStart(addDaysToDateKey(targetKey, -daysToSubtract));
+}
+
+function normalizeWeekStartInput(value) {
+    return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
 
 function getDefaultReviewWeekOffset() {

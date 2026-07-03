@@ -11,10 +11,30 @@ let currentWeeklyChartView = localStorage.getItem('weeklyChartView') || 'bar';
 let weeklyStatsData = [];
 let previousWeeklyStatsData = [];
 let currentReportWeekStart = null;
+
+function initializeDeepworkRouteState() {
+    const params = new URLSearchParams(window.location.search);
+    const requestedWeekOffset = Number(params.get('weekOffset'));
+    if (Number.isInteger(requestedWeekOffset)) {
+        currentWeekOffset = requestedWeekOffset;
+        localStorage.setItem('deepworkWeekOffset', String(currentWeekOffset));
+    } else {
+        const savedWeekOffset = Number(localStorage.getItem('deepworkWeekOffset'));
+        if (Number.isInteger(savedWeekOffset)) {
+            currentWeekOffset = savedWeekOffset;
+        }
+    }
+
+    if (params.get('view') === 'timeline') {
+        currentWeeklyChartView = 'timeline';
+        localStorage.setItem('weeklyChartView', 'timeline');
+    }
+}
 // Load data on page load
 // Load data on page load (KEEP THIS ONE)
 // Load data on page load - PARALLEL VERSION
 window.onload = async function() {
+    initializeDeepworkRouteState();
     console.log('🔵 Deep Work page loaded - START');
     
     // Load user info first (needed for everything)
@@ -31,9 +51,9 @@ window.onload = async function() {
     await Promise.all([
         checkActiveSession(),      // Restores timer if needed
         loadWeeklyStats(),          // Bar chart
-        loadWeeklyReport(0),         // Weekly progress card
+        loadWeeklyReport(currentWeekOffset),         // Weekly progress card
         loadTodayProgress(),        // Today's compact stats
-        loadCategoryBreakdown(0),     // Category breakdown
+        loadCategoryBreakdown(currentWeekOffset),     // Category breakdown
         loadWeeklyConstraint(),
          loadTasks(),                // ← ADD THIS INSIDE
         loadNotes()                 // ← ADD THIS INSIDE
@@ -759,13 +779,16 @@ async function loadWeeklyStats() {
         
         // Update week range display
         const weekRangeEl = document.getElementById('weekRangeDisplay');
+        const plannedBlockCount = (data.data || []).reduce((sum, day) => sum + ((day.plannedSegments || []).length), 0);
         if (weekRangeEl) {
-            weekRangeEl.textContent = data.weekRangeDisplay;
+            weekRangeEl.textContent = plannedBlockCount > 0
+                ? `${data.weekRangeDisplay} - ${plannedBlockCount} scheduled`
+                : data.weekRangeDisplay;
         }
         
-        // Update navigation buttons state
+        // Future weeks can contain reserved blocks, so keep Next available.
         if (nextBtn) {
-            nextBtn.disabled = data.isCurrentWeek;
+            nextBtn.disabled = false;
         }
         if (prevBtn) {
             prevBtn.disabled = false;
@@ -773,6 +796,10 @@ async function loadWeeklyStats() {
         
         weeklyStatsData = data.data || [];
         previousWeeklyStatsData = previousData.data || [];
+        if (plannedBlockCount > 0) {
+            currentWeeklyChartView = 'timeline';
+            localStorage.setItem('weeklyChartView', 'timeline');
+        }
         renderWeeklyActivity();
         
     } catch (error) {
@@ -797,6 +824,7 @@ async function loadWeeklyStats() {
 // Load previous week
 async function loadPreviousWeek() {
     currentWeekOffset--;
+    localStorage.setItem('deepworkWeekOffset', String(currentWeekOffset));
     await Promise.all([
         loadWeeklyStats(),
         loadWeeklyReport(currentWeekOffset),
@@ -806,20 +834,20 @@ async function loadPreviousWeek() {
 
 // Load next week
 async function loadNextWeek() {
-    if (currentWeekOffset < 0) {
-        currentWeekOffset++;
-        await Promise.all([
-            loadWeeklyStats(),
-            loadWeeklyReport(currentWeekOffset),
-            loadCategoryBreakdown(currentWeekOffset)
-        ]);
-    }
+    currentWeekOffset++;
+    localStorage.setItem('deepworkWeekOffset', String(currentWeekOffset));
+    await Promise.all([
+        loadWeeklyStats(),
+        loadWeeklyReport(currentWeekOffset),
+        loadCategoryBreakdown(currentWeekOffset)
+    ]);
 }
 
 // Load current week (reset to today)
 async function loadCurrentWeek() {
     if (currentWeekOffset !== 0) {
         currentWeekOffset = 0;
+        localStorage.setItem('deepworkWeekOffset', '0');
         await Promise.all([
             loadWeeklyStats(),
             loadWeeklyReport(0),
@@ -986,6 +1014,28 @@ function renderTimelineChart(stats) {
 
     const rows = stats.map(day => {
         const sourceSegments = day.segments || [];
+        const sourcePlannedSegments = day.plannedSegments || [];
+
+        const plannedSegments = sourcePlannedSegments.map(segment => {
+            const startMinute = Math.max(0, Math.min(1440, Number(segment.startMinute) || 0));
+            const endMinute = Math.max(startMinute, Math.min(1440, Number(segment.endMinute) || 0));
+            const segmentMinutes = Number(segment.minutes) || Math.max(0, endMinute - startMinute);
+            const startPercent = (startMinute / 1440) * 100;
+            const widthPercent = Math.max(0.35, ((endMinute - startMinute) / 1440) * 100);
+            const taskName = getTimelineTaskName(segment);
+            const tooltip = `Scheduled: ${taskName} (${segment.startLabel || formatTimelineClock(startMinute)} - ${segment.endLabel || formatTimelineClock(endMinute)})`;
+            const color = safeTimelineColor(segment.color);
+            const background = timelineColorWithAlpha(color, 0.24);
+            const label = segmentMinutes >= 20 ? escapeHtml(taskName) : '';
+
+            return `
+                <div class="timeline-planned-segment"
+                    style="left: ${startPercent}%; width: ${widthPercent}%; color: ${color}; background: ${background};"
+                    data-tooltip="${escapeHtml(tooltip)}">
+                    <span>${label}</span>
+                </div>
+            `;
+        }).join('');
 
         const segments = sourceSegments.map(segment => {
             const startMinute = Number(segment.startMinute) || 0;
@@ -1019,7 +1069,7 @@ function renderTimelineChart(stats) {
         }).join('');
 
         const totalDisplay = formatTimelineDuration(day.minutes);
-        const emptyState = segments ? '' : '<div class="timeline-empty">No study blocks</div>';
+        const emptyState = segments || plannedSegments ? '' : '<div class="timeline-empty">No study blocks</div>';
 
         return `
             <div class="timeline-row">
@@ -1030,6 +1080,7 @@ function renderTimelineChart(stats) {
                 <div class="timeline-gutter" aria-hidden="true"></div>
                 <div class="timeline-track">
                     ${emptyState}
+                    ${plannedSegments}
                     ${segments}
                 </div>
             </div>
@@ -1049,12 +1100,20 @@ function renderTimelineChart(stats) {
 }
 
 function attachTimelineTooltips(timeline) {
-    const segments = timeline.querySelectorAll('.timeline-segment[data-tooltip]');
+    const segments = timeline.querySelectorAll('.timeline-segment[data-tooltip], .timeline-planned-segment[data-tooltip]');
     segments.forEach(segment => {
         segment.addEventListener('mouseenter', showTimelineTooltip);
         segment.addEventListener('mousemove', positionTimelineTooltip);
         segment.addEventListener('mouseleave', hideTimelineTooltip);
     });
+}
+
+function timelineColorWithAlpha(color, alpha) {
+    const safeColor = safeTimelineColor(color);
+    const red = parseInt(safeColor.slice(1, 3), 16);
+    const green = parseInt(safeColor.slice(3, 5), 16);
+    const blue = parseInt(safeColor.slice(5, 7), 16);
+    return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 }
 
 function showTimelineTooltip(event) {

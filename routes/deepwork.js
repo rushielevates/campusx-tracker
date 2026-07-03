@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const DeepWorkSession = require('../models/DeepWorkSession');
 const User = require('../models/User');
+const ScheduledDeepWorkBlock = require('../models/ScheduledDeepWorkBlock');
 
 const APP_TIME_ZONE = 'Asia/Kolkata';
 const APP_TIME_ZONE_OFFSET_MINUTES = 330;
@@ -198,6 +199,47 @@ function buildSessionSegmentsForWeek(sessions, weekStartDateKey, taskTypes = [])
 
             currentDateKey = addDaysToDateKey(currentDateKey, 1);
         }
+    });
+
+    for (const segments of segmentsByDate.values()) {
+        segments.sort((a, b) => a.startMinute - b.startMinute);
+    }
+
+    return segmentsByDate;
+}
+
+function buildScheduledSegmentsForWeek(blocks, weekStartDateKey) {
+    const segmentsByDate = new Map();
+
+    for (let i = 0; i < 7; i++) {
+        segmentsByDate.set(addDaysToDateKey(weekStartDateKey, i), []);
+    }
+
+    blocks.forEach(block => {
+        const repeatDays = Array.isArray(block.repeatDays) ? block.repeatDays : [];
+        repeatDays.forEach(dayIndex => {
+            const dateKey = addDaysToDateKey(weekStartDateKey, dayIndex);
+            if (!segmentsByDate.has(dateKey)) return;
+
+            const startMinute = Math.max(0, Math.min(1439, Number(block.startMinute) || 0));
+            const endMinute = Math.max(startMinute + 1, Math.min(1440, Number(block.endMinute) || 0));
+            const minutes = endMinute - startMinute;
+
+            segmentsByDate.get(dateKey).push({
+                id: block._id.toString(),
+                taskType: block.taskTypeId,
+                taskName: block.taskName || fallbackTaskName(block.taskTypeId),
+                taskIcon: block.taskIcon || '',
+                color: block.color || '#667eea',
+                startMinute,
+                endMinute,
+                startLabel: formatTimeFromMinutes(startMinute),
+                endLabel: formatTimeFromMinutes(endMinute),
+                minutes,
+                hours: (minutes / 60).toFixed(1),
+                isScheduled: true
+            });
+        });
     });
 
     for (const segments of segmentsByDate.values()) {
@@ -616,6 +658,11 @@ router.get('/weekly-stats', auth, async (req, res) => {
         const userDailyStats = user.deepWorkStats?.dailyStats || [];
         const taskTypes = user.deepWorkStats?.customTaskTypes || [];
         const segmentsByDate = buildSessionSegmentsForWeek(sessions, mondayDateKey, taskTypes);
+        const scheduledBlocks = await ScheduledDeepWorkBlock.find({
+            userId: req.session.userId,
+            targetWeekStart: mondayDateKey
+        }).lean();
+        const plannedSegmentsByDate = buildScheduledSegmentsForWeek(scheduledBlocks, mondayDateKey);
         
         // Create a map of dates from userDailyStats for quick lookup
         const editedMinutesMap = new Map();
@@ -641,6 +688,7 @@ router.get('/weekly-stats', auth, async (req, res) => {
             
             // Calculate from sessions
             const daySegments = segmentsByDate.get(dateKey) || [];
+            const plannedSegments = plannedSegmentsByDate.get(dateKey) || [];
             const sessionMinutes = daySegments.reduce((sum, segment) => sum + (segment.minutes || 0), 0);
             
             // Get edited minutes from map (if any)
@@ -660,7 +708,8 @@ router.get('/weekly-stats', auth, async (req, res) => {
                 hours: (totalMinutes / 60).toFixed(1),
                 sessions: daySessions.length,
                 focusScore: avgFocus,
-                segments: daySegments
+                segments: daySegments,
+                plannedSegments
             });
         }
         
