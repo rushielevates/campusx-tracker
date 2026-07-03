@@ -73,7 +73,37 @@
     <!-- Timer Section -->
 <!-- Timer Section (Left) -->
 <div class="timer-section" id="timerSection">
-    <div class="timer-display" id="timerDisplay">00:00:00</div>
+    <div class="timer-actions" id="timerActions">
+        <button type="button" class="timer-menu-btn" id="timerMenuBtn" onclick="toggleTimerActionsMenu(event)" title="Timer options" aria-label="Timer options" aria-expanded="false">
+            <img src="images/icons/menu-bar.png" alt="">
+        </button>
+        <div class="timer-actions-menu" id="timerActionsMenu">
+            <div class="timer-actions-menu-label">Clock mode</div>
+            <button type="button" class="timer-mode-option active" id="stopwatchModeOption" onclick="setTimerMode('stopwatch')">Stopwatch</button>
+            <button type="button" class="timer-mode-option" id="countdownModeOption" onclick="setTimerMode('countdown')">Countdown</button>
+            <div class="timer-actions-menu-divider"></div>
+            <button type="button" onclick="closeTimerActionsMenu(); showTaskManager();">⚙️ Manage Tasks</button>
+        </div>
+    </div>
+    <div class="timer-display" id="timerDisplay">
+        <span class="timer-display-static" id="timerDisplayStatic">00:00:00</span>
+        <span class="timer-display-editable" id="timerDisplayEditable" style="display: none;">
+            <span class="timer-digit-unit">
+                <input type="text" inputmode="numeric" maxlength="2" class="timer-digit-input" id="countdownHoursInput" value="00" aria-label="Hours" oninput="sanitizeDigitInput(this)" onfocus="this.select()" onblur="clampCountdownInput(this)" onkeydown="handleCountdownDigitKeydown(event)">
+                <span class="timer-digit-caption">HR</span>
+            </span>
+            <span class="timer-digit-colon">:</span>
+            <span class="timer-digit-unit">
+                <input type="text" inputmode="numeric" maxlength="2" class="timer-digit-input" id="countdownMinutesInput" value="25" aria-label="Minutes" oninput="sanitizeDigitInput(this)" onfocus="this.select()" onblur="clampCountdownInput(this)" onkeydown="handleCountdownDigitKeydown(event)">
+                <span class="timer-digit-caption">MIN</span>
+            </span>
+            <span class="timer-digit-colon">:</span>
+            <span class="timer-digit-unit">
+                <span class="timer-digit-fixed">00</span>
+                <span class="timer-digit-caption">SEC</span>
+            </span>
+        </span>
+    </div>
     <div class="timer-controls">
         <button id="startBtn" class="timer-btn start" onclick="startTimer()">Start</button>
         <button id="pauseBtn" class="timer-btn pause" onclick="pauseTimer()" style="display: none;">Pause</button>
@@ -84,23 +114,26 @@
         <select id="taskType"></select>
     </div>
     <div class="timer-footer">
-        <button class="manage-tasks-btn" onclick="showTaskManager()">⚙️ Manage Tasks</button>
         <button class="show-tasks-btn" id="showTasksBtn" onclick="expandTasks()" style="display: none;">
             📋 Show Tasks
         </button>
     </div>
+    <audio id="alarmAudio" src="/Audio/Alarm.mp3" preload="auto"></audio>
 </div>
 
     <!-- Tasks/Notes Section (Right) -->
     <div class="tasks-notes-section" id="tasksNotesSection">
-        <div class="section-header">
-            <div class="tab-container">
-                <button class="tab-btn active" onclick="switchTab('tasks')">📋 Tasks</button>
-                <button class="tab-btn" onclick="switchTab('notes')">📝 Notes</button>
-            </div>
-            <button class="collapse-btn" onclick="toggleTasksSection()" id="collapseBtn">
-                ▶
+        <div class="timer-actions" id="tasksActions">
+            <button type="button" class="timer-menu-btn" id="tasksMenuBtn" onclick="toggleTasksActionsMenu(event)" title="Tasks/Notes options" aria-label="Tasks and notes options" aria-expanded="false">
+                <img src="images/icons/menu-bar.png" alt="">
             </button>
+            <div class="timer-actions-menu" id="tasksActionsMenu">
+                <div class="timer-actions-menu-label">View</div>
+                <button type="button" class="timer-mode-option active" id="tasksViewOption" onclick="switchTab('tasks')">📋 Tasks</button>
+                <button type="button" class="timer-mode-option" id="notesViewOption" onclick="switchTab('notes')">📝 Notes</button>
+                <div class="timer-actions-menu-divider"></div>
+                <button type="button" onclick="closeTasksActionsMenu(); toggleTasksSection();">◀ Collapse panel</button>
+            </div>
         </div>
 
         <!-- Tasks Tab -->

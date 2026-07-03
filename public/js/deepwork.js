@@ -4,6 +4,8 @@ let timerInterval = null;
 let seconds = 0;
 let taskType = 'other';
 let taskDescription = '';
+let timerMode = 'stopwatch'; // 'stopwatch' or 'countdown'
+let countdownTotalSeconds = 0;
 // Week navigation variables
 let currentWeekOffset = 0; // 0 = current week, -1 = last week, -2 = two weeks ago, etc.
 let isLoadingWeekly = false;
@@ -342,8 +344,14 @@ async function checkActiveSession() {
         const localActive = localStorage.getItem('deepWorkActive');
         const localSessionId = localStorage.getItem('deepWorkSessionId');
         const localStartTime = localStorage.getItem('deepWorkStartTime');
-        
+        const localTimerMode = localStorage.getItem('deepWorkTimerMode') || 'stopwatch';
+        const localCountdownSeconds = Number(localStorage.getItem('deepWorkCountdownSeconds')) || 0;
+
         if (localActive === 'true' && localSessionId && localStartTime) {
+            timerMode = localTimerMode;
+            countdownTotalSeconds = localCountdownSeconds;
+            currentSessionId = localSessionId; // so the clock renders read-only, not editable, while restoring
+            applyTimerModeUI();
             const elapsedSeconds = Math.floor((Date.now() - parseInt(localStartTime)) / 1000);
             // Show restoring UI immediately
             showRestoringUI(localSessionId, elapsedSeconds);
@@ -351,7 +359,7 @@ async function checkActiveSession() {
         const response = await fetch('/api/deepwork/current-session', {
             credentials: 'include'
         });
-        
+
         if (response.ok) {
             const data = await response.json();
             if (data.hasActiveSession) {
@@ -362,12 +370,12 @@ async function checkActiveSession() {
                 taskType = data.taskType;
                 taskDescription = data.taskDescription;
 
-                
+
                 // Update localStorage with server data
                 localStorage.setItem('deepWorkActive', 'true');
                 localStorage.setItem('deepWorkSessionId', data.sessionId);
                 localStorage.setItem('deepWorkStartTime', Date.now() - (data.elapsedSeconds * 1000));
-                
+
                 updateTimerDisplay();
                 startTimerFromExisting(data.elapsedSeconds);
             } else{
@@ -375,6 +383,8 @@ async function checkActiveSession() {
                 localStorage.removeItem('deepWorkActive');
                 localStorage.removeItem('deepWorkSessionId');
                 localStorage.removeItem('deepWorkStartTime');
+                localStorage.removeItem('deepWorkTimerMode');
+                localStorage.removeItem('deepWorkCountdownSeconds');
             }
         }
     } catch (error) {
@@ -472,7 +482,8 @@ function showRestoringUI(sessionId, elapsedSeconds) {
     document.getElementById('pauseBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'inline-block';
     document.querySelector('.task-input').style.opacity = '0.5';
-    
+    setTimerConfigDisabled(true);
+
     // Show approximate time while waiting for server
     seconds = elapsedSeconds;
     updateTimerDisplay();
@@ -481,28 +492,24 @@ function showRestoringUI(sessionId, elapsedSeconds) {
 // Start timer from existing session
 function startTimerFromExisting(elapsedSeconds) {
     const sessionStartTime = Date.now() - (elapsedSeconds * 1000);
-    
+
     if (timerInterval) {
         clearInterval(timerInterval);
     }
-    
+
     timerInterval = setInterval(() => {
         const realSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
-        if (realSeconds !== seconds) {
-            seconds = realSeconds;
-            updateTimerDisplay();
-        }
+        handleTimerTick(realSeconds);
     }, 200);
-    
+
     startPingInterval();
-    
+
     document.getElementById('startBtn').style.display = 'none';
     document.getElementById('pauseBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'inline-block';
     document.getElementById('startBtn').textContent = 'Start';
     document.querySelector('.task-input').style.opacity = '0.5';
-    document.querySelector('.task-input input').disabled = true;
-    document.querySelector('.task-input select').disabled = true;
+    setTimerConfigDisabled(true);
 }
 // Load user info
 async function loadUserInfo() {
@@ -536,14 +543,23 @@ function startTimer() {
     }
     taskDescription = document.getElementById('taskDescription').value;
     taskType = document.getElementById('taskType').value;
-    
+
     if (!taskDescription) {
         alert('Please describe what you\'re working on');
         return;
     }
-    
-    console.log('Starting timer with:', { taskType, taskDescription });
-    
+
+    if (timerMode === 'countdown') {
+        const totalSeconds = getCountdownSecondsFromInputs();
+        if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) {
+            alert('Set a countdown duration greater than 0');
+            return;
+        }
+        countdownTotalSeconds = totalSeconds;
+    }
+
+    console.log('Starting timer with:', { taskType, taskDescription, timerMode, countdownTotalSeconds });
+
     fetch('/api/deepwork/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -559,41 +575,42 @@ function startTimer() {
     .then(data => {
         console.log('Session started:', data);
         currentSessionId = data.sessionId;
-        
+        applyTimerModeUI();
+
         // Store the actual start time
         const sessionStartTime = Date.now();
         seconds = 0;
         updateTimerDisplay();
-        
+
         localStorage.setItem('deepWorkActive', 'true');
         localStorage.setItem('deepWorkSessionId', data.sessionId);
         localStorage.setItem('deepWorkStartTime', sessionStartTime.toString());
-        
+        localStorage.setItem('deepWorkTimerMode', timerMode);
+        if (timerMode === 'countdown') {
+            localStorage.setItem('deepWorkCountdownSeconds', String(countdownTotalSeconds));
+        } else {
+            localStorage.removeItem('deepWorkCountdownSeconds');
+        }
+
         // Clear any existing interval
         if (timerInterval) {
             clearInterval(timerInterval);
         }
-        
+
         // Use accurate timer based on real time
         timerInterval = setInterval(() => {
             // Calculate real elapsed seconds
             const realSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
-            
-            // Update if changed
-            if (realSeconds !== seconds) {
-                seconds = realSeconds;
-                updateTimerDisplay();
-            }
+            handleTimerTick(realSeconds);
         }, 200); // Check 5 times per second for accuracy
-        
+
         startPingInterval();
-        
+
         document.getElementById('startBtn').style.display = 'none';
         document.getElementById('pauseBtn').style.display = 'inline-block';
         document.getElementById('stopBtn').style.display = 'inline-block';
         document.querySelector('.task-input').style.opacity = '0.5';
-        document.querySelector('.task-input input').disabled = true;
-        document.querySelector('.task-input select').disabled = true;
+        setTimerConfigDisabled(true);
     })
     .catch(error => {
         console.error('Error starting timer:', error);
@@ -643,22 +660,18 @@ function resumeTimer() {
     // Resume the timer from current seconds
     timerInterval = setInterval(() => {
         const realSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
-        if (realSeconds !== seconds) {
-            seconds = realSeconds;
-            updateTimerDisplay();
-        }
+        handleTimerTick(realSeconds);
     }, 200);
-    
+
     // Resume ping interval
     startPingInterval();
-    
+
     // Update UI
     document.getElementById('startBtn').style.display = 'none';
     document.getElementById('pauseBtn').style.display = 'inline-block';
     document.getElementById('stopBtn').style.display = 'inline-block';
     document.querySelector('.task-input').style.opacity = '0.5';
-    document.querySelector('.task-input input').disabled = true;
-    document.querySelector('.task-input select').disabled = true;
+    setTimerConfigDisabled(true);
 }
 function stopTimer() {
         // Clear ping interval when stopping
@@ -699,6 +712,8 @@ function stopTimer() {
     localStorage.removeItem('deepWorkActive');
     localStorage.removeItem('deepWorkSessionId');
     localStorage.removeItem('deepWorkStartTime');
+    localStorage.removeItem('deepWorkTimerMode');
+    localStorage.removeItem('deepWorkCountdownSeconds');
         return Promise.all([
             loadTodayProgress(),
             loadWeeklyStats(),
@@ -721,28 +736,170 @@ function resetTimer() {
     currentSessionId = null;
     seconds = 0;
     updateTimerDisplay();
+    applyTimerModeUI();
     if (timerInterval) {
         clearInterval(timerInterval);
         timerInterval = null;
     }
-    
+
     document.getElementById('startBtn').style.display = 'inline-block';
     document.getElementById('pauseBtn').style.display = 'none';
     document.getElementById('stopBtn').style.display = 'none';
     document.getElementById('startBtn').textContent = 'Start';
     document.querySelector('.task-input').style.opacity = '1';
-    document.querySelector('.task-input input').disabled = false;
-    document.querySelector('.task-input select').disabled = false;
+    setTimerConfigDisabled(false);
     document.getElementById('taskDescription').value = '';
 }
 
 function updateTimerDisplay() {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-    
-    document.getElementById('timerDisplay').textContent = 
+    const displaySeconds = timerMode === 'countdown'
+        ? Math.max(0, countdownTotalSeconds - seconds)
+        : seconds;
+    const hours = Math.floor(displaySeconds / 3600);
+    const minutes = Math.floor((displaySeconds % 3600) / 60);
+    const secs = displaySeconds % 60;
+
+    document.getElementById('timerDisplayStatic').textContent =
         `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+// ===== TIMER OPTIONS MENU =====
+function toggleTimerActionsMenu(event) {
+    if (event) event.stopPropagation();
+    const actions = document.getElementById('timerActions');
+    const button = document.getElementById('timerMenuBtn');
+    if (!actions) return;
+
+    const isOpen = actions.classList.toggle('open');
+    if (button) button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
+function closeTimerActionsMenu() {
+    const actions = document.getElementById('timerActions');
+    const button = document.getElementById('timerMenuBtn');
+    if (actions) actions.classList.remove('open');
+    if (button) button.setAttribute('aria-expanded', 'false');
+}
+
+document.addEventListener('click', (event) => {
+    const actions = document.getElementById('timerActions');
+    if (actions && !actions.contains(event.target)) {
+        closeTimerActionsMenu();
+    }
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeTimerActionsMenu();
+});
+
+// ===== COUNTDOWN MODE =====
+function setTimerMode(mode) {
+    if (currentSessionId) return; // don't allow switching modes mid-session
+    timerMode = mode === 'countdown' ? 'countdown' : 'stopwatch';
+    applyTimerModeUI();
+    seconds = 0;
+    updateTimerDisplay();
+    closeTimerActionsMenu();
+}
+
+function applyTimerModeUI() {
+    const stopwatchOption = document.getElementById('stopwatchModeOption');
+    const countdownOption = document.getElementById('countdownModeOption');
+    const staticDisplay = document.getElementById('timerDisplayStatic');
+    const editableDisplay = document.getElementById('timerDisplayEditable');
+    if (stopwatchOption) stopwatchOption.classList.toggle('active', timerMode === 'stopwatch');
+    if (countdownOption) countdownOption.classList.toggle('active', timerMode === 'countdown');
+
+    // The clock digits are directly editable only while a countdown is being
+    // set up (idle, no session running yet). Once running it shows read-only time.
+    const showEditableDigits = timerMode === 'countdown' && !currentSessionId;
+    if (staticDisplay) staticDisplay.style.display = showEditableDigits ? 'none' : 'inline';
+    if (editableDisplay) editableDisplay.style.display = showEditableDigits ? 'inline-flex' : 'none';
+
+    if (showEditableDigits) {
+        setCountdownInputsFromSeconds(countdownTotalSeconds > 0 ? countdownTotalSeconds : 25 * 60);
+    }
+}
+
+function setCountdownInputsFromSeconds(totalSeconds) {
+    const hoursInput = document.getElementById('countdownHoursInput');
+    const minutesInput = document.getElementById('countdownMinutesInput');
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    if (hoursInput) hoursInput.value = String(hours).padStart(2, '0');
+    if (minutesInput) minutesInput.value = String(minutes).padStart(2, '0');
+}
+
+function getCountdownSecondsFromInputs() {
+    const hours = Number(document.getElementById('countdownHoursInput')?.value) || 0;
+    const minutes = Number(document.getElementById('countdownMinutesInput')?.value) || 0;
+    return Math.round(hours * 3600 + minutes * 60);
+}
+
+// Keep countdown digit inputs numeric-only, max 2 characters
+function sanitizeDigitInput(input) {
+    input.value = input.value.replace(/\D/g, '').slice(0, 2);
+}
+
+// Clamp and pad a countdown digit input on blur (hours 0-23, minutes 0-59)
+function clampCountdownInput(input) {
+    const max = input.id === 'countdownHoursInput' ? 23 : 59;
+    let value = parseInt(input.value, 10);
+    if (!Number.isFinite(value)) value = 0;
+    value = Math.max(0, Math.min(max, value));
+    input.value = String(value).padStart(2, '0');
+}
+
+function handleCountdownDigitKeydown(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        event.target.blur();
+    }
+}
+
+function setTimerConfigDisabled(disabled) {
+    const taskInputField = document.querySelector('.task-input input');
+    const taskTypeSelect = document.querySelector('.task-input select');
+    const stopwatchOption = document.getElementById('stopwatchModeOption');
+    const countdownOption = document.getElementById('countdownModeOption');
+    const hoursInput = document.getElementById('countdownHoursInput');
+    const minutesInput = document.getElementById('countdownMinutesInput');
+    if (taskInputField) taskInputField.disabled = disabled;
+    if (taskTypeSelect) taskTypeSelect.disabled = disabled;
+    if (stopwatchOption) stopwatchOption.disabled = disabled;
+    if (countdownOption) countdownOption.disabled = disabled;
+    if (hoursInput) hoursInput.disabled = disabled;
+    if (minutesInput) minutesInput.disabled = disabled;
+}
+
+// Shared tick handler for the stopwatch and countdown clock intervals
+function handleTimerTick(realSeconds) {
+    if (realSeconds !== seconds) {
+        seconds = realSeconds;
+        updateTimerDisplay();
+    }
+    if (timerMode === 'countdown' && countdownTotalSeconds > 0 && seconds >= countdownTotalSeconds) {
+        completeCountdown();
+    }
+}
+
+// Called when a countdown reaches zero: play the alarm and auto-end the session
+function completeCountdown() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    seconds = countdownTotalSeconds;
+    updateTimerDisplay();
+    playAlarmSound();
+    stopTimer();
+}
+
+function playAlarmSound() {
+    const audio = document.getElementById('alarmAudio');
+    if (!audio) return;
+    audio.currentTime = 0;
+    audio.play().catch(err => console.log('Alarm playback failed:', err));
 }
 
 // ===== WEEKLY BAR CHART =====
@@ -1773,19 +1930,48 @@ let currentTab = 'tasks';
 
 function switchTab(tab) {
     currentTab = tab;
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('tasksViewOption')?.classList.toggle('active', tab === 'tasks');
+    document.getElementById('notesViewOption')?.classList.toggle('active', tab === 'notes');
     document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-    
+
     if (tab === 'tasks') {
-        document.querySelector('.tab-btn:first-child').classList.add('active');
         document.getElementById('tasks-tab').classList.add('active');
         loadTasks();
     } else {
-        document.querySelector('.tab-btn:last-child').classList.add('active');
         document.getElementById('notes-tab').classList.add('active');
         loadNotes();
     }
+    closeTasksActionsMenu();
 }
+
+// ===== TASKS/NOTES OPTIONS MENU =====
+function toggleTasksActionsMenu(event) {
+    if (event) event.stopPropagation();
+    const actions = document.getElementById('tasksActions');
+    const button = document.getElementById('tasksMenuBtn');
+    if (!actions) return;
+
+    const isOpen = actions.classList.toggle('open');
+    if (button) button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
+function closeTasksActionsMenu() {
+    const actions = document.getElementById('tasksActions');
+    const button = document.getElementById('tasksMenuBtn');
+    if (actions) actions.classList.remove('open');
+    if (button) button.setAttribute('aria-expanded', 'false');
+}
+
+document.addEventListener('click', (event) => {
+    const actions = document.getElementById('tasksActions');
+    if (actions && !actions.contains(event.target)) {
+        closeTasksActionsMenu();
+    }
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeTasksActionsMenu();
+});
 
 // ===== TASKS =====
 async function loadTasks() {
@@ -2006,20 +2192,17 @@ let isTasksVisible = true;
 function toggleTasksSection() {
     const row = document.querySelector('.timer-tasks-row');
     const showBtn = document.getElementById('showTasksBtn');
-    const collapseBtn = document.getElementById('collapseBtn');
-    
+
     isTasksVisible = !isTasksVisible;
-    
+
     if (isTasksVisible) {
         // Expand
         row.classList.remove('collapsed');
         if (showBtn) showBtn.style.display = 'none';
-        if (collapseBtn) collapseBtn.textContent = '▶';
     } else {
         // Collapse
         row.classList.add('collapsed');
         if (showBtn) showBtn.style.display = 'block';
-        if (collapseBtn) collapseBtn.textContent = '◀';
     }
 }
 

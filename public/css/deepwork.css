@@ -214,6 +214,7 @@ html.sidebar-no-transition .main-content {
 
 /* ===== TIMER SECTION ===== */
 .timer-section {
+    position: relative;
     background: white;
     border-radius: 20px;
     padding: 30px;
@@ -222,12 +223,172 @@ html.sidebar-no-transition .main-content {
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
+.timer-actions {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+}
+
+.timer-menu-btn {
+    width: 38px;
+    height: 38px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #f8fafc;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all 0.2s;
+}
+
+.timer-menu-btn:hover,
+.timer-actions.open .timer-menu-btn {
+    background: #eef2ff;
+    border-color: #667eea;
+}
+
+.timer-menu-btn img {
+    width: 20px;
+    height: 20px;
+    display: block;
+    object-fit: contain;
+}
+
+.timer-actions-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 190px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+    padding: 6px;
+    z-index: 50;
+    display: none;
+    text-align: left;
+}
+
+.timer-actions.open .timer-actions-menu {
+    display: block;
+}
+
+.timer-actions-menu-label {
+    padding: 8px 12px 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+}
+
+.timer-actions-menu-divider {
+    height: 1px;
+    background: #eef0f4;
+    margin: 6px 4px;
+}
+
+.timer-actions-menu button {
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: #334155;
+    cursor: pointer;
+    display: block;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.timer-actions-menu button:hover {
+    background: #eef2ff;
+    color: #4338ca;
+}
+
+.timer-actions-menu button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: transparent;
+    color: #334155;
+}
+
+.timer-mode-option.active {
+    color: #667eea;
+    background: #eef2ff;
+}
+
+.timer-mode-option.active::after {
+    content: '✓';
+    float: right;
+}
+
 .timer-display {
     font-size: 72px;
     font-weight: 300;
     font-family: monospace;
     color: #333;
     margin: 20px 0;
+}
+
+.timer-display-editable {
+    display: inline-flex;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.timer-digit-unit {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.timer-digit-input,
+.timer-digit-fixed {
+    font: inherit;
+    color: inherit;
+    text-align: center;
+    width: 1.3em;
+    border: none;
+    background: transparent;
+    border-radius: 10px;
+    padding: 0 2px;
+}
+
+.timer-digit-input {
+    cursor: text;
+    transition: background 0.15s, color 0.15s;
+}
+
+.timer-digit-input:focus {
+    outline: none;
+    background: rgba(102, 126, 234, 0.14);
+    color: #667eea;
+}
+
+.timer-digit-input:disabled {
+    cursor: default;
+}
+
+.timer-digit-colon {
+    font: inherit;
+    color: inherit;
+}
+
+.timer-digit-caption {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #b6bac1;
+    margin-top: -6px;
+}
+
+.timer-digit-unit:focus-within .timer-digit-caption {
+    color: #667eea;
 }
 
 .timer-controls {
@@ -1782,7 +1943,7 @@ html.sidebar-no-transition .main-content {
     align-items: stretch; /* Makes children equal height */
 }
 
-.timer-section, 
+.timer-section,
 .tasks-notes-section {
     height: 100%;
     display: flex;
@@ -1792,6 +1953,16 @@ html.sidebar-no-transition .main-content {
 /* Reduce timer section padding to match tasks section */
 .timer-section {
     padding: 20px; /* Reduced from 30px to match tasks section */
+}
+
+/* The tasks/notes menu button floats in the corner (same pattern as the
+   timer's menu), so give the content just enough clearance to not sit under it */
+.tasks-notes-section {
+    position: relative;
+}
+
+.tasks-notes-section .tab-content {
+    margin-top: 34px;
 }
 
 /* Adjust timer display size to fit better */
@@ -1808,12 +1979,12 @@ html.sidebar-no-transition .main-content {
     margin: 15px auto; /* Reduced margin */
 }
 
-/* Make tasks/notes content area flexible */
-.tasks-list, 
+/* Cap tasks/notes list height and let them scroll internally instead of
+   growing the whole card taller */
+.tasks-list,
 .notes-list {
-    flex: 1;
-    min-height: 200px;
-    max-height: none; /* Remove max-height constraint */
+    max-height: 320px;
+    overflow-y: auto;
 }
 
 /* Ensure footer stays at bottom */
