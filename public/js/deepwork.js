@@ -1994,9 +1994,11 @@ async function loadTasks() {
         
         document.getElementById('tasksSummary').textContent = `✅ ${completed}/${tasks.length} completed`;
         makeTasksSortable();
-        
+
+        return { completed, total: tasks.length };
     } catch (error) {
         console.error('Error loading tasks:', error);
+        return { completed: 0, total: 0 };
     }
 }
 
@@ -2025,10 +2027,50 @@ async function toggleTask(id) {
             method: 'PUT',
             credentials: 'include'
         });
-        loadTasks();
+        const { completed, total } = await loadTasks();
+        if (total > 0 && completed === total) {
+            celebrateAllTasksDone();
+        }
     } catch (error) {
         console.error('Error toggling task:', error);
     }
+}
+
+// ===== CELEBRATION (all tasks done) =====
+function celebrateAllTasksDone() {
+    const colors = ['#667eea', '#764ba2', '#28a745', '#ffc107', '#fd7e14', '#e83e8c', '#17a2b8'];
+
+    const container = document.createElement('div');
+    container.className = 'confetti-container';
+    document.body.appendChild(container);
+
+    const pieceCount = 90;
+    for (let i = 0; i < pieceCount; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        const size = 6 + Math.random() * 6;
+        piece.style.left = `${Math.random() * 100}vw`;
+        piece.style.width = `${size}px`;
+        piece.style.height = `${size * 0.4}px`;
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.setProperty('--confetti-drift', `${(Math.random() - 0.5) * 160}px`);
+        piece.style.animationDuration = `${2.2 + Math.random() * 1.6}s`;
+        piece.style.animationDelay = `${Math.random() * 0.4}s`;
+        container.appendChild(piece);
+    }
+
+    const toast = document.createElement('div');
+    toast.className = 'celebration-toast';
+    toast.textContent = '🎉 Congrats! All tasks done! 🎉';
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('show'));
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 400);
+    }, 2600);
+
+    setTimeout(() => container.remove(), 4200);
 }
 
 async function deleteTodoTask(id) {
