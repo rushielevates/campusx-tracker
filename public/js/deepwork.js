@@ -31,6 +31,12 @@ function initializeDeepworkRouteState() {
         currentWeeklyChartView = 'timeline';
         localStorage.setItem('weeklyChartView', 'timeline');
     }
+
+    const savedTimerModePreference = localStorage.getItem('deepworkTimerModePreference');
+    if (savedTimerModePreference === 'countdown' || savedTimerModePreference === 'stopwatch') {
+        timerMode = savedTimerModePreference;
+        applyTimerModeUI();
+    }
 }
 // Load data on page load
 // Load data on page load (KEEP THIS ONE)
@@ -89,36 +95,24 @@ async function loadWeeklyConstraint() {
     }
 }
 
-// ===== CATEGORY-BASED TIME EDITING =====
+// ===== CATEGORY-BASED SESSION EDITING =====
 
-// Store original values for comparison
+// Cached categories/sessions from the server, and which category (if any)
+// currently has an add/edit session form open.
+let categoryEditorData = [];
+let categoryEditorFormState = {};
 
-let categoryEdits = new Map();
 // Show category edit modal
 async function showCategoryEditModal() {
     console.log('🔵 Opening category edit modal');
-    
+
     try {
-        // Show loading state
         document.getElementById('categoryEditList').innerHTML = '<div class="loading">Loading categories...</div>';
         document.getElementById('categoryEditModal').style.display = 'block';
-        
-        // Fetch today's category breakdown
-        const response = await fetch('/api/deepwork/today-categories', {
-            credentials: 'include'
-        });
-        
-        if (!response.ok) throw new Error('Failed to load categories');
-        
-        const data = await response.json();
-        console.log('📊 Today categories:', data);
-        
-        // Clear previous edits
-        categoryEdits.clear();
-        
-        // Render categories
-        renderCategoryEditor(data.categories);
-        
+
+        categoryEditorFormState = {};
+        await refreshCategoryEditorData();
+
     } catch (error) {
         console.error('Error loading categories:', error);
         alert('Failed to load categories. Please try again.');
@@ -126,204 +120,257 @@ async function showCategoryEditModal() {
     }
 }
 
-// Render category editor
-function renderCategoryEditor(categories) {
+// Re-fetch today's categories/sessions from the server and re-render
+async function refreshCategoryEditorData() {
+    const response = await fetch('/api/deepwork/today-categories', {
+        credentials: 'include'
+    });
+
+    if (!response.ok) throw new Error('Failed to load categories');
+
+    const data = await response.json();
+    console.log('📊 Today categories:', data);
+
+    categoryEditorData = data.categories || [];
+    renderCategoryEditor();
+}
+
+// Render category editor: each category shows its existing sessions (each
+// editable in place) plus an "Add Session" action to log a new one.
+function renderCategoryEditor() {
     const container = document.getElementById('categoryEditList');
-    
+    const categories = categoryEditorData;
+
     if (!categories || categories.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: #666;">No categories yet. Start a timer first!</p>';
+        updateCategoryEditorTotal();
         return;
     }
-    
-    container.innerHTML = categories.map(cat => {
-        const hours = Math.floor(cat.minutes / 60);
-        const mins = cat.minutes % 60;
-        const timeDisplay = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
-        
-        // Store original value
-        categoryEdits.set(cat.id, {
-            original: cat.minutes,
-            current: cat.minutes,
-            changed: false
-        });
-        
-        return `
-            <div class="category-edit-item" data-category-id="${cat.id}">
+
+    container.innerHTML = categories.map(cat => renderCategoryBlock(cat)).join('');
+    updateCategoryEditorTotal();
+}
+
+function renderCategoryBlock(cat) {
+    const hours = Math.floor(cat.minutes / 60);
+    const mins = cat.minutes % 60;
+    const timeDisplay = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+    const formState = categoryEditorFormState[cat.id];
+    const sessions = cat.sessions || [];
+
+    const sessionsHtml = sessions.length
+        ? sessions.map(session => renderSessionRow(cat.id, session, formState)).join('')
+        : '<div class="session-row-empty">No sessions logged yet today</div>';
+
+    const isAdding = formState?.mode === 'add';
+    const addFormHtml = isAdding ? renderSessionForm(cat.id, null) : '';
+    const addButtonHtml = isAdding
+        ? ''
+        : `<button type="button" class="add-session-btn" onclick="showAddSessionForm('${cat.id}')">+ Add Session</button>`;
+
+    return `
+        <div class="category-edit-item" data-category-id="${cat.id}">
+            <div class="category-edit-header">
                 <div class="category-edit-icon">${cat.icon}</div>
                 <div class="category-edit-info">
-                    <div class="category-edit-name" style="color: ${cat.color}">${cat.name}</div>
-                    <div class="category-edit-current">Current: ${timeDisplay}</div>
-                </div>
-                <div class="category-edit-controls">
-                    <div class="category-time-input">
-                        <input 
-                            type="number" 
-                            id="hours-${cat.id}" 
-                            min="0" 
-                            max="24" 
-                            value="${hours}"
-                            onchange="updateCategoryTime('${cat.id}')"
-                            onkeyup="updateCategoryTime('${cat.id}')"
-                        >
-                        <span class="time-unit">h</span>
-                    </div>
-                    <div class="category-time-input">
-                        <input 
-                            type="number" 
-                            id="mins-${cat.id}" 
-                            min="0" 
-                            max="59" 
-                            value="${mins}"
-                            onchange="updateCategoryTime('${cat.id}')"
-                            onkeyup="updateCategoryTime('${cat.id}')"
-                        >
-                        <span class="time-unit">m</span>
-                    </div>
-                    <div class="category-edit-actions">
-                        <button onclick="adjustCategoryTime('${cat.id}', 15)" title="Add 15 min">+15</button>
-                        <button onclick="adjustCategoryTime('${cat.id}', -15)" title="Remove 15 min">-15</button>
-                    </div>
+                    <div class="category-edit-name" style="color: ${cat.color}">${escapeHtml(cat.name)}</div>
+                    <div class="category-edit-current">Today: ${timeDisplay} · ${sessions.length} session${sessions.length === 1 ? '' : 's'}</div>
                 </div>
             </div>
-        `;
-    }).join('');
-    
-    updateCategoryTotal();
+            <div class="session-list">${sessionsHtml}</div>
+            ${addFormHtml}
+            ${addButtonHtml}
+        </div>
+    `;
 }
 
-// Update category time from inputs
-function updateCategoryTime(categoryId) {
-    const hoursInput = document.getElementById(`hours-${categoryId}`);
-    const minsInput = document.getElementById(`mins-${categoryId}`);
-    
-    let hours = parseInt(hoursInput.value) || 0;
-    let mins = parseInt(minsInput.value) || 0;
-    
-    // Validate
-    hours = Math.max(0, Math.min(24, hours));
-    mins = Math.max(0, Math.min(59, mins));
-    
-    // Normalize (if mins > 59, add to hours)
-    if (mins >= 60) {
-        hours += Math.floor(mins / 60);
-        mins = mins % 60;
+function renderSessionRow(categoryId, session, formState) {
+    if (formState?.mode === 'edit' && formState.sessionId === session.id) {
+        return renderSessionForm(categoryId, session);
     }
-    
-    // Update inputs
-    hoursInput.value = hours;
-    minsInput.value = mins;
-    
-    const totalMinutes = (hours * 60) + mins;
-    
-    // Store edit
-    const edit = categoryEdits.get(categoryId);
-    if (edit) {
-        edit.current = totalMinutes;
-        edit.changed = (totalMinutes !== edit.original);
-    }
-    
-    // Highlight changed item
-    const item = document.querySelector(`[data-category-id="${categoryId}"]`);
-    if (edit.changed) {
-        item.classList.add('changed');
-    } else {
-        item.classList.remove('changed');
-    }
-    
-    updateCategoryTotal();
+
+    const hours = Math.floor(session.minutes / 60);
+    const mins = session.minutes % 60;
+    const durationDisplay = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+
+    return `
+        <div class="session-row" data-session-id="${session.id}">
+            <div class="session-row-info">
+                <span class="session-time-range">${session.startLabel} – ${session.endLabel}</span>
+                <span class="session-duration">${durationDisplay}</span>
+                ${session.taskDescription ? `<span class="session-desc">${escapeHtml(session.taskDescription)}</span>` : ''}
+            </div>
+            <div class="session-row-actions">
+                <button type="button" title="Edit session" onclick="showEditSessionForm('${categoryId}', '${session.id}')">✏️</button>
+                <button type="button" title="Delete session" onclick="deleteSession('${categoryId}', '${session.id}')">🗑️</button>
+            </div>
+        </div>
+    `;
 }
 
-// Quick adjust by amount
-function adjustCategoryTime(categoryId, deltaMinutes) {
-    const edit = categoryEdits.get(categoryId);
-    if (!edit) return;
-    
-    const newMinutes = Math.max(0, edit.current + deltaMinutes);
-    const hours = Math.floor(newMinutes / 60);
-    const mins = newMinutes % 60;
-    
-    document.getElementById(`hours-${categoryId}`).value = hours;
-    document.getElementById(`mins-${categoryId}`).value = mins;
-    
-    updateCategoryTime(categoryId);
+// session === null means "new session" form; otherwise it's an edit form
+// pre-filled with that session's current start/end/description.
+function renderSessionForm(categoryId, session) {
+    const isEdit = !!session;
+    const formId = isEdit ? `session-form-${session.id}` : `session-form-new-${categoryId}`;
+    const startValue = isEdit ? session.startInputValue : '';
+    const endValue = isEdit ? session.endInputValue : '';
+    const descValue = isEdit ? session.taskDescription : '';
+    const saveHandler = isEdit
+        ? `saveSessionEdit('${categoryId}', '${session.id}')`
+        : `saveNewSession('${categoryId}')`;
+
+    return `
+        <div class="session-form" id="${formId}">
+            <div class="session-form-row">
+                <label>Start
+                    <input type="time" class="session-start-input" value="${startValue}">
+                </label>
+                <label>End
+                    <input type="time" class="session-end-input" value="${endValue}">
+                </label>
+            </div>
+            <input type="text" class="session-desc-input" placeholder="What did you work on?" value="${escapeHtml(descValue)}">
+            <div class="session-form-actions">
+                <button type="button" class="session-form-cancel" onclick="cancelSessionForm('${categoryId}')">Cancel</button>
+                <button type="button" class="session-form-save" onclick="${saveHandler}">${isEdit ? 'Save' : 'Add'}</button>
+            </div>
+        </div>
+    `;
 }
 
-// Update total display
-function updateCategoryTotal() {
-    let totalMinutes = 0;
-    
-    for (const edit of categoryEdits.values()) {
-        totalMinutes += edit.current;
-    }
-    
-    const hours = Math.floor(totalMinutes / 60);
-    const mins = totalMinutes % 60;
-    
-    document.getElementById('categoryEditTotal').textContent = 
-        hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+function showAddSessionForm(categoryId) {
+    categoryEditorFormState[categoryId] = { mode: 'add' };
+    renderCategoryEditor();
 }
 
-// Save all category edits
-async function saveAllCategoryEdits() {
-    const changes = [];
-    
-    for (const [categoryId, edit] of categoryEdits.entries()) {
-        if (edit.changed) {
-            changes.push({
-                categoryId,
-                minutes: edit.current
-            });
-        }
-    }
-    
-    if (changes.length === 0) {
-        closeCategoryEditModal();
+function showEditSessionForm(categoryId, sessionId) {
+    categoryEditorFormState[categoryId] = { mode: 'edit', sessionId };
+    renderCategoryEditor();
+}
+
+function cancelSessionForm(categoryId) {
+    delete categoryEditorFormState[categoryId];
+    renderCategoryEditor();
+}
+
+function readSessionFormValues(formEl) {
+    return {
+        startTime: formEl.querySelector('.session-start-input').value,
+        endTime: formEl.querySelector('.session-end-input').value,
+        taskDescription: formEl.querySelector('.session-desc-input').value.trim()
+    };
+}
+
+async function saveNewSession(categoryId) {
+    const formEl = document.getElementById(`session-form-new-${categoryId}`);
+    const { startTime, endTime, taskDescription } = readSessionFormValues(formEl);
+
+    if (!startTime || !endTime) {
+        alert('Please set both a start and end time');
         return;
     }
-    
-    console.log('💾 Saving category changes:', changes);
-    
-    // Show saving indicator
-    const saveBtn = document.querySelector('.btn-primary');
-    const originalText = saveBtn.textContent;
-    saveBtn.textContent = 'Saving...';
-    saveBtn.disabled = true;
-    
+
     try {
-        // Save each category change
-        const promises = changes.map(change => 
-            fetch('/api/deepwork/update-category-time', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(change)
-            })
-        );
-        
-        await Promise.all(promises);
-        
-        console.log('✅ All category changes saved');
-        
-        // Close modal
-        closeCategoryEditModal();
-        
-        // Refresh all dashboard components
-        await Promise.all([
-            loadTodayProgress(),
-            loadWeeklyStats(),
-            loadWeeklyReport(currentWeekOffset),
-            loadCategoryBreakdown(currentWeekOffset)
-        ]);
-        
-        alert('Time updated successfully!');
-        
+        const response = await fetch('/api/deepwork/session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ categoryId, startTime, endTime, taskDescription })
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            alert(data.error || 'Failed to add session');
+            return;
+        }
+
+        delete categoryEditorFormState[categoryId];
+        await refreshCategoryEditorData();
+        await refreshDeepworkDashboardAfterEdit();
+
     } catch (error) {
-        console.error('Error saving category edits:', error);
-        alert('Failed to save changes. Please try again.');
-    } finally {
-        saveBtn.textContent = originalText;
-        saveBtn.disabled = false;
+        console.error('Error adding session:', error);
+        alert('Failed to add session. Please try again.');
     }
+}
+
+async function saveSessionEdit(categoryId, sessionId) {
+    const formEl = document.getElementById(`session-form-${sessionId}`);
+    const { startTime, endTime, taskDescription } = readSessionFormValues(formEl);
+
+    if (!startTime || !endTime) {
+        alert('Please set both a start and end time');
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/deepwork/session/${sessionId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ startTime, endTime, taskDescription })
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            alert(data.error || 'Failed to update session');
+            return;
+        }
+
+        delete categoryEditorFormState[categoryId];
+        await refreshCategoryEditorData();
+        await refreshDeepworkDashboardAfterEdit();
+
+    } catch (error) {
+        console.error('Error updating session:', error);
+        alert('Failed to update session. Please try again.');
+    }
+}
+
+async function deleteSession(categoryId, sessionId) {
+    if (!confirm('Delete this session?')) return;
+
+    try {
+        const response = await fetch(`/api/deepwork/session/${sessionId}`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            alert(data.error || 'Failed to delete session');
+            return;
+        }
+
+        delete categoryEditorFormState[categoryId];
+        await refreshCategoryEditorData();
+        await refreshDeepworkDashboardAfterEdit();
+
+    } catch (error) {
+        console.error('Error deleting session:', error);
+        alert('Failed to delete session. Please try again.');
+    }
+}
+
+function updateCategoryEditorTotal() {
+    const totalMinutes = categoryEditorData.reduce((sum, cat) => sum + (cat.minutes || 0), 0);
+    const hours = Math.floor(totalMinutes / 60);
+    const mins = totalMinutes % 60;
+
+    const totalEl = document.getElementById('categoryEditTotal');
+    if (totalEl) {
+        totalEl.textContent = hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+    }
+}
+
+async function refreshDeepworkDashboardAfterEdit() {
+    await Promise.all([
+        loadTodayProgress(),
+        loadWeeklyStats(),
+        loadWeeklyReport(currentWeekOffset),
+        loadCategoryBreakdown(currentWeekOffset)
+    ]);
 }
 
 // Close modal
@@ -346,15 +393,23 @@ async function checkActiveSession() {
         const localStartTime = localStorage.getItem('deepWorkStartTime');
         const localTimerMode = localStorage.getItem('deepWorkTimerMode') || 'stopwatch';
         const localCountdownSeconds = Number(localStorage.getItem('deepWorkCountdownSeconds')) || 0;
+        const localPaused = localStorage.getItem('deepWorkPaused') === 'true';
+        const localPausedSeconds = Number(localStorage.getItem('deepWorkPausedSeconds')) || 0;
 
         if (localActive === 'true' && localSessionId && localStartTime) {
             timerMode = localTimerMode;
             countdownTotalSeconds = localCountdownSeconds;
             currentSessionId = localSessionId; // so the clock renders read-only, not editable, while restoring
             applyTimerModeUI();
-            const elapsedSeconds = Math.floor((Date.now() - parseInt(localStartTime)) / 1000);
-            // Show restoring UI immediately
-            showRestoringUI(localSessionId, elapsedSeconds);
+
+            if (localPaused) {
+                // Show paused UI immediately, frozen at the seconds captured when paused
+                showRestoringPausedUI(localPausedSeconds);
+            } else {
+                const elapsedSeconds = Math.floor((Date.now() - parseInt(localStartTime)) / 1000);
+                // Show restoring UI immediately
+                showRestoringUI(localSessionId, elapsedSeconds);
+            }
         }
         const response = await fetch('/api/deepwork/current-session', {
             credentials: 'include'
@@ -366,18 +421,28 @@ async function checkActiveSession() {
                 console.log('Found active session:', data);
                 // Restore the timer
                 currentSessionId = data.sessionId;
-                seconds = data.elapsedSeconds;
                 taskType = data.taskType;
                 taskDescription = data.taskDescription;
 
+                if (localPaused) {
+                    // The server has no concept of pause, so its elapsedSeconds keeps
+                    // ticking with wall-clock time. Trust the locally frozen value instead
+                    // and stay paused rather than auto-resuming the interval.
+                    seconds = localPausedSeconds;
+                    localStorage.setItem('deepWorkSessionId', data.sessionId);
+                    updateTimerDisplay();
+                    showRestoringPausedUI(localPausedSeconds);
+                } else {
+                    seconds = data.elapsedSeconds;
 
-                // Update localStorage with server data
-                localStorage.setItem('deepWorkActive', 'true');
-                localStorage.setItem('deepWorkSessionId', data.sessionId);
-                localStorage.setItem('deepWorkStartTime', Date.now() - (data.elapsedSeconds * 1000));
+                    // Update localStorage with server data
+                    localStorage.setItem('deepWorkActive', 'true');
+                    localStorage.setItem('deepWorkSessionId', data.sessionId);
+                    localStorage.setItem('deepWorkStartTime', Date.now() - (data.elapsedSeconds * 1000));
 
-                updateTimerDisplay();
-                startTimerFromExisting(data.elapsedSeconds);
+                    updateTimerDisplay();
+                    startTimerFromExisting(data.elapsedSeconds);
+                }
             } else{
                 // Clear localStorage if server says no active session
                 localStorage.removeItem('deepWorkActive');
@@ -385,6 +450,8 @@ async function checkActiveSession() {
                 localStorage.removeItem('deepWorkStartTime');
                 localStorage.removeItem('deepWorkTimerMode');
                 localStorage.removeItem('deepWorkCountdownSeconds');
+                localStorage.removeItem('deepWorkPaused');
+                localStorage.removeItem('deepWorkPausedSeconds');
             }
         }
     } catch (error) {
@@ -486,6 +553,24 @@ function showRestoringUI(sessionId, elapsedSeconds) {
 
     // Show approximate time while waiting for server
     seconds = elapsedSeconds;
+    updateTimerDisplay();
+}
+
+// Helper function for restoring a session that was paused before refresh -
+// shows the frozen time with the timer left paused, no interval started.
+function showRestoringPausedUI(pausedSeconds) {
+    console.log('Restoring paused session from localStorage...');
+    document.getElementById('taskDescription').value = 'Restoring...';
+    document.getElementById('taskDescription').disabled = true;
+    document.getElementById('taskType').disabled = true;
+    document.getElementById('startBtn').style.display = 'inline-block';
+    document.getElementById('startBtn').textContent = 'Resume';
+    document.getElementById('pauseBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display = 'inline-block';
+    document.querySelector('.task-input').style.opacity = '0.5';
+    setTimerConfigDisabled(true);
+
+    seconds = pausedSeconds;
     updateTimerDisplay();
 }
 
@@ -591,6 +676,8 @@ function startTimer() {
         } else {
             localStorage.removeItem('deepWorkCountdownSeconds');
         }
+        localStorage.removeItem('deepWorkPaused');
+        localStorage.removeItem('deepWorkPausedSeconds');
 
         // Clear any existing interval
         if (timerInterval) {
@@ -638,9 +725,19 @@ function startPingInterval() {
 
 function pauseTimer() {
     clearInterval(timerInterval);
+    timerInterval = null;
+    // Stop pinging while paused - nothing to keep alive
+    if (window.pingInterval) {
+        clearInterval(window.pingInterval);
+    }
     document.getElementById('pauseBtn').style.display = 'none';
     document.getElementById('startBtn').style.display = 'inline-block';
     document.getElementById('startBtn').textContent = 'Resume';
+
+    // Persist the paused state so a refresh doesn't recompute elapsed time
+    // from the original (now stale) start timestamp.
+    localStorage.setItem('deepWorkPaused', 'true');
+    localStorage.setItem('deepWorkPausedSeconds', String(seconds));
 }
 // ===== ADD THIS NEW FUNCTION =====
 function resumeTimer() {
@@ -649,14 +746,14 @@ function resumeTimer() {
         startTimer();
         return;
     }
-    
+
     const sessionStartTime = Date.now() - (seconds * 1000);
-    
+
     // Clear any existing interval
     if (timerInterval) {
         clearInterval(timerInterval);
     }
-    
+
     // Resume the timer from current seconds
     timerInterval = setInterval(() => {
         const realSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
@@ -665,6 +762,12 @@ function resumeTimer() {
 
     // Resume ping interval
     startPingInterval();
+
+    // Rebase the persisted start time so the excluded pause duration
+    // never counts toward elapsed time again, and clear the paused flags.
+    localStorage.setItem('deepWorkStartTime', String(sessionStartTime));
+    localStorage.removeItem('deepWorkPaused');
+    localStorage.removeItem('deepWorkPausedSeconds');
 
     // Update UI
     document.getElementById('startBtn').style.display = 'none';
@@ -714,6 +817,8 @@ function stopTimer() {
     localStorage.removeItem('deepWorkStartTime');
     localStorage.removeItem('deepWorkTimerMode');
     localStorage.removeItem('deepWorkCountdownSeconds');
+    localStorage.removeItem('deepWorkPaused');
+    localStorage.removeItem('deepWorkPausedSeconds');
         return Promise.all([
             loadTodayProgress(),
             loadWeeklyStats(),
@@ -796,6 +901,7 @@ document.addEventListener('keydown', (event) => {
 function setTimerMode(mode) {
     if (currentSessionId) return; // don't allow switching modes mid-session
     timerMode = mode === 'countdown' ? 'countdown' : 'stopwatch';
+    localStorage.setItem('deepworkTimerModePreference', timerMode);
     applyTimerModeUI();
     seconds = 0;
     updateTimerDisplay();

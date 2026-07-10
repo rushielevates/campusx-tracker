@@ -57,6 +57,24 @@ function formatTimeFromMinutes(minutes) {
     return `${hours12}:${mins.toString().padStart(2, '0')} ${period}`;
 }
 
+// Formats minutes-since-midnight as a zero-padded 24h "HH:MM" string, suitable
+// for pre-filling an <input type="time">.
+function formatTimeInputValue(minutes) {
+    const normalized = Math.max(0, Math.min(1439, Math.round(minutes)));
+    const hours = Math.floor(normalized / 60);
+    const mins = normalized % 60;
+    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+}
+
+// Parses an <input type="time"> value ("HH:MM") into minutes since midnight,
+// or null if the value isn't a valid time.
+function parseTimeInputToMinutes(value) {
+    if (typeof value !== 'string') return null;
+    const match = value.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+    if (!match) return null;
+    return Number(match[1]) * 60 + Number(match[2]);
+}
+
 function getWeekBoundsForOffset(weekOffset = 0) {
     const { mondayDateKey, sundayDateKey } = getWeekDateKeysForOffset(weekOffset);
     return {
@@ -76,6 +94,17 @@ function getWeekDateKeysForOffset(weekOffset = 0) {
     const sundayDateKey = addDaysToDateKey(mondayDateKey, 6);
 
     return { mondayDateKey, sundayDateKey };
+}
+
+// Boundaries for "today" expressed in India time, so the day rolls over at
+// midnight IST instead of midnight in the server's (UTC) timezone.
+function getAppTodayBounds() {
+    const todayDateKey = toAppDateKey(new Date());
+    return {
+        todayDateKey,
+        todayStart: appDateKeyToUtcStart(todayDateKey),
+        tomorrowStart: appDateKeyToUtcStart(addDaysToDateKey(todayDateKey, 1))
+    };
 }
 
 function normalizeWeekStartKey(weekStart) {
@@ -564,25 +593,19 @@ router.get('/current-session', auth, async (req, res) => {
 // Get today's stats
 router.get('/today-stats', auth, async (req, res) => {
     try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
+        const { todayDateKey, todayStart: today, tomorrowStart: tomorrow } = getAppTodayBounds();
+
         // Get from user.dailyStats (includes manual edits)
         const user = await User.findById(req.session.userId);
         let userTotal = 0;
         if (user.deepWorkStats?.dailyStats) {
             const todayStat = user.deepWorkStats.dailyStats.find(d => {
-                const dDate = new Date(d.date);
-                dDate.setHours(0, 0, 0, 0);
-                return dDate.getTime() === today.getTime();
+                return toAppDateKey(new Date(d.date)) === todayDateKey;
             });
             userTotal = todayStat?.totalMinutes || 0;
         }
-        
+
         // Get from sessions (for sessions count, focus, etc.)
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
         const todaySessions = await DeepWorkSession.find({
             userId: req.session.userId,
             startTime: { $gte: today, $lt: tomorrow }
@@ -866,21 +889,20 @@ router.get('/weekly-report', auth, async (req, res) => {
 // ===== GET TODAY'S CATEGORY BREAKDOWN FOR EDITING =====
 router.get('/today-categories', auth, async (req, res) => {
     try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
-        // Get today's sessions
+        const { todayStart: today, tomorrowStart: tomorrow } = getAppTodayBounds();
+
+        // Get today's completed sessions (a still-running session has no fixed
+        // end time yet, so it isn't something the user can edit here)
         const sessions = await DeepWorkSession.find({
             userId: req.session.userId,
-            startTime: { $gte: today, $lt: tomorrow }
-        });
-        
+            startTime: { $gte: today, $lt: tomorrow },
+            activeSession: { $ne: true }
+        }).sort({ startTime: 1 });
+
         // Get user's task types for mapping
         const user = await User.findById(req.session.userId);
         const taskTypes = user.deepWorkStats?.customTaskTypes || [];
-        
+
         // Create map for quick lookup
         const taskTypeMap = new Map();
         taskTypes.forEach(task => {
@@ -890,20 +912,20 @@ router.get('/today-categories', auth, async (req, res) => {
                 color: task.color || '#667eea'
             });
         });
-        
+
         // Group sessions by task type
         const categoryMap = new Map();
-        
+
         sessions.forEach(session => {
             const taskType = session.taskType || 'other';
             const minutes = session.durationMinutes || 0;
-            
+
             const taskDetails = taskTypeMap.get(taskType) || {
                 name: taskType.charAt(0).toUpperCase() + taskType.slice(1),
                 icon: '⚙️',
                 color: '#667eea'
             };
-            
+
             if (!categoryMap.has(taskType)) {
                 categoryMap.set(taskType, {
                     id: taskType,
@@ -914,16 +936,26 @@ router.get('/today-categories', auth, async (req, res) => {
                     sessions: []
                 });
             }
-            
+
             const category = categoryMap.get(taskType);
             category.minutes += minutes;
+
+            const sessionEnd = getSessionEffectiveEnd(session);
+            const startMinutes = minutesFromAppDayStart(session.startTime);
+            const endMinutes = minutesFromAppDayStart(sessionEnd);
+
             category.sessions.push({
                 id: session._id,
                 minutes: minutes,
-                isManual: session.isManualEntry || false
+                isManual: session.isManualEntry || false,
+                taskDescription: session.taskDescription || '',
+                startLabel: formatTimeFromMinutes(startMinutes),
+                endLabel: formatTimeFromMinutes(endMinutes),
+                startInputValue: formatTimeInputValue(startMinutes),
+                endInputValue: formatTimeInputValue(endMinutes)
             });
         });
-        
+
         // Ensure all active task types are shown (even with 0 minutes)
         taskTypes.forEach(task => {
             if (task.isActive !== false) {
@@ -939,12 +971,12 @@ router.get('/today-categories', auth, async (req, res) => {
                 }
             }
         });
-        
+
         const categories = Array.from(categoryMap.values())
             .sort((a, b) => b.minutes - a.minutes);
-        
+
         const totalMinutes = categories.reduce((sum, cat) => sum + cat.minutes, 0);
-        
+
         res.json({
             date: today,
             totalMinutes,
@@ -966,11 +998,8 @@ router.post('/update-category-time', auth, async (req, res) => {
             return res.status(400).json({ error: 'Invalid minutes value' });
         }
         
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
+        const { todayStart: today, tomorrowStart: tomorrow } = getAppTodayBounds();
+
         // Get existing sessions for this category today
         const existingSessions = await DeepWorkSession.find({
             userId: req.session.userId,
@@ -1071,36 +1100,145 @@ router.post('/update-category-time', auth, async (req, res) => {
     }
 });
 
+// ===== ADD A NEW MANUAL SESSION FOR A CATEGORY (explicit start/end time) =====
+router.post('/session', auth, async (req, res) => {
+    try {
+        const { categoryId, startTime, endTime, taskDescription } = req.body;
+
+        if (!categoryId) {
+            return res.status(400).json({ error: 'Category is required' });
+        }
+
+        const startMinutes = parseTimeInputToMinutes(startTime);
+        const endMinutes = parseTimeInputToMinutes(endTime);
+        if (startMinutes === null || endMinutes === null) {
+            return res.status(400).json({ error: 'Please provide a valid start and end time' });
+        }
+        if (endMinutes <= startMinutes) {
+            return res.status(400).json({ error: 'End time must be after start time' });
+        }
+
+        const { todayStart } = getAppTodayBounds();
+        const sessionStart = new Date(todayStart.getTime() + startMinutes * 60000);
+        const sessionEnd = new Date(todayStart.getTime() + endMinutes * 60000);
+
+        const session = new DeepWorkSession({
+            userId: req.session.userId,
+            startTime: sessionStart,
+            endTime: sessionEnd,
+            durationMinutes: endMinutes - startMinutes,
+            taskType: categoryId,
+            taskDescription: String(taskDescription || '').trim(),
+            focusScore: 90,
+            interruptions: 0,
+            activeSession: false,
+            isManualEntry: true
+        });
+
+        await session.save();
+        await updateUserDailyStats(req.session.userId);
+
+        res.json({ success: true, sessionId: session._id });
+    } catch (error) {
+        console.error('Error creating session:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ===== EDIT AN EXISTING SESSION'S START/END TIME OR DESCRIPTION =====
+router.put('/session/:id', auth, async (req, res) => {
+    try {
+        const { startTime, endTime, taskDescription } = req.body;
+
+        const session = await DeepWorkSession.findOne({
+            _id: req.params.id,
+            userId: req.session.userId
+        });
+
+        if (!session) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+        if (session.activeSession) {
+            return res.status(400).json({ error: 'Cannot edit a session that is still running' });
+        }
+
+        const startMinutes = parseTimeInputToMinutes(startTime);
+        const endMinutes = parseTimeInputToMinutes(endTime);
+        if (startMinutes === null || endMinutes === null) {
+            return res.status(400).json({ error: 'Please provide a valid start and end time' });
+        }
+        if (endMinutes <= startMinutes) {
+            return res.status(400).json({ error: 'End time must be after start time' });
+        }
+
+        const { todayStart } = getAppTodayBounds();
+        session.startTime = new Date(todayStart.getTime() + startMinutes * 60000);
+        session.endTime = new Date(todayStart.getTime() + endMinutes * 60000);
+        session.durationMinutes = endMinutes - startMinutes;
+        if (typeof taskDescription === 'string') {
+            session.taskDescription = taskDescription.trim();
+        }
+
+        await session.save();
+        await updateUserDailyStats(req.session.userId);
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error editing session:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ===== DELETE A SESSION =====
+router.delete('/session/:id', auth, async (req, res) => {
+    try {
+        const session = await DeepWorkSession.findOne({
+            _id: req.params.id,
+            userId: req.session.userId
+        });
+
+        if (!session) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+        if (session.activeSession) {
+            return res.status(400).json({ error: 'Cannot delete a session that is still running' });
+        }
+
+        await DeepWorkSession.findByIdAndDelete(req.params.id);
+        await updateUserDailyStats(req.session.userId);
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting session:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Helper function to recalculate dailyStats
 async function updateUserDailyStats(userId) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    
+    const { todayDateKey, todayStart: today, tomorrowStart: tomorrow } = getAppTodayBounds();
+
     const sessions = await DeepWorkSession.find({
         userId: userId,
         startTime: { $gte: today, $lt: tomorrow }
     });
-    
+
     const totalMinutes = sessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
-    const avgFocus = sessions.length > 0 
+    const avgFocus = sessions.length > 0
         ? Math.round(sessions.reduce((sum, s) => sum + (s.focusScore || 0), 0) / sessions.length)
         : 0;
-    
+
     const user = await User.findById(userId);
-    
+
     if (!user.deepWorkStats) user.deepWorkStats = { dailyStats: [] };
     if (!user.deepWorkStats.dailyStats) user.deepWorkStats.dailyStats = [];
-    
+
     // Find today's stats
     let todayStats = null;
     for (let i = 0; i < user.deepWorkStats.dailyStats.length; i++) {
         const stat = user.deepWorkStats.dailyStats[i];
-        const statDate = new Date(stat.date);
-        statDate.setHours(0, 0, 0, 0);
-        
-        if (statDate.getTime() === today.getTime()) {
+
+        if (toAppDateKey(new Date(stat.date)) === todayDateKey) {
             todayStats = stat;
             todayStats.totalMinutes = totalMinutes;
             todayStats.sessions = sessions.length;
@@ -1145,21 +1283,9 @@ router.get('/get-goal', auth, async (req, res) => {
 router.get('/category-breakdown', auth, async (req, res) => {
     try {
         const weekOffset = parseInt(req.query.weekOffset) || 0;
-        const today = new Date();
-        const targetDate = new Date(today);
-        targetDate.setDate(today.getDate() + (weekOffset * 7));
-        // Calculate Monday of current week
-        const monday = new Date(targetDate);
-        const dayOfWeek = targetDate.getDay();
-        const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        monday.setDate(targetDate.getDate() - daysToSubtract);
-        monday.setHours(0, 0, 0, 0);
-        
-        // Calculate Sunday
-        const sunday = new Date(monday);
-        sunday.setDate(monday.getDate() + 6);
-        sunday.setHours(23, 59, 59, 999);
-        
+        // Calculate the week in India time (matches /weekly-stats and /weekly-report)
+        const { monday, sunday } = getWeekBoundsForOffset(weekOffset);
+
         // Get all sessions for this week
         const sessions = await DeepWorkSession.find({
             userId: req.session.userId,
@@ -1251,29 +1377,24 @@ router.post('/edit-today', auth, async (req, res) => {
         const { totalMinutes } = req.body;
         console.log('🔵 EDIT REQUEST:', { totalMinutes, userId: req.session.userId });
         
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        
+        const { todayDateKey, todayStart: today, tomorrowStart: tomorrow } = getAppTodayBounds();
+
         // Validate
         if (totalMinutes < 0 || totalMinutes > 1440) {
             return res.status(400).json({ error: 'Time must be between 0 and 24 hours' });
         }
-        
+
         const user = await User.findById(req.session.userId);
-        
+
         // Find or create today's stats
         let todayStats = null;
         let todayIndex = -1;
-        
+
         if (user.deepWorkStats?.dailyStats) {
             for (let i = 0; i < user.deepWorkStats.dailyStats.length; i++) {
                 const stat = user.deepWorkStats.dailyStats[i];
-                const statDate = new Date(stat.date);
-                statDate.setHours(0, 0, 0, 0);
-                
-                if (statDate.getTime() === today.getTime()) {
+
+                if (toAppDateKey(new Date(stat.date)) === todayDateKey) {
                     todayStats = stat;
                     todayIndex = i;
                     break;
@@ -1448,77 +1569,71 @@ async function updateUserDeepWorkStats(userId, session) {
     user.deepWorkStats.totalSessions += 1;
     user.deepWorkStats.totalDeepWorkMinutes += session.durationMinutes;
     
-    // Update daily stats - FIXED VERSION
-const today = new Date();
-today.setHours(0, 0, 0, 0);
+    // Update daily stats - uses India-time day boundaries so a session logged
+    // just after midnight IST lands on the correct (new) day, not the server's
+    // (UTC) calendar day.
+    const { todayDateKey, todayStart: today, tomorrowStart: tomorrow } = getAppTodayBounds();
 
-// More robust way to find today's stats
-let todayStats = null;
-let todayIndex = -1;
+    // More robust way to find today's stats
+    let todayStats = null;
+    let todayIndex = -1;
 
-console.log('🔍 Looking for today stats. Total entries:', user.deepWorkStats.dailyStats?.length || 0);
+    console.log('🔍 Looking for today stats. Total entries:', user.deepWorkStats.dailyStats?.length || 0);
 
-if (user.deepWorkStats.dailyStats) {
-    for (let i = 0; i < user.deepWorkStats.dailyStats.length; i++) {
-        const stat = user.deepWorkStats.dailyStats[i];
-        const statDate = new Date(stat.date);
-        statDate.setHours(0, 0, 0, 0);
-        
-        // Compare timestamps (more reliable)
-        if (statDate.getTime() === today.getTime()) {
-            todayStats = stat;
-            todayIndex = i;
-            console.log('✅ Found existing entry at index', i, 'with minutes:', stat.totalMinutes);
-            break;
+    if (user.deepWorkStats.dailyStats) {
+        for (let i = 0; i < user.deepWorkStats.dailyStats.length; i++) {
+            const stat = user.deepWorkStats.dailyStats[i];
+
+            if (toAppDateKey(new Date(stat.date)) === todayDateKey) {
+                todayStats = stat;
+                todayIndex = i;
+                console.log('✅ Found existing entry at index', i, 'with minutes:', stat.totalMinutes);
+                break;
+            }
         }
     }
-}
 
-if (!todayStats) {
-    console.log('⚠️ Creating NEW entry for today');
-    todayStats = {
-        date: today,
-        totalMinutes: session.durationMinutes,  // Initialize with this session's time
-        sessions: 1,
-        avgFocusScore: 0
-    };
-    user.deepWorkStats.dailyStats.push(todayStats);
-} else {
-    // Found existing entry - ADD to it
-    console.log('➕ Adding', session.durationMinutes, 'minutes to existing', todayStats.totalMinutes);
-    todayStats.totalMinutes += session.durationMinutes;
-    todayStats.sessions += 1;
-}
+    if (!todayStats) {
+        console.log('⚠️ Creating NEW entry for today');
+        todayStats = {
+            date: today,
+            totalMinutes: session.durationMinutes,  // Initialize with this session's time
+            sessions: 1,
+            avgFocusScore: 0
+        };
+        user.deepWorkStats.dailyStats.push(todayStats);
+    } else {
+        // Found existing entry - ADD to it
+        console.log('➕ Adding', session.durationMinutes, 'minutes to existing', todayStats.totalMinutes);
+        todayStats.totalMinutes += session.durationMinutes;
+        todayStats.sessions += 1;
+    }
     // Recalculate average focus
     const allTodaySessions = await DeepWorkSession.find({
         userId,
-        startTime: { $gte: today, $lt: new Date(today.getTime() + 86400000) }
+        startTime: { $gte: today, $lt: tomorrow }
     });
-    
+
     const totalFocus = allTodaySessions.reduce((sum, s) => sum + (s.focusScore || 0), 0);
     todayStats.avgFocusScore = Math.round(totalFocus / allTodaySessions.length);
-    
-    // Update streak
-   // ===== FIXED STREAK UPDATE CODE =====
-// Update streak - ONLY ONCE PER DAY
-const yesterday = new Date(today);
-yesterday.setDate(yesterday.getDate() - 1);
 
-// Check if this is the first session of the day
-const isFirstSessionToday = todayStats.sessions === 1;
+    // Update streak - ONLY ONCE PER DAY
+    const yesterdayDateKey = addDaysToDateKey(todayDateKey, -1);
 
-if (isFirstSessionToday) {
-    const hadSessionYesterday = user.deepWorkStats.dailyStats.some(d => 
-        new Date(d.date).setHours(0,0,0,0) === yesterday.getTime() && d.totalMinutes > 0
-    );
-    
-    if (hadSessionYesterday) {
-        user.deepWorkStats.currentStreak += 1;
-    } else {
-        user.deepWorkStats.currentStreak = 1;
+    // Check if this is the first session of the day
+    const isFirstSessionToday = todayStats.sessions === 1;
+
+    if (isFirstSessionToday) {
+        const hadSessionYesterday = user.deepWorkStats.dailyStats.some(d =>
+            toAppDateKey(new Date(d.date)) === yesterdayDateKey && d.totalMinutes > 0
+        );
+
+        if (hadSessionYesterday) {
+            user.deepWorkStats.currentStreak += 1;
+        } else {
+            user.deepWorkStats.currentStreak = 1;
+        }
     }
-}
-// ===== END OF FIXED CODE =====
     
     user.deepWorkStats.longestStreak = Math.max(
         user.deepWorkStats.longestStreak,
