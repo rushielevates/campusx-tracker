@@ -7,14 +7,6 @@ const ScheduledDeepWorkBlock = require('../models/ScheduledDeepWorkBlock');
 
 const APP_TIME_ZONE_OFFSET_MINUTES = 330;
 const DAY_MS = 24 * 60 * 60 * 1000;
-const REVIEW_QUESTIONS = [
-    'workedEveryDay',
-    'sessionsLongEnough',
-    'categorySplit',
-    'bestBlock',
-    'protectingTime',
-    'nextWeekConstraint'
-];
 
 // Auth middleware
 const auth = async (req, res, next) => {
@@ -116,6 +108,8 @@ router.get('/weekly-review', auth, async (req, res) => {
             ? Number(req.query.weekOffset)
             : getDefaultReviewWeekOffset();
         const week = getWeekRangeForOffset(weekOffset);
+        const user = await User.findById(req.session.userId);
+        const questions = getUserReviewQuestions(user);
         const review = await WeeklyReview.findOne({
             userId: req.session.userId,
             weekStart: week.weekStart
@@ -124,7 +118,8 @@ router.get('/weekly-review', auth, async (req, res) => {
         const analysis = await buildWeeklyAnalysis(req.session.userId, week);
         res.json({
             ...analysis,
-            review: normalizeReview(review, week)
+            questions,
+            review: normalizeReview(review, week, questions)
         });
     } catch (error) {
         console.error('Error fetching weekly review:', error);
@@ -141,9 +136,10 @@ router.post('/weekly-review', auth, async (req, res) => {
 
         const week = getWeekRangeFromStart(weekStart);
         const user = await User.findById(req.session.userId);
+        const questions = getUserReviewQuestions(user);
         const goalMinutes = user?.deepWorkStats?.weeklyGoal || 1500;
-        const cleanAnswers = REVIEW_QUESTIONS.reduce((memo, key) => {
-            memo[key] = String(answers[key] || '').trim();
+        const cleanAnswers = questions.reduce((memo, question) => {
+            memo[question.id] = String(answers[question.id] || '').trim();
             return memo;
         }, {});
 
@@ -162,7 +158,7 @@ router.post('/weekly-review', auth, async (req, res) => {
             { new: true, upsert: true, setDefaultsOnInsert: true }
         ).lean();
 
-        res.json({ success: true, review: normalizeReview(review, week) });
+        res.json({ success: true, review: normalizeReview(review, week, questions) });
     } catch (error) {
         console.error('Error saving weekly review:', error);
         res.status(500).json({ error: error.message });
@@ -172,21 +168,137 @@ router.post('/weekly-review', auth, async (req, res) => {
 router.get('/weekly-review/constraint', auth, async (req, res) => {
     try {
         const currentWeek = getWeekRangeForOffset(0);
+        const user = await User.findById(req.session.userId);
+        const questions = getUserReviewQuestions(user);
+        const constraintQuestion = questions.find(question => question.isConstraint);
+
+        if (!constraintQuestion) {
+            return res.json({ hasConstraint: false, constraint: '', sourceWeekStart: null, sourceWeekEnd: null });
+        }
+
         const review = await WeeklyReview.findOne({
             userId: req.session.userId,
             appliesToWeekStart: currentWeek.weekStart,
             isCompleted: true,
-            'answers.nextWeekConstraint': { $ne: '' }
+            [`answers.${constraintQuestion.id}`]: { $ne: '' }
         }).sort({ updatedAt: -1 }).lean();
 
         res.json({
-            hasConstraint: Boolean(review?.answers?.nextWeekConstraint),
-            constraint: review?.answers?.nextWeekConstraint || '',
+            hasConstraint: Boolean(review?.answers?.[constraintQuestion.id]),
+            constraint: review?.answers?.[constraintQuestion.id] || '',
             sourceWeekStart: review?.weekStart || null,
             sourceWeekEnd: review?.weekEnd || null
         });
     } catch (error) {
         console.error('Error fetching weekly constraint:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ===== WEEKLY REVIEW QUESTION MANAGEMENT ENDPOINTS =====
+
+router.get('/review-questions', auth, async (req, res) => {
+    try {
+        const user = await User.findById(req.session.userId);
+        res.json({ questions: getUserReviewQuestions(user) });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/review-questions/add', auth, async (req, res) => {
+    try {
+        const { label } = req.body;
+        if (!label || label.trim() === '') {
+            return res.status(400).json({ error: 'Question label is required' });
+        }
+
+        const user = await User.findById(req.session.userId);
+        if (!user.deepWorkStats) user.deepWorkStats = {};
+        if (!user.deepWorkStats.customReviewQuestions) user.deepWorkStats.customReviewQuestions = [];
+
+        const newId = label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') + '-' + Date.now();
+        const maxOrder = user.deepWorkStats.customReviewQuestions.reduce(
+            (max, q) => Math.max(max, q.order || 0), 0
+        );
+
+        const newQuestion = {
+            id: newId,
+            label: label.trim(),
+            order: maxOrder + 1,
+            isActive: true,
+            isConstraint: false
+        };
+
+        user.deepWorkStats.customReviewQuestions.push(newQuestion);
+        await user.save();
+
+        res.json({ success: true, question: newQuestion });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.put('/review-questions/:id', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { label, isActive } = req.body;
+
+        const user = await User.findById(req.session.userId);
+        const question = user.deepWorkStats?.customReviewQuestions?.find(q => q.id === id);
+
+        if (!question) {
+            return res.status(404).json({ error: 'Question not found' });
+        }
+
+        if (label !== undefined && label.trim() !== '') question.label = label.trim();
+        if (isActive !== undefined) question.isActive = isActive;
+
+        await user.save();
+        res.json({ success: true, question });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.delete('/review-questions/:id', auth, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const user = await User.findById(req.session.userId);
+        const questions = user.deepWorkStats?.customReviewQuestions || [];
+        const index = questions.findIndex(q => q.id === id);
+
+        if (index === -1) {
+            return res.status(404).json({ error: 'Question not found' });
+        }
+
+        questions.splice(index, 1);
+        await user.save();
+
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/review-questions/reorder', auth, async (req, res) => {
+    try {
+        const { orderedIds } = req.body;
+        const user = await User.findById(req.session.userId);
+        const questions = user.deepWorkStats?.customReviewQuestions || [];
+
+        const questionMap = {};
+        questions.forEach(q => { questionMap[q.id] = q; });
+
+        const reordered = orderedIds
+            .filter(id => questionMap[id])
+            .map((id, index) => ({ ...questionMap[id], order: index + 1 }));
+
+        user.deepWorkStats.customReviewQuestions = reordered;
+        await user.save();
+
+        res.json({ success: true });
+    } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
@@ -505,15 +617,28 @@ async function buildWeeklyAnalysis(userId, week) {
     };
 }
 
-function normalizeReview(review, week) {
+function getUserReviewQuestions(user) {
+    const questions = user?.deepWorkStats?.customReviewQuestions || [];
+    return questions
+        .map(q => ({
+            id: q.id,
+            label: q.label,
+            order: q.order || 0,
+            isActive: q.isActive !== false,
+            isConstraint: Boolean(q.isConstraint)
+        }))
+        .sort((a, b) => a.order - b.order);
+}
+
+function normalizeReview(review, week, questions) {
     return {
         weekStart: week.weekStart,
         weekEnd: week.weekEnd,
         appliesToWeekStart: week.appliesToWeekStart,
         goalMinutes: review?.goalMinutes || null,
         isCompleted: Boolean(review?.isCompleted),
-        answers: REVIEW_QUESTIONS.reduce((memo, key) => {
-            memo[key] = review?.answers?.[key] || '';
+        answers: questions.reduce((memo, question) => {
+            memo[question.id] = review?.answers?.[question.id] || '';
             return memo;
         }, {}),
         updatedAt: review?.updatedAt || null

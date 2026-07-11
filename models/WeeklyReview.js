@@ -6,14 +6,7 @@ const weeklyReviewSchema = new mongoose.Schema({
     weekEnd: { type: String, required: true },
     appliesToWeekStart: { type: String, required: true },
     goalMinutes: { type: Number, default: 1500 },
-    answers: {
-        workedEveryDay: { type: String, default: '' },
-        sessionsLongEnough: { type: String, default: '' },
-        categorySplit: { type: String, default: '' },
-        bestBlock: { type: String, default: '' },
-        protectingTime: { type: String, default: '' },
-        nextWeekConstraint: { type: String, default: '' }
-    },
+    answers: { type: mongoose.Schema.Types.Mixed, default: {} },
     isCompleted: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }

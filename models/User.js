@@ -71,6 +71,23 @@ const userSchema = new mongoose.Schema({
             { id: 'planning', name: 'Planning', icon: '📋', color: '#6f42c1', order: 5 },
             { id: 'other', name: 'Other', icon: '⚙️', color: '#6c757d', order: 6 }
         ]
+    },
+    customReviewQuestions: {
+        type: [{
+            id: { type: String, required: true },
+            label: { type: String, required: true },
+            order: { type: Number, default: 0 },
+            isActive: { type: Boolean, default: true },
+            isConstraint: { type: Boolean, default: false }
+        }],
+        default: [
+            { id: 'workedEveryDay', label: 'Did I work every day and start early?', order: 1 },
+            { id: 'sessionsLongEnough', label: 'What actually broke my rhythm this week?', order: 2 },
+            { id: 'categorySplit', label: 'Did my category split match my priority?', order: 3 },
+            { id: 'bestBlock', label: 'What did I actually produce, not just study?', order: 4 },
+            { id: 'protectingTime', label: 'What is the one thing I am protecting time for next week?', order: 5 },
+            { id: 'nextWeekConstraint', label: 'Constraint for next week', order: 6, isConstraint: true }
+        ]
     }
     }
 

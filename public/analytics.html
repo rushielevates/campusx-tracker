@@ -155,6 +155,28 @@
         .review-answer textarea { width: 100%; min-height: 86px; border: 1px solid #d0d5dd; border-radius: 8px; padding: 10px; resize: vertical; font: inherit; color: #222; background: white; box-shadow: inset 0 1px 2px rgba(15,23,42,0.04); }
         .review-answer textarea:focus { outline: 2px solid rgba(29,158,117,0.18); border-color: #1D9E75; }
         .review-answer.constraint-answer { grid-column: 1 / -1; }
+        .review-answer-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+        .manage-questions-btn { border: 1px solid #d0d5dd; border-radius: 8px; background: white; color: #344054; font-size: 12px; font-weight: 700; padding: 6px 10px; cursor: pointer; }
+        .manage-questions-btn:hover { border-color: #1D9E75; color: #117455; }
+        .review-question-modal { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 1200; align-items: center; justify-content: center; }
+        .review-question-modal.open { display: flex; }
+        .review-question-modal-content { width: min(480px, 92vw); max-height: 82vh; overflow-y: auto; background: white; border-radius: 12px; padding: 20px; box-shadow: 0 20px 50px rgba(15,23,42,0.25); }
+        .review-question-modal-content h3 { font-size: 17px; color: #1f2937; margin-bottom: 4px; }
+        .review-question-modal-subtitle { color: #667085; font-size: 12px; margin-bottom: 14px; }
+        .review-question-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+        .review-question-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 1px solid #e5e7eb; border-radius: 8px; background: #f8fafc; }
+        .review-question-row.dragging { opacity: 0.5; }
+        .review-question-drag { cursor: grab; color: #98a2b3; font-weight: 800; }
+        .review-question-label { flex: 1; color: #1f2937; font-size: 13px; font-weight: 650; }
+        .review-question-row-actions { display: flex; gap: 6px; }
+        .review-question-row-actions button { border: 1px solid #d0d5dd; border-radius: 6px; background: white; color: #344054; font-size: 11px; font-weight: 800; padding: 5px 8px; cursor: pointer; }
+        .review-question-row-actions button:hover { border-color: #1D9E75; color: #117455; }
+        .review-question-row-actions button.danger:hover { border-color: #f04438; color: #b42318; }
+        .add-review-question-row { display: flex; gap: 8px; margin-bottom: 16px; }
+        .add-review-question-row input { flex: 1; border: 1px solid #d0d5dd; border-radius: 8px; padding: 8px 10px; font: inherit; }
+        .add-review-question-row button { border: none; border-radius: 8px; background: #1D9E75; color: white; font-weight: 800; padding: 8px 14px; cursor: pointer; }
+        .review-question-modal-close { display: flex; justify-content: flex-end; }
+        .review-question-modal-close button { border: none; border-radius: 8px; background: #f3f5f9; color: #344054; font-weight: 800; padding: 8px 16px; cursor: pointer; }
         .schedule-panel { margin-bottom: 14px; }
         .schedule-form-grid { display: grid; grid-template-columns: minmax(190px, 1.25fr) repeat(2, minmax(120px, 0.75fr)); gap: 12px; margin-top: 12px; }
         .schedule-field { display: flex; flex-direction: column; gap: 7px; }
@@ -382,33 +404,26 @@
                     </div>
 
                     <div class="review-panel">
-                        <h3>Weekly review answers</h3>
-                        <div class="review-answer-grid">
-                            <div class="review-answer">
-                                <label for="answerWorkedEveryDay">Did I work every day and start early?</label>
-                                <textarea id="answerWorkedEveryDay"></textarea>
-                            </div>
-                            <div class="review-answer">
-                                <label for="answerSessionsLongEnough">What actually broke my rhythm this week?</label>
-                                <textarea id="answerSessionsLongEnough"></textarea>
-                            </div>
-                            <div class="review-answer">
-                                <label for="answerCategorySplit">Did my category split match my priority?</label>
-                                <textarea id="answerCategorySplit"></textarea>
-                            </div>
-                            <div class="review-answer">
-                                <label for="answerBestBlock">What did I actually produce, not just study?</label>
-                                <textarea id="answerBestBlock"></textarea>
-                            </div>
-                            <div class="review-answer">
-                                <label for="answerProtectingTime">What is the one thing I am protecting time for next week?</label>
-                                <textarea id="answerProtectingTime"></textarea>
-                            </div>
-                            <div class="review-answer constraint-answer">
-                                <label for="answerNextWeekConstraint">Constraint for next week</label>
-                                <textarea id="answerNextWeekConstraint" placeholder="Example: First session before 6 AM on at least 5 days."></textarea>
-                            </div>
+                        <div class="review-answer-panel-header">
+                            <h3>Weekly review answers</h3>
+                            <button type="button" class="manage-questions-btn" onclick="openReviewQuestionManager()">Manage questions</button>
                         </div>
+                        <div class="review-answer-grid" id="reviewAnswerGrid"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="review-question-modal" id="reviewQuestionModal">
+                <div class="review-question-modal-content">
+                    <h3>Manage questions</h3>
+                    <div class="review-question-modal-subtitle">Drag to reorder. Edit or delete any question, or add your own.</div>
+                    <div class="review-question-list" id="reviewQuestionList"></div>
+                    <div class="add-review-question-row">
+                        <input type="text" id="newReviewQuestionLabel" placeholder="New question">
+                        <button type="button" onclick="addReviewQuestion()">Add</button>
+                    </div>
+                    <div class="review-question-modal-close">
+                        <button type="button" onclick="closeReviewQuestionManager()">Done</button>
                     </div>
                 </div>
             </div>
@@ -421,6 +436,7 @@
         let activityData = {};
         let reviewWeekOffset = getDefaultReviewWeekOffset();
         let weeklyReviewData = null;
+        let reviewQuestions = [];
         let scheduleTaskTypes = [];
         let selectedScheduleDays = [0, 1, 2, 3, 4];
         let weeklyScheduleBlocks = [];
@@ -433,6 +449,7 @@
             await loadAnalytics();
             initScheduleDays();
             await loadScheduleTaskTypes();
+            await loadReviewQuestions();
             await loadWeeklyReview();
 
             window.addEventListener('storage', (event) => {
@@ -704,12 +721,173 @@
             renderCategorySplit(data.categories || [], summary.totalMinutes || 0);
             renderEarlyStarts(data.earlyStarts || { days: [], count: 0, totalDays: 7 });
 
-            document.getElementById('answerWorkedEveryDay').value = answers.workedEveryDay || '';
-            document.getElementById('answerSessionsLongEnough').value = answers.sessionsLongEnough || '';
-            document.getElementById('answerCategorySplit').value = answers.categorySplit || '';
-            document.getElementById('answerBestBlock').value = answers.bestBlock || '';
-            document.getElementById('answerProtectingTime').value = answers.protectingTime || '';
-            document.getElementById('answerNextWeekConstraint').value = answers.nextWeekConstraint || '';
+            if (Array.isArray(data.questions)) reviewQuestions = data.questions;
+            renderReviewAnswerGrid(answers);
+        }
+
+        function renderReviewAnswerGrid(answers) {
+            const grid = document.getElementById('reviewAnswerGrid');
+            if (!grid) return;
+
+            const activeQuestions = reviewQuestions.filter(question => question.isActive !== false);
+            grid.innerHTML = activeQuestions.map(question => `
+                <div class="review-answer${question.isConstraint ? ' constraint-answer' : ''}">
+                    <label for="answer-${escapeHtml(question.id)}">${escapeHtml(question.label)}</label>
+                    <textarea id="answer-${escapeHtml(question.id)}" data-question-id="${escapeHtml(question.id)}">${escapeHtml(answers[question.id] || '')}</textarea>
+                </div>
+            `).join('');
+        }
+
+        async function loadReviewQuestions() {
+            try {
+                const response = await fetch('/api/analytics/review-questions');
+                if (!response.ok) return;
+                const data = await response.json();
+                reviewQuestions = (data.questions || []).sort((a, b) => (a.order || 0) - (b.order || 0));
+            } catch (error) {
+                console.error('Error loading review questions:', error);
+            }
+        }
+
+        function openReviewQuestionManager() {
+            renderReviewQuestionList();
+            document.getElementById('reviewQuestionModal').classList.add('open');
+        }
+
+        function closeReviewQuestionManager() {
+            document.getElementById('reviewQuestionModal').classList.remove('open');
+        }
+
+        function renderReviewQuestionList() {
+            const list = document.getElementById('reviewQuestionList');
+            if (!list) return;
+
+            list.innerHTML = reviewQuestions.map(question => `
+                <div class="review-question-row" draggable="true" data-id="${escapeHtml(question.id)}">
+                    <div class="review-question-drag" title="Drag to reorder">&#8942;&#8942;</div>
+                    <div class="review-question-label">${escapeHtml(question.label)}</div>
+                    <div class="review-question-row-actions">
+                        <button type="button" onclick="editReviewQuestion('${question.id}')">Edit</button>
+                        <button type="button" class="danger" onclick="deleteReviewQuestion('${question.id}')">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+
+            makeReviewQuestionsSortable();
+        }
+
+        async function addReviewQuestion() {
+            const input = document.getElementById('newReviewQuestionLabel');
+            const label = input.value.trim();
+            if (!label) {
+                alert('Please enter a question');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/analytics/review-questions/add', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ label })
+                });
+                if (!response.ok) throw new Error('Failed to add question');
+
+                input.value = '';
+                await loadReviewQuestions();
+                renderReviewQuestionList();
+                renderReviewAnswerGrid(weeklyReviewData?.review?.answers || {});
+            } catch (error) {
+                console.error('Error adding review question:', error);
+                alert('Failed to add question. Please try again.');
+            }
+        }
+
+        async function editReviewQuestion(id) {
+            const question = reviewQuestions.find(q => q.id === id);
+            const nextLabel = prompt('Question text', question?.label || '');
+            if (nextLabel === null) return;
+
+            const label = nextLabel.trim();
+            if (!label) {
+                alert('Please enter a question');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/analytics/review-questions/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ label })
+                });
+                if (!response.ok) throw new Error('Failed to update question');
+
+                await loadReviewQuestions();
+                renderReviewQuestionList();
+                renderReviewAnswerGrid(weeklyReviewData?.review?.answers || {});
+            } catch (error) {
+                console.error('Error updating review question:', error);
+                alert('Failed to update question. Please try again.');
+            }
+        }
+
+        async function deleteReviewQuestion(id) {
+            if (!confirm('Delete this question? Its saved answers will no longer be shown.')) return;
+
+            try {
+                const response = await fetch(`/api/analytics/review-questions/${id}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Failed to delete question');
+
+                await loadReviewQuestions();
+                renderReviewQuestionList();
+                renderReviewAnswerGrid(weeklyReviewData?.review?.answers || {});
+            } catch (error) {
+                console.error('Error deleting review question:', error);
+                alert('Failed to delete question. Please try again.');
+            }
+        }
+
+        function makeReviewQuestionsSortable() {
+            const list = document.getElementById('reviewQuestionList');
+            if (!list) return;
+            let draggedRow = null;
+
+            list.querySelectorAll('.review-question-row').forEach(row => {
+                row.addEventListener('dragstart', () => {
+                    draggedRow = row;
+                    row.classList.add('dragging');
+                });
+                row.addEventListener('dragend', async () => {
+                    row.classList.remove('dragging');
+                    draggedRow = null;
+                    await saveReviewQuestionOrder();
+                });
+                row.addEventListener('dragover', (event) => {
+                    event.preventDefault();
+                    if (!draggedRow || draggedRow === row) return;
+                    const rect = row.getBoundingClientRect();
+                    const isAfter = event.clientY - rect.top > rect.height / 2;
+                    row.parentNode.insertBefore(draggedRow, isAfter ? row.nextSibling : row);
+                });
+            });
+        }
+
+        async function saveReviewQuestionOrder() {
+            const orderedIds = Array.from(document.querySelectorAll('#reviewQuestionList .review-question-row'))
+                .map(row => row.dataset.id);
+
+            try {
+                const response = await fetch('/api/analytics/review-questions/reorder', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderedIds })
+                });
+                if (!response.ok) throw new Error('Failed to reorder questions');
+
+                await loadReviewQuestions();
+                renderReviewAnswerGrid(weeklyReviewData?.review?.answers || {});
+            } catch (error) {
+                console.error('Error reordering review questions:', error);
+            }
         }
 
         function initScheduleDays() {
@@ -1138,14 +1316,10 @@
             const status = document.getElementById('reviewStatus');
             if (status) status.textContent = '';
 
-            const answers = {
-                workedEveryDay: document.getElementById('answerWorkedEveryDay').value,
-                sessionsLongEnough: document.getElementById('answerSessionsLongEnough').value,
-                categorySplit: document.getElementById('answerCategorySplit').value,
-                bestBlock: document.getElementById('answerBestBlock').value,
-                protectingTime: document.getElementById('answerProtectingTime').value,
-                nextWeekConstraint: document.getElementById('answerNextWeekConstraint').value
-            };
+            const answers = {};
+            document.querySelectorAll('#reviewAnswerGrid [data-question-id]').forEach(textarea => {
+                answers[textarea.dataset.questionId] = textarea.value;
+            });
 
             try {
                 const response = await fetch('/api/analytics/weekly-review', {
