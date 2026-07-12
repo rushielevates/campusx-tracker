@@ -660,6 +660,7 @@ function startTimer() {
     .then(data => {
         console.log('Session started:', data);
         currentSessionId = data.sessionId;
+        addedPlannedTopicIds.clear();
         applyTimerModeUI();
 
         // Store the actual start time
@@ -839,6 +840,7 @@ function resetTimer() {
         clearInterval(window.pingInterval);
     }
     currentSessionId = null;
+    addedPlannedTopicIds.clear();
     seconds = 0;
     updateTimerDisplay();
     applyTimerModeUI();
@@ -1686,6 +1688,145 @@ async function loadTaskTypes() {
         }
     } catch (error) {
         console.error('Error loading task types:', error);
+    }
+}
+
+// ===== PLANNED TOPICS (from weekly review topic plan) =====
+let plannedTopicItems = [];
+let addedPlannedTopicIds = new Set();
+const plannedDayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+function getCurrentIstMondayKey() {
+    const istNow = new Date(Date.now() + 330 * 60 * 1000);
+    const dayOfWeek = istNow.getUTCDay();
+    const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    istNow.setUTCDate(istNow.getUTCDate() - daysToSubtract);
+    return `${istNow.getUTCFullYear()}-${String(istNow.getUTCMonth() + 1).padStart(2, '0')}-${String(istNow.getUTCDate()).padStart(2, '0')}`;
+}
+
+async function openPlannedTopicsModal() {
+    const categoryId = document.getElementById('taskType').value;
+    if (!categoryId) {
+        alert('Select a category first');
+        return;
+    }
+
+    const category = (window.taskTypes || []).find(t => t.id === categoryId);
+    document.getElementById('plannedTopicsCategoryLabel').textContent = category
+        ? `Topics planned for ${category.name} this week.`
+        : 'Topics planned for this category.';
+
+    await loadPlannedTopics(categoryId);
+    document.getElementById('plannedTopicsModal').style.display = 'block';
+}
+
+function closePlannedTopicsModal() {
+    document.getElementById('plannedTopicsModal').style.display = 'none';
+}
+
+async function loadPlannedTopics(categoryId) {
+    const list = document.getElementById('plannedTopicsList');
+    try {
+        const targetWeekStart = getCurrentIstMondayKey();
+        const response = await fetch(`/api/analytics/weekly-review/topic-plan?targetWeekStart=${encodeURIComponent(targetWeekStart)}`, {
+            credentials: 'include'
+        });
+        if (!response.ok) throw new Error('Failed to load planned topics');
+        const data = await response.json();
+        plannedTopicItems = (data.items || []).filter(item => item.categoryId === categoryId);
+        renderPlannedTopics();
+    } catch (error) {
+        console.error('Error loading planned topics:', error);
+        if (list) list.innerHTML = '<p class="planned-topics-empty">Unable to load planned topics.</p>';
+    }
+}
+
+function renderPlannedTopics() {
+    const list = document.getElementById('plannedTopicsList');
+    if (!list) return;
+
+    if (!plannedTopicItems.length) {
+        list.innerHTML = '<p class="planned-topics-empty">No topics planned for this category this week.<br>Add some from the weekly review page.</p>';
+        return;
+    }
+
+    const canSelect = !currentSessionId;
+
+    const groups = new Map();
+    plannedTopicItems.forEach(item => {
+        const key = (item.day === null || item.day === undefined) ? 'unassigned' : item.day;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(item);
+    });
+
+    const orderedKeys = [0, 1, 2, 3, 4, 5, 6, 'unassigned'].filter(key => groups.has(key));
+
+    list.innerHTML = orderedKeys.map(key => {
+        const items = groups.get(key);
+        const label = key === 'unassigned' ? 'Unassigned' : plannedDayNames[key];
+        const rows = items.map(item => renderPlannedTopicRow(item, canSelect)).join('');
+        return `
+            <div class="planned-day-group">
+                <div class="planned-day-header">
+                    <span class="planned-day-pill ${key === 'unassigned' ? 'unassigned' : ''}">${label}</span>
+                    <span class="planned-day-count">${items.length}</span>
+                </div>
+                <div class="planned-day-items">${rows}</div>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderPlannedTopicRow(item, canSelect) {
+    const isAdded = addedPlannedTopicIds.has(item._id);
+    return `
+        <div class="planned-topic-card ${item.completed ? 'completed' : ''}" data-id="${item._id}">
+            <label class="planned-topic-check">
+                <input type="checkbox" ${item.completed ? 'checked' : ''} onchange="togglePlannedTopicComplete('${item._id}')">
+            </label>
+            <span class="planned-topic-text">${escapeHtml(item.text)}</span>
+            ${item.completed ? '<span class="planned-topic-done-badge">✓ Done</span>' : ''}
+            ${canSelect ? `<button type="button" class="planned-topic-use-btn ${isAdded ? 'added' : ''}" onclick="selectPlannedTopic('${item._id}')">${isAdded ? '✓ Added' : '+ Add'}</button>` : ''}
+        </div>
+    `;
+}
+
+function selectPlannedTopic(itemId) {
+    const item = plannedTopicItems.find(entry => entry._id === itemId);
+    if (!item) return;
+
+    if (addedPlannedTopicIds.has(itemId)) {
+        addedPlannedTopicIds.delete(itemId);
+    } else {
+        addedPlannedTopicIds.add(itemId);
+    }
+
+    const selectedTexts = plannedTopicItems
+        .filter(entry => addedPlannedTopicIds.has(entry._id))
+        .map(entry => entry.text);
+    document.getElementById('taskDescription').value = selectedTexts.join(', ');
+
+    renderPlannedTopics();
+}
+
+async function togglePlannedTopicComplete(itemId) {
+    const item = plannedTopicItems.find(entry => entry._id === itemId);
+    if (!item) return;
+    const nextCompleted = !item.completed;
+
+    try {
+        const response = await fetch(`/api/analytics/weekly-review/topic-plan/${itemId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ completed: nextCompleted })
+        });
+        if (!response.ok) throw new Error('Failed to update topic');
+        item.completed = nextCompleted;
+        renderPlannedTopics();
+    } catch (error) {
+        console.error('Error updating planned topic:', error);
+        alert('Failed to update topic. Please try again.');
     }
 }
 

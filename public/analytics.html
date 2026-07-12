@@ -177,6 +177,34 @@
         .add-review-question-row button { border: none; border-radius: 8px; background: #1D9E75; color: white; font-weight: 800; padding: 8px 14px; cursor: pointer; }
         .review-question-modal-close { display: flex; justify-content: flex-end; }
         .review-question-modal-close button { border: none; border-radius: 8px; background: #f3f5f9; color: #344054; font-weight: 800; padding: 8px 16px; cursor: pointer; }
+        .topic-plan-modal { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.45); z-index: 1200; align-items: center; justify-content: center; }
+        .topic-plan-modal.open { display: flex; }
+        .topic-plan-modal-content { width: min(640px, 94vw); max-height: 86vh; overflow-y: auto; background: white; border-radius: 12px; padding: 22px; box-shadow: 0 20px 50px rgba(15,23,42,0.25); }
+        .topic-plan-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+        .topic-plan-modal-header h3 { font-size: 18px; color: #1f2937; margin-bottom: 4px; }
+        .topic-plan-modal-subtitle { color: #667085; font-size: 12px; }
+        .topic-plan-modal-close-x { border: none; background: #f3f5f9; color: #344054; width: 30px; height: 30px; border-radius: 8px; font-size: 18px; line-height: 1; cursor: pointer; flex: none; }
+        .topic-plan-modal-close-x:hover { background: #e6eaf2; }
+        .topic-plan-categories { display: flex; flex-direction: column; gap: 14px; }
+        .topic-plan-category { border: 1px solid #e5e7eb; border-radius: 10px; background: #f8fafc; overflow: hidden; }
+        .topic-plan-category-header { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid #edf0f5; }
+        .topic-plan-category-dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+        .topic-plan-category-name { font-weight: 800; color: #1f2937; font-size: 14px; flex: 1; }
+        .topic-plan-category-count { color: #667085; font-size: 12px; font-weight: 700; }
+        .topic-plan-item-list { display: flex; flex-direction: column; }
+        .topic-plan-item-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #edf0f5; }
+        .topic-plan-item-row:last-child { border-bottom: none; }
+        .topic-plan-item-text { flex: 1; color: #1f2937; font-size: 13px; font-weight: 600; }
+        .topic-plan-item-day { min-height: 32px; border: 1px solid #d0d5dd; border-radius: 7px; padding: 5px 8px; background: white; color: #344054; font: inherit; font-size: 12px; font-weight: 700; }
+        .topic-plan-item-delete { border: none; background: none; color: #98a2b3; font-size: 16px; cursor: pointer; padding: 2px 4px; flex: none; }
+        .topic-plan-item-delete:hover { color: #b42318; }
+        .topic-plan-add-row { display: flex; gap: 8px; padding: 10px 14px; background: white; }
+        .topic-plan-add-row input { flex: 1; border: 1px solid #d0d5dd; border-radius: 8px; padding: 8px 10px; font: inherit; font-size: 13px; }
+        .topic-plan-add-row button { border: none; border-radius: 8px; background: #1D9E75; color: white; font-weight: 800; padding: 8px 14px; cursor: pointer; font-size: 13px; }
+        .topic-plan-add-row button:hover { background: #157f5e; }
+        .topic-plan-empty-hint { padding: 12px 14px; color: #667085; font-size: 12px; }
+        .topic-plan-modal-close { display: flex; justify-content: flex-end; margin-top: 16px; }
+        .topic-plan-modal-close button { border: none; border-radius: 8px; background: #f3f5f9; color: #344054; font-weight: 800; padding: 8px 16px; cursor: pointer; }
         .schedule-panel { margin-bottom: 14px; }
         .schedule-form-grid { display: grid; grid-template-columns: minmax(190px, 1.25fr) repeat(2, minmax(120px, 0.75fr)); gap: 12px; margin-top: 12px; }
         .schedule-field { display: flex; flex-direction: column; gap: 7px; }
@@ -410,6 +438,30 @@
                         </div>
                         <div class="review-answer-grid" id="reviewAnswerGrid"></div>
                     </div>
+
+                    <div class="review-panel">
+                        <div class="review-answer-panel-header">
+                            <h3>Topic plan for next week</h3>
+                            <button type="button" class="manage-questions-btn" onclick="openTopicPlanModal()">Plan topics</button>
+                        </div>
+                        <div class="review-panel-subtitle" id="topicPlanSummary">Group topics by category and assign a day for next week.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="topic-plan-modal" id="topicPlanModal" onclick="if (event.target === this) closeTopicPlanModal()">
+                <div class="topic-plan-modal-content">
+                    <div class="topic-plan-modal-header">
+                        <div>
+                            <h3>Topic plan for next week</h3>
+                            <div class="topic-plan-modal-subtitle" id="topicPlanModalSubtitle">0 topics - 0 unassigned</div>
+                        </div>
+                        <button type="button" class="topic-plan-modal-close-x" onclick="closeTopicPlanModal()" aria-label="Close">&times;</button>
+                    </div>
+                    <div class="topic-plan-categories" id="topicPlanCategories"></div>
+                    <div class="topic-plan-modal-close">
+                        <button type="button" onclick="closeTopicPlanModal()">Done</button>
+                    </div>
                 </div>
             </div>
 
@@ -441,6 +493,7 @@
         let selectedScheduleDays = [0, 1, 2, 3, 4];
         let weeklyScheduleBlocks = [];
         let editingScheduleBlockId = null;
+        let topicPlanItems = [];
         const scheduleDayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
         window.onload = async function() {
@@ -679,6 +732,7 @@
                 weeklyReviewData = await response.json();
                 renderWeeklyReview(weeklyReviewData);
                 await loadWeeklySchedule();
+                await loadTopicPlan();
                 if (status) status.textContent = '';
             } catch (error) {
                 console.error('Error loading weekly review:', error);
@@ -1146,6 +1200,155 @@
             } catch (error) {
                 console.error('Error deleting block:', error);
                 showToast(error.message || 'Delete failed', 'error');
+            }
+        }
+
+        async function loadTopicPlan() {
+            const targetWeekStart = getScheduleTargetWeekStart();
+            if (!targetWeekStart) return;
+            try {
+                const response = await fetch(`/api/analytics/weekly-review/topic-plan?targetWeekStart=${encodeURIComponent(targetWeekStart)}`);
+                if (!response.ok) throw new Error('Failed to load topic plan');
+                const data = await response.json();
+                topicPlanItems = data.items || [];
+                renderTopicPlanSummary();
+            } catch (error) {
+                console.error('Error loading topic plan:', error);
+            }
+        }
+
+        function renderTopicPlanSummary() {
+            const total = topicPlanItems.length;
+            const unassigned = topicPlanItems.filter(item => item.day === null || item.day === undefined).length;
+            const text = `${total} topic${total === 1 ? '' : 's'} - ${unassigned} unassigned`;
+
+            const panelSubtitle = document.getElementById('topicPlanSummary');
+            if (panelSubtitle) panelSubtitle.textContent = total > 0 ? text : 'Group topics by category and assign a day for next week.';
+
+            const modalSubtitle = document.getElementById('topicPlanModalSubtitle');
+            if (modalSubtitle) modalSubtitle.textContent = text;
+        }
+
+        function openTopicPlanModal() {
+            renderTopicPlanCategories();
+            document.getElementById('topicPlanModal').classList.add('open');
+        }
+
+        function closeTopicPlanModal() {
+            document.getElementById('topicPlanModal').classList.remove('open');
+        }
+
+        function renderTopicPlanCategories() {
+            const container = document.getElementById('topicPlanCategories');
+            if (!container) return;
+
+            if (!scheduleTaskTypes.length) {
+                container.innerHTML = '<div class="topic-plan-empty-hint">Add a Deepwork task category first (see Schedule for next week above).</div>';
+                return;
+            }
+
+            container.innerHTML = scheduleTaskTypes.map(category => {
+                const items = topicPlanItems.filter(item => item.categoryId === category.id);
+                const rows = items.length
+                    ? items.map(item => renderTopicPlanRow(item)).join('')
+                    : '<div class="topic-plan-empty-hint">No topics yet.</div>';
+
+                return `
+                    <div class="topic-plan-category">
+                        <div class="topic-plan-category-header">
+                            <div class="topic-plan-category-dot" style="background: ${safeColor(category.color)};"></div>
+                            <div class="topic-plan-category-name">${escapeHtml(category.name)}</div>
+                            <div class="topic-plan-category-count">${items.length}</div>
+                        </div>
+                        <div class="topic-plan-item-list">${rows}</div>
+                        <div class="topic-plan-add-row">
+                            <input type="text" id="topicPlanInput-${escapeHtml(category.id)}" placeholder="Add ${escapeHtml(category.name)} topic...">
+                            <button type="button" onclick="addTopicPlanItem('${category.id}')">Add</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.querySelectorAll('.topic-plan-add-row input').forEach(input => {
+                input.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        const categoryId = input.id.replace('topicPlanInput-', '');
+                        addTopicPlanItem(categoryId);
+                    }
+                });
+            });
+        }
+
+        function renderTopicPlanRow(item) {
+            const dayOptions = ['<option value="">Unassigned</option>']
+                .concat(scheduleDayNames.map((day, index) => `<option value="${index}" ${item.day === index ? 'selected' : ''}>${day}</option>`))
+                .join('');
+
+            return `
+                <div class="topic-plan-item-row">
+                    <div class="topic-plan-item-text">${escapeHtml(item.text)}</div>
+                    <select class="topic-plan-item-day" onchange="updateTopicPlanDay('${item._id}', this.value)">${dayOptions}</select>
+                    <button type="button" class="topic-plan-item-delete" title="Remove" onclick="deleteTopicPlanItem('${item._id}')">&times;</button>
+                </div>
+            `;
+        }
+
+        async function addTopicPlanItem(categoryId) {
+            const input = document.getElementById(`topicPlanInput-${categoryId}`);
+            const text = input?.value.trim();
+            if (!text) return;
+
+            const targetWeekStart = getScheduleTargetWeekStart();
+            try {
+                const response = await fetch('/api/analytics/weekly-review/topic-plan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ targetWeekStart, categoryId, text, day: null })
+                });
+                if (!response.ok) throw new Error('Failed to add topic');
+
+                if (input) input.value = '';
+                await loadTopicPlan();
+                renderTopicPlanCategories();
+            } catch (error) {
+                console.error('Error adding topic plan item:', error);
+                showToast('Failed to add topic', 'error');
+            }
+        }
+
+        async function updateTopicPlanDay(itemId, dayValue) {
+            const day = dayValue === '' ? null : Number(dayValue);
+            try {
+                const response = await fetch(`/api/analytics/weekly-review/topic-plan/${itemId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ day })
+                });
+                if (!response.ok) throw new Error('Failed to update topic');
+
+                const item = topicPlanItems.find(entry => entry._id === itemId);
+                if (item) item.day = day;
+                renderTopicPlanSummary();
+            } catch (error) {
+                console.error('Error updating topic plan item:', error);
+                showToast('Failed to update topic', 'error');
+                await loadTopicPlan();
+                renderTopicPlanCategories();
+            }
+        }
+
+        async function deleteTopicPlanItem(itemId) {
+            try {
+                const response = await fetch(`/api/analytics/weekly-review/topic-plan/${itemId}`, { method: 'DELETE' });
+                if (!response.ok) throw new Error('Failed to delete topic');
+
+                topicPlanItems = topicPlanItems.filter(item => item._id !== itemId);
+                renderTopicPlanSummary();
+                renderTopicPlanCategories();
+            } catch (error) {
+                console.error('Error deleting topic plan item:', error);
+                showToast('Failed to delete topic', 'error');
             }
         }
 

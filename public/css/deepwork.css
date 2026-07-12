@@ -449,6 +449,212 @@ html.sidebar-no-transition .main-content {
     background: white;
 }
 
+.planned-topics-row {
+    max-width: 500px;
+    margin: -8px auto 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.planned-topics-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #eef1ff 0%, #f5eefc 100%);
+    border: 1.5px solid #d8dcfb;
+    border-radius: 999px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #4c4fb3;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+
+.planned-topics-btn:hover {
+    border-color: #8f97f0;
+    box-shadow: 0 6px 16px rgba(102, 126, 234, 0.22);
+    transform: translateY(-1px);
+}
+
+.planned-topics-btn-icon {
+    font-size: 15px;
+}
+
+/* ===== Planned Topics Modal ===== */
+.planned-topics-modal-content {
+    max-width: 560px;
+    padding: 0;
+}
+
+.planned-topics-modal-content .modal-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 15px 15px 0 0;
+    padding: 22px 24px;
+    align-items: flex-start;
+}
+
+.planned-topics-modal-content .modal-header h2 {
+    color: white;
+    font-size: 19px;
+}
+
+.planned-topics-subtitle {
+    margin: 6px 0 0;
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.88);
+    font-weight: 600;
+}
+
+.planned-topics-modal-content .modal-header .close {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.planned-topics-modal-content .modal-header .close:hover {
+    color: white;
+}
+
+.planned-topics-modal-content .modal-body {
+    padding: 20px 22px;
+}
+
+.planned-topics-modal-content .modal-footer {
+    padding: 16px 22px 20px;
+    border-top: 1px solid #eef0f5;
+}
+
+.planned-topics-list {
+    max-height: 400px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.planned-topics-empty {
+    text-align: center;
+    padding: 34px 10px;
+    color: #98a2b3;
+    font-size: 13.5px;
+}
+
+.planned-day-group {
+    border: 1px solid #eef0f5;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fafbfe;
+}
+
+.planned-day-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #f3f4fb;
+    border-bottom: 1px solid #eef0f5;
+}
+
+.planned-day-pill {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #4c4fb3;
+    background: #e4e6fb;
+    padding: 3px 11px;
+    border-radius: 999px;
+}
+
+.planned-day-pill.unassigned {
+    color: #667085;
+    background: #eef0f4;
+}
+
+.planned-day-count {
+    font-size: 11px;
+    color: #98a2b3;
+    font-weight: 700;
+    margin-left: auto;
+}
+
+.planned-day-items {
+    display: flex;
+    flex-direction: column;
+}
+
+.planned-topic-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border-bottom: 1px solid #f1f2f7;
+    background: white;
+    transition: background 0.15s;
+}
+
+.planned-topic-card:last-child {
+    border-bottom: none;
+}
+
+.planned-topic-card.completed {
+    background: #f3fdf7;
+}
+
+.planned-topic-check {
+    display: flex;
+    align-items: center;
+    flex: none;
+}
+
+.planned-topic-check input {
+    width: 17px;
+    height: 17px;
+    cursor: pointer;
+    accent-color: #16a34a;
+}
+
+.planned-topic-text {
+    flex: 1;
+    font-size: 13.5px;
+    color: #1f2937;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.planned-topic-done-badge {
+    font-size: 11px;
+    font-weight: 800;
+    color: #15803d;
+    background: #dcfce7;
+    padding: 3px 10px;
+    border-radius: 999px;
+    flex: none;
+}
+
+.planned-topic-use-btn {
+    flex: none;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 7px;
+    padding: 6px 13px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+}
+
+.planned-topic-use-btn:hover {
+    background: #5a6fd1;
+    transform: translateY(-1px);
+}
+
+.planned-topic-use-btn.added {
+    background: #eef2ff;
+    color: #4c4fb3;
+    border: 1.5px solid #c7ccfa;
+}
+
 /* ===== CHART SECTION ===== */
 .chart-section {
     background: white;

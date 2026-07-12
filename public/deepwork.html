@@ -113,6 +113,12 @@
         <input type="text" id="taskDescription" placeholder="What are you working on?">
         <select id="taskType"></select>
     </div>
+    <div class="planned-topics-row" id="plannedTopicsRow">
+        <button type="button" class="planned-topics-btn" id="plannedTopicsBtn" onclick="openPlannedTopicsModal()">
+            <span class="planned-topics-btn-icon">📌</span>
+            <span>Choose from planned topics</span>
+        </button>
+    </div>
     <div class="timer-footer">
         <button class="show-tasks-btn" id="showTasksBtn" onclick="expandTasks()" style="display: none;">
             📋 Show Tasks
@@ -387,6 +393,26 @@
 
         <div class="modal-footer">
             <button class="btn-primary" onclick="closeCategoryEditModal()">Done</button>
+        </div>
+    </div>
+</div>
+    <!-- Planned Topics Modal -->
+<div class="modal" id="plannedTopicsModal" onclick="if (event.target === this) closePlannedTopicsModal()">
+    <div class="modal-content category-edit-modal planned-topics-modal-content">
+        <div class="modal-header">
+            <div>
+                <h2>📌 Planned Topics</h2>
+                <p class="planned-topics-subtitle" id="plannedTopicsCategoryLabel">Topics planned for this category.</p>
+            </div>
+            <span class="close" onclick="closePlannedTopicsModal()">&times;</span>
+        </div>
+
+        <div class="modal-body">
+            <div id="plannedTopicsList" class="planned-topics-list"></div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-primary" onclick="closePlannedTopicsModal()">Done</button>
         </div>
     </div>
 </div>

@@ -4,6 +4,7 @@ const User = require('../models/User');
 const DeepWorkSession = require('../models/DeepWorkSession');
 const WeeklyReview = require('../models/WeeklyReview');
 const ScheduledDeepWorkBlock = require('../models/ScheduledDeepWorkBlock');
+const TopicPlanItem = require('../models/TopicPlanItem');
 
 const APP_TIME_ZONE_OFFSET_MINUTES = 330;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -447,6 +448,137 @@ router.delete('/weekly-review/schedule/:id', auth, async (req, res) => {
         res.json({ success: true });
     } catch (error) {
         console.error('Error deleting weekly schedule:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ===== TOPIC PLAN FOR NEXT WEEK ENDPOINTS =====
+
+function normalizeTopicPlanDay(day) {
+    if (day === null || day === undefined || day === '') return null;
+    const numericDay = Number(day);
+    return Number.isInteger(numericDay) && numericDay >= 0 && numericDay <= 6 ? numericDay : null;
+}
+
+router.get('/weekly-review/topic-plan', auth, async (req, res) => {
+    try {
+        const targetWeekStart = normalizeWeekStartInput(req.query.targetWeekStart);
+        if (!targetWeekStart) {
+            return res.status(400).json({ error: 'Valid targetWeekStart is required' });
+        }
+
+        const items = await TopicPlanItem.find({
+            userId: req.session.userId,
+            targetWeekStart
+        }).sort({ order: 1, createdAt: 1 }).lean();
+
+        res.json({ items });
+    } catch (error) {
+        console.error('Error fetching topic plan:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/weekly-review/topic-plan', auth, async (req, res) => {
+    try {
+        const { targetWeekStart, categoryId, text, day } = req.body;
+
+        const cleanTargetWeekStart = normalizeWeekStartInput(targetWeekStart);
+        if (!cleanTargetWeekStart) {
+            return res.status(400).json({ error: 'Valid targetWeekStart is required' });
+        }
+
+        const cleanText = String(text || '').trim();
+        if (!cleanText) {
+            return res.status(400).json({ error: 'Topic text is required' });
+        }
+
+        const cleanDay = normalizeTopicPlanDay(day);
+
+        const user = await User.findById(req.session.userId);
+        const category = user?.deepWorkStats?.customTaskTypes?.find(task => task.id === categoryId);
+        if (!category) {
+            return res.status(400).json({ error: 'Select a valid category' });
+        }
+
+        const maxOrder = await TopicPlanItem.find({
+            userId: req.session.userId,
+            targetWeekStart: cleanTargetWeekStart,
+            categoryId: category.id
+        }).sort({ order: -1 }).limit(1).lean();
+
+        const item = await TopicPlanItem.create({
+            userId: req.session.userId,
+            targetWeekStart: cleanTargetWeekStart,
+            categoryId: category.id,
+            categoryName: category.name,
+            categoryColor: category.color || '#667eea',
+            text: cleanText,
+            day: cleanDay,
+            order: (maxOrder[0]?.order || 0) + 1,
+            updatedAt: new Date()
+        });
+
+        res.status(201).json({ success: true, item });
+    } catch (error) {
+        console.error('Error saving topic plan item:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.put('/weekly-review/topic-plan/:id', auth, async (req, res) => {
+    try {
+        const { text, day, completed } = req.body;
+        const update = { updatedAt: new Date() };
+
+        if (text !== undefined) {
+            const cleanText = String(text || '').trim();
+            if (!cleanText) {
+                return res.status(400).json({ error: 'Topic text is required' });
+            }
+            update.text = cleanText;
+        }
+
+        if (day !== undefined) {
+            update.day = normalizeTopicPlanDay(day);
+        }
+
+        if (completed !== undefined) {
+            update.completed = Boolean(completed);
+            update.completedAt = update.completed ? new Date() : null;
+        }
+
+        const item = await TopicPlanItem.findOneAndUpdate(
+            { _id: req.params.id, userId: req.session.userId },
+            update,
+            { new: true }
+        );
+
+        if (!item) {
+            return res.status(404).json({ error: 'Topic not found' });
+        }
+
+        res.json({ success: true, item });
+    } catch (error) {
+        console.error('Error updating topic plan item:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.delete('/weekly-review/topic-plan/:id', auth, async (req, res) => {
+    try {
+        const item = await TopicPlanItem.findOneAndDelete({
+            _id: req.params.id,
+            userId: req.session.userId
+        });
+
+        if (!item) {
+            return res.status(404).json({ error: 'Topic not found' });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error deleting topic plan item:', error);
         res.status(500).json({ error: error.message });
     }
 });
