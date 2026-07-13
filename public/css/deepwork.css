@@ -526,9 +526,11 @@ html.sidebar-no-transition .main-content {
 .planned-topics-list {
     max-height: 400px;
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+    display: block;
+}
+
+.planned-day-group + .planned-day-group {
+    margin-top: 14px;
 }
 
 .planned-topics-empty {
