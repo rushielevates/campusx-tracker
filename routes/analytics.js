@@ -8,6 +8,7 @@ const TopicPlanItem = require('../models/TopicPlanItem');
 
 const APP_TIME_ZONE_OFFSET_MINUTES = 330;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_EARLY_MORNING_CUTOFF_MINUTES = 360; // 6:00 AM
 
 // Auth middleware
 const auth = async (req, res, next) => {
@@ -124,6 +125,62 @@ router.get('/weekly-review', auth, async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching weekly review:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.post('/set-early-morning-cutoff', auth, async (req, res) => {
+    try {
+        const { cutoffTime } = req.body;
+        if (!cutoffTime || !/^\d{2}:\d{2}$/.test(cutoffTime)) {
+            return res.status(400).json({ error: 'Valid cutoffTime (HH:MM) is required' });
+        }
+
+        const [hoursStr, minutesStr] = cutoffTime.split(':');
+        const cutoffMinutes = Number(hoursStr) * 60 + Number(minutesStr);
+        if (!Number.isFinite(cutoffMinutes) || cutoffMinutes < 0 || cutoffMinutes > 1439) {
+            return res.status(400).json({ error: 'Invalid cutoff time' });
+        }
+
+        const weekOffset = parseInt(req.body.weekOffset, 10) || 0;
+        const weekStartKey = normalizeWeekStartInput(req.body.weekStart) || getWeekRangeForOffset(weekOffset).weekStart;
+        const monday = appDateKeyToUtcStart(weekStartKey);
+
+        const user = await User.findById(req.session.userId);
+        if (!user.deepWorkStats) user.deepWorkStats = {};
+        if (!Array.isArray(user.deepWorkStats.earlyMorningCutoffs)) {
+            user.deepWorkStats.earlyMorningCutoffs = [];
+        }
+
+        const existingCutoff = user.deepWorkStats.earlyMorningCutoffs.find(entry => {
+            return normalizeWeekStartKey(entry.weekStart) === weekStartKey;
+        });
+
+        if (existingCutoff) {
+            existingCutoff.cutoffMinutes = cutoffMinutes;
+        } else {
+            user.deepWorkStats.earlyMorningCutoffs.push({
+                weekStart: monday,
+                cutoffMinutes
+            });
+        }
+
+        if (weekOffset === 0) {
+            user.deepWorkStats.earlyMorningCutoffMinutes = cutoffMinutes;
+            user.deepWorkStats.earlyMorningCutoffWeekStart = monday;
+        }
+
+        await user.save();
+
+        res.json({
+            success: true,
+            weekStart: weekStartKey,
+            cutoffMinutes,
+            cutoffTime,
+            cutoffLabel: formatMinutesAsClockLabel(cutoffMinutes)
+        });
+    } catch (error) {
+        console.error('Error saving early morning cutoff:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -646,6 +703,7 @@ async function buildWeeklyAnalysis(userId, week) {
         weekStart: week.weekStart
     }).lean();
     const goalMinutes = review?.goalMinutes || user?.deepWorkStats?.weeklyGoal || 1500;
+    const cutoffMinutes = getCutoffForWeek(user, week.weekStart);
     const sessions = await DeepWorkSession.find({
         userId,
         startTime: { $gte: week.utcStart, $lte: week.utcEnd },
@@ -700,8 +758,12 @@ async function buildWeeklyAnalysis(userId, week) {
     const bestDay = daily.reduce((best, day) => day.minutes > best.minutes ? day : best, daily[0]);
     const earlyStarts = daily.filter(day => {
         if (!day.firstSessionTime) return false;
-        return getAppMinutesFromDate(new Date(day.firstSessionTime)) < 360;
+        return getAppMinutesFromDate(new Date(day.firstSessionTime)) < cutoffMinutes;
     }).length;
+
+    const previousWeekRange = getWeekRangeFromStart(addDaysToDateKey(week.weekStart, -7));
+    const previousWeekCutoffMinutes = getCutoffForWeek(user, previousWeekRange.weekStart);
+    const previousWeekEarlyStarts = await computeEarlyStartCount(userId, previousWeekRange, previousWeekCutoffMinutes);
 
     const categories = Array.from(categoryTotals.entries())
         .filter(([, minutes]) => minutes > 0)
@@ -739,11 +801,16 @@ async function buildWeeklyAnalysis(userId, week) {
         earlyStarts: {
             count: earlyStarts,
             totalDays: 7,
+            cutoffMinutes,
+            cutoffTime: minutesToClockInput(cutoffMinutes),
+            cutoffLabel: formatMinutesAsClockLabel(cutoffMinutes),
+            previousWeekCount: previousWeekEarlyStarts,
+            diffFromLastWeek: earlyStarts - previousWeekEarlyStarts,
             days: daily.map(day => ({
                 day: day.day.charAt(0),
                 date: day.date,
                 time: day.firstSessionTime ? formatAppTime(new Date(day.firstSessionTime)) : null,
-                isEarly: day.firstSessionTime ? getAppMinutesFromDate(new Date(day.firstSessionTime)) < 360 : false
+                isEarly: day.firstSessionTime ? getAppMinutesFromDate(new Date(day.firstSessionTime)) < cutoffMinutes : false
             }))
         }
     };
@@ -787,6 +854,70 @@ function getWeekRangeForOffset(weekOffset) {
 
 function normalizeWeekStartInput(value) {
     return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+}
+
+function normalizeWeekStartKey(value) {
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+    if (value) {
+        const parsed = new Date(value);
+        if (!Number.isNaN(parsed.getTime())) return toAppDateKey(parsed);
+    }
+    return null;
+}
+
+function getCutoffForWeek(user, weekStartKey) {
+    const savedCutoff = user?.deepWorkStats?.earlyMorningCutoffs?.find(entry => {
+        return normalizeWeekStartKey(entry.weekStart) === weekStartKey;
+    });
+
+    if (savedCutoff && Number.isFinite(savedCutoff.cutoffMinutes)) {
+        return savedCutoff.cutoffMinutes;
+    }
+
+    if (user?.deepWorkStats?.earlyMorningCutoffWeekStart && Number.isFinite(user?.deepWorkStats?.earlyMorningCutoffMinutes)) {
+        if (normalizeWeekStartKey(user.deepWorkStats.earlyMorningCutoffWeekStart) === weekStartKey) {
+            return user.deepWorkStats.earlyMorningCutoffMinutes;
+        }
+    }
+
+    return DEFAULT_EARLY_MORNING_CUTOFF_MINUTES;
+}
+
+async function computeEarlyStartCount(userId, weekRange, cutoffMinutes) {
+    const sessions = await DeepWorkSession.find({
+        userId,
+        startTime: { $gte: weekRange.utcStart, $lte: weekRange.utcEnd },
+        durationMinutes: { $gt: 0 }
+    }).sort({ startTime: 1 }).lean();
+
+    const firstSessionByDay = new Map();
+    sessions.forEach(session => {
+        const dateKey = toAppDateKey(new Date(session.startTime));
+        const existing = firstSessionByDay.get(dateKey);
+        if (!existing || new Date(session.startTime) < new Date(existing)) {
+            firstSessionByDay.set(dateKey, session.startTime);
+        }
+    });
+
+    let count = 0;
+    firstSessionByDay.forEach(time => {
+        if (getAppMinutesFromDate(new Date(time)) < cutoffMinutes) count += 1;
+    });
+    return count;
+}
+
+function formatMinutesAsClockLabel(minutes) {
+    const hours24 = Math.floor(minutes / 60) % 24;
+    const mins = minutes % 60;
+    const period = hours24 >= 12 ? 'PM' : 'AM';
+    const hours12 = hours24 % 12 || 12;
+    return mins === 0 ? `${hours12} ${period}` : `${hours12}:${String(mins).padStart(2, '0')} ${period}`;
+}
+
+function minutesToClockInput(minutes) {
+    const hours24 = Math.floor(minutes / 60) % 24;
+    const mins = minutes % 60;
+    return `${String(hours24).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 }
 
 function getDefaultReviewWeekOffset() {

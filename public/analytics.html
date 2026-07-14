@@ -148,6 +148,13 @@
         .early-start-day { text-align: center; color: #667085; font-size: 11px; }
         .early-start-circle { width: 34px; height: 34px; border-radius: 50%; border: 1px solid #d0d5dd; margin: 0 auto 7px; display: flex; align-items: center; justify-content: center; color: #344054; font-weight: 800; background: linear-gradient(180deg, #ffffff, #f1f5f9); box-shadow: 0 2px 5px rgba(15,23,42,0.06); }
         .early-start-circle.early { background: linear-gradient(180deg, #dcfce7, #bbf7d0); border-color: #86efac; color: #166534; }
+        #earlyStartComparison.improved { color: #117455; background: #e9fbf4; border-color: #b7ead6; }
+        #earlyStartComparison.declined { color: #b42318; background: #fff1f0; border-color: #fecdca; }
+        .cutoff-editor-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+        .cutoff-editor { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 200px; }
+        .cutoff-editor label { color: #344054; font-size: 12px; font-weight: 700; white-space: nowrap; }
+        .cutoff-editor input[type="time"] { flex: 1; min-height: 34px; border: 1px solid #d0d5dd; border-radius: 8px; padding: 6px 8px; background: white; color: #1f2937; font: inherit; font-weight: 650; min-width: 0; }
+        .review-save-btn.small { min-height: 34px; padding: 6px 12px; font-size: 12px; }
         .review-answer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
         .review-answer { display: flex; flex-direction: column; gap: 7px; }
         .review-answer label { color: #344054; font-size: 13px; font-weight: 700; }
@@ -388,9 +395,22 @@
 
                         <div class="review-panel">
                             <h3>Early morning rate</h3>
-                            <div class="review-panel-subtitle">First session before 6 AM</div>
+                            <div class="review-panel-subtitle" id="earlyStartSubtitle">First session before 6 AM</div>
                             <div class="early-start-grid" id="earlyStartGrid"></div>
                             <div class="review-hint" id="earlyStartSummary"></div>
+                            <div class="review-hint" id="earlyStartComparison"></div>
+                            <div class="cutoff-editor-row">
+                                <div class="cutoff-editor">
+                                    <label for="earlyCutoffInput">This week's cutoff</label>
+                                    <input type="time" id="earlyCutoffInput">
+                                    <button class="review-save-btn small" onclick="saveEarlyMorningCutoff('this')">Save</button>
+                                </div>
+                                <div class="cutoff-editor">
+                                    <label for="nextWeekCutoffInput">Next week's cutoff</label>
+                                    <input type="time" id="nextWeekCutoffInput">
+                                    <button class="review-save-btn small" onclick="saveEarlyMorningCutoff('next')">Save</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -504,6 +524,7 @@
             await loadScheduleTaskTypes();
             await loadReviewQuestions();
             await loadWeeklyReview();
+            await loadNextWeekCutoff();
 
             window.addEventListener('storage', (event) => {
                 if (event.key === 'analytics-refresh') {
@@ -1499,8 +1520,70 @@
                 </div>
             `).join('');
 
+            document.getElementById('earlyStartSubtitle').textContent =
+                `First session before ${earlyStarts.cutoffLabel || '6 AM'}`;
+
             document.getElementById('earlyStartSummary').textContent =
                 `${earlyStarts.count || 0} / ${earlyStarts.totalDays || 7} days had an early start`;
+
+            const comparisonEl = document.getElementById('earlyStartComparison');
+            const diff = earlyStarts.diffFromLastWeek;
+            const previousCount = earlyStarts.previousWeekCount || 0;
+            comparisonEl.classList.remove('improved', 'declined');
+            if (typeof diff === 'number' && diff !== 0) {
+                comparisonEl.classList.add(diff > 0 ? 'improved' : 'declined');
+                const arrow = diff > 0 ? '▲' : '▼';
+                const dayWord = Math.abs(diff) === 1 ? 'day' : 'days';
+                comparisonEl.textContent = `${arrow} ${Math.abs(diff)} ${dayWord} ${diff > 0 ? 'more' : 'fewer'} than last week (${previousCount} last week)`;
+            } else {
+                comparisonEl.textContent = `Same as last week (${previousCount} early start${previousCount === 1 ? '' : 's'})`;
+            }
+
+            const cutoffInput = document.getElementById('earlyCutoffInput');
+            if (cutoffInput && earlyStarts.cutoffTime) cutoffInput.value = earlyStarts.cutoffTime;
+        }
+
+        async function loadNextWeekCutoff() {
+            try {
+                const response = await fetch('/api/analytics/weekly-review?weekOffset=1');
+                if (!response.ok) return;
+                const data = await response.json();
+                const input = document.getElementById('nextWeekCutoffInput');
+                if (input && data.earlyStarts?.cutoffTime) input.value = data.earlyStarts.cutoffTime;
+            } catch (error) {
+                console.error('Error loading next week cutoff:', error);
+            }
+        }
+
+        async function saveEarlyMorningCutoff(target) {
+            const inputId = target === 'next' ? 'nextWeekCutoffInput' : 'earlyCutoffInput';
+            const cutoffTime = document.getElementById(inputId).value;
+            if (!cutoffTime) {
+                showToast('Pick a time first', 'error');
+                return;
+            }
+
+            const weekOffset = target === 'next' ? 1 : reviewWeekOffset;
+
+            try {
+                const response = await fetch('/api/analytics/set-early-morning-cutoff', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cutoffTime, weekOffset })
+                });
+                if (!response.ok) throw new Error('Failed to save cutoff');
+
+                showToast(target === 'next' ? "Next week's cutoff saved" : 'Cutoff updated', 'success');
+
+                if (target === 'next') {
+                    await loadNextWeekCutoff();
+                } else {
+                    await loadWeeklyReview();
+                }
+            } catch (error) {
+                console.error('Error saving early morning cutoff:', error);
+                showToast('Unable to save cutoff', 'error');
+            }
         }
 
         function renderBarRow(label, value, width, colorClass) {

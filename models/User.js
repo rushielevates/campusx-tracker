@@ -42,7 +42,15 @@ const userSchema = new mongoose.Schema({
             weekStart: { type: Date, required: true },
             goalMinutes: { type: Number, required: true }
         }],
-        
+
+        // Early morning cutoff (minutes since midnight, e.g. 360 = 6:00 AM), editable per week
+        earlyMorningCutoffMinutes: { type: Number, default: 360 },
+        earlyMorningCutoffWeekStart: { type: Date },
+        earlyMorningCutoffs: [{
+            weekStart: { type: Date, required: true },
+            cutoffMinutes: { type: Number, required: true }
+        }],
+
         // Daily stats for bar chart
         dailyStats: [{
             date: { type: Date },
