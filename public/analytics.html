@@ -137,6 +137,12 @@
         .review-bar-row > div:last-child { text-align: right; font-weight: 700; color: #1f2937; }
         .review-bar-track { height: 10px; background: #e9eef6; border-radius: 999px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(15,23,42,0.08); }
         .review-bar-fill { height: 100%; border-radius: 999px; min-width: 2px; box-shadow: 0 0 0 1px rgba(255,255,255,0.35) inset; }
+        .review-bar-middle { display: flex; flex-direction: column; gap: 4px; }
+        .review-bar-diff-row { display: flex; justify-content: flex-end; }
+        .depth-diff { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px; font-weight: 800; }
+        .depth-diff.good { background: #e9fbf4; color: #117455; }
+        .depth-diff.bad { background: #fff1f0; color: #b42318; }
+        .depth-diff.neutral { background: #f3f5f9; color: #667085; }
         .depth-red { background: #ef4444; }
         .depth-orange { background: #f59e0b; }
         .depth-blue { background: #3b82f6; }
@@ -1480,14 +1486,28 @@
 
         function renderSessionDepth(depth, totalSessions) {
             const colors = ['depth-red', 'depth-orange', 'depth-blue', 'depth-green'];
+            const goodDirection = [-1, -1, 1, 1]; // under20 & 20-44: fewer is better; 45-89 & 90+: more is better
+
             document.getElementById('sessionDepthRows').innerHTML = depth.map((bucket, index) => {
                 const width = totalSessions > 0 ? Math.round((bucket.count / totalSessions) * 100) : 0;
-                return renderBarRow(
-                    `${bucket.label}<br><span>${bucket.note}</span>`,
-                    `${bucket.count} sessions`,
-                    width,
-                    colors[index] || 'depth-blue'
-                );
+                const diff = bucket.diffFromLastWeek || 0;
+                let diffHtml = '<span class="depth-diff neutral">+0</span>';
+                if (diff !== 0) {
+                    const isGood = Math.sign(diff) === goodDirection[index];
+                    const sign = diff > 0 ? '+' : '-';
+                    diffHtml = `<span class="depth-diff ${isGood ? 'good' : 'bad'}">${sign}${Math.abs(diff)}</span>`;
+                }
+
+                return `
+                    <div class="review-bar-row">
+                        <div>${bucket.label}<br><span>${bucket.note}</span></div>
+                        <div class="review-bar-middle">
+                            <div class="review-bar-diff-row">${diffHtml}</div>
+                            <div class="review-bar-track"><div class="review-bar-fill ${colors[index] || 'depth-blue'}" style="width: ${Math.max(0, Math.min(100, width))}%"></div></div>
+                        </div>
+                        <div>${bucket.count} sessions</div>
+                    </div>
+                `;
             }).join('');
         }
 

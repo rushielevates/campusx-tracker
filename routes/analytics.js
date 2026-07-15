@@ -764,6 +764,13 @@ async function buildWeeklyAnalysis(userId, week) {
     const previousWeekRange = getWeekRangeFromStart(addDaysToDateKey(week.weekStart, -7));
     const previousWeekCutoffMinutes = getCutoffForWeek(user, previousWeekRange.weekStart);
     const previousWeekEarlyStarts = await computeEarlyStartCount(userId, previousWeekRange, previousWeekCutoffMinutes);
+    const previousWeekDepthCounts = await computeDepthCounts(userId, previousWeekRange);
+
+    const depth = Object.entries(depthBuckets).map(([key, bucket]) => ({
+        ...bucket,
+        previousWeekCount: previousWeekDepthCounts[key] || 0,
+        diffFromLastWeek: bucket.count - (previousWeekDepthCounts[key] || 0)
+    }));
 
     const categories = Array.from(categoryTotals.entries())
         .filter(([, minutes]) => minutes > 0)
@@ -795,7 +802,7 @@ async function buildWeeklyAnalysis(userId, week) {
                 sessions: bestDay.sessions
             } : null
         },
-        depth: Object.values(depthBuckets),
+        depth,
         daily,
         categories,
         earlyStarts: {
@@ -904,6 +911,21 @@ async function computeEarlyStartCount(userId, weekRange, cutoffMinutes) {
         if (getAppMinutesFromDate(new Date(time)) < cutoffMinutes) count += 1;
     });
     return count;
+}
+
+async function computeDepthCounts(userId, weekRange) {
+    const sessions = await DeepWorkSession.find({
+        userId,
+        startTime: { $gte: weekRange.utcStart, $lte: weekRange.utcEnd },
+        durationMinutes: { $gt: 0 }
+    }).select('durationMinutes').lean();
+
+    const counts = { under20: 0, between20And44: 0, between45And89: 0, over90: 0 };
+    sessions.forEach(session => {
+        const key = getDepthBucketKey(session.durationMinutes || 0);
+        counts[key] += 1;
+    });
+    return counts;
 }
 
 function formatMinutesAsClockLabel(minutes) {
