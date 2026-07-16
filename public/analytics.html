@@ -66,7 +66,14 @@
         .page-header { margin-bottom: 24px; }
         .page-header h1 { font-size: 28px; color: #222; margin-bottom: 6px; }
         .page-header p { color: #666; font-size: 15px; }
-        .heatmap-section { background: white; border: 1px solid #e8ebf2; border-radius: 12px; padding: 24px; box-shadow: 0 8px 28px rgba(15,23,42,0.06); }
+        .heatmap-section, .weekly-trend-section { background: white; border: 1px solid #e8ebf2; border-radius: 12px; padding: 24px; box-shadow: 0 8px 28px rgba(15,23,42,0.06); }
+        .analytics-top-row { display: flex; gap: 20px; align-items: stretch; }
+        .analytics-top-row .heatmap-section, .analytics-top-row .weekly-trend-section { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+        .trend-range-label { font-size: 12px; color: #667085; font-weight: 600; white-space: nowrap; }
+        .trend-chart-wrapper { flex: 1; margin-top: 10px; min-height: 240px; position: relative; }
+        .trend-chart-svg { width: 100%; height: 240px; display: block; overflow: visible; }
+        .trend-chart-svg .trend-hit { cursor: crosshair; }
+        .trend-empty-hint { color: #667085; font-size: 13px; padding: 40px 0; text-align: center; }
         .activity-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 15px; }
         .activity-title { font-size: 18px; font-weight: 800; color: #1f2937; display: flex; align-items: center; gap: 10px; }
         .streak-badge { background: #eef2ff; color: #4338ca; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; }
@@ -267,6 +274,7 @@
             .review-metric-grid, .review-card-grid, .review-answer-grid { grid-template-columns: 1fr; }
             .schedule-form-grid { grid-template-columns: 1fr; }
             .review-bar-row { grid-template-columns: 95px 1fr 58px; }
+            .analytics-top-row { flex-direction: column; }
         }
     </style>
 </head>
@@ -317,46 +325,58 @@
 
         <div class="main-content">
             <div class="analytics-container">
-                <div class="heatmap-section" id="heatmap-section">
-                    <div class="activity-header">
-                        <div class="activity-title">
-                            Deep work
-                            <span class="streak-badge"><span id="current-streak">0</span> day streak</span>
+                <div class="analytics-top-row">
+                    <div class="heatmap-section" id="heatmap-section">
+                        <div class="activity-header">
+                            <div class="activity-title">
+                                Deep work
+                                <span class="streak-badge"><span id="current-streak">0</span> day streak</span>
+                            </div>
+                            <div class="activity-actions">
+                                <div class="year-navigation">
+                                    <button class="year-btn" onclick="changeYear(-1)">&lt;</button>
+                                    <div class="year-label" id="yearLabel"></div>
+                                    <button class="year-btn" onclick="changeYear(1)">&gt;</button>
+                                </div>
+                                <div class="calendar-legend">
+                                    <div class="legend-item"><div class="legend-color level-0"></div><span>0h</span></div>
+                                    <div class="legend-item"><div class="legend-color level-1"></div><span>&lt;1h</span></div>
+                                    <div class="legend-item"><div class="legend-color level-2"></div><span>1-2h</span></div>
+                                    <div class="legend-item"><div class="legend-color level-3"></div><span>2-4h</span></div>
+                                    <div class="legend-item"><div class="legend-color level-4"></div><span>4h+</span></div>
+                                </div>
+                            </div>
                         </div>
-                        <div class="activity-actions">
-                            <div class="year-navigation">
-                                <button class="year-btn" onclick="changeYear(-1)">&lt;</button>
-                                <div class="year-label" id="yearLabel"></div>
-                                <button class="year-btn" onclick="changeYear(1)">&gt;</button>
+
+                        <div class="compact-streaks">
+                            <div class="compact-streak-item">
+                                <span>Current:</span>
+                                <span class="compact-streak-value" id="compact-current-streak">0</span>
+                                <span>days</span>
                             </div>
-                            <div class="calendar-legend">
-                                <div class="legend-item"><div class="legend-color level-0"></div><span>0h</span></div>
-                                <div class="legend-item"><div class="legend-color level-1"></div><span>&lt;1h</span></div>
-                                <div class="legend-item"><div class="legend-color level-2"></div><span>1-2h</span></div>
-                                <div class="legend-item"><div class="legend-color level-3"></div><span>2-4h</span></div>
-                                <div class="legend-item"><div class="legend-color level-4"></div><span>4h+</span></div>
+                            <div class="compact-streak-item">
+                                <span>Longest:</span>
+                                <span class="compact-streak-value" id="compact-longest-streak">0</span>
+                                <span>days</span>
                             </div>
+                        </div>
+
+                        <div class="calendar-wrapper">
+                            <div class="day-labels">
+                                <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
+                            </div>
+                            <div class="calendar-grid" id="calendarGrid"></div>
                         </div>
                     </div>
 
-                    <div class="compact-streaks">
-                        <div class="compact-streak-item">
-                            <span>Current:</span>
-                            <span class="compact-streak-value" id="compact-current-streak">0</span>
-                            <span>days</span>
+                    <div class="weekly-trend-section" id="weeklyTrendSection">
+                        <div class="activity-header">
+                            <div class="activity-title">Weekly focus time</div>
+                            <div class="trend-range-label" id="trendRangeLabel"></div>
                         </div>
-                        <div class="compact-streak-item">
-                            <span>Longest:</span>
-                            <span class="compact-streak-value" id="compact-longest-streak">0</span>
-                            <span>days</span>
+                        <div class="trend-chart-wrapper" id="trendChartWrapper">
+                            <svg class="trend-chart-svg" id="trendChart"></svg>
                         </div>
-                    </div>
-
-                    <div class="calendar-wrapper">
-                        <div class="day-labels">
-                            <div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div><div>Sun</div>
-                        </div>
-                        <div class="calendar-grid" id="calendarGrid"></div>
                     </div>
                 </div>
 
@@ -537,6 +557,8 @@
                     loadAnalytics(true);
                 }
             });
+
+            window.addEventListener('resize', debounce(renderWeeklyTrendChart, 150));
         };
 
         async function loadUserInfo() {
@@ -569,6 +591,7 @@
                 processActivityData();
                 updateStreaks();
                 generateCalendar();
+                renderWeeklyTrendChart();
 
                 if (showFeedback) {
                     heatmap.style.opacity = '1';
@@ -684,6 +707,236 @@
             if (hours >= 1) return 2;
             if (minutes > 0) return 1;
             return 0;
+        }
+
+        function buildWeeklyTrend() {
+            const days = (analyticsData?.calendarData || []).slice().sort((a, b) => a.date < b.date ? -1 : 1);
+            const weekMap = new Map();
+
+            days.forEach(day => {
+                const date = new Date(`${day.date}T00:00:00`);
+                const dayOfWeek = date.getDay();
+                const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+                const monday = new Date(date);
+                monday.setDate(date.getDate() - diffToMonday);
+                const key = toLocalDateKey(monday);
+
+                if (!weekMap.has(key)) {
+                    const sunday = new Date(monday);
+                    sunday.setDate(monday.getDate() + 6);
+                    weekMap.set(key, { weekStart: monday, weekEnd: sunday, minutes: 0 });
+                }
+                weekMap.get(key).minutes += day.minutes || 0;
+            });
+
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            return Array.from(weekMap.entries())
+                .sort((a, b) => a[0] < b[0] ? -1 : 1)
+                .map(([, value]) => ({
+                    weekStart: value.weekStart,
+                    weekEnd: value.weekEnd,
+                    minutes: value.minutes,
+                    hours: value.minutes / 60
+                }))
+                .filter(week => week.weekEnd <= today);
+        }
+
+        function renderWeeklyTrendChart() {
+            const wrapper = document.getElementById('trendChartWrapper');
+            const svg = document.getElementById('trendChart');
+            const rangeLabel = document.getElementById('trendRangeLabel');
+            if (!wrapper || !svg) return;
+
+            const completedWeeks = buildWeeklyTrend();
+            const existingHint = document.getElementById('trendEmptyHint');
+
+            if (completedWeeks.length === 0) {
+                svg.innerHTML = '';
+                svg.removeAttribute('viewBox');
+                if (rangeLabel) rangeLabel.textContent = '';
+                if (!existingHint) {
+                    svg.insertAdjacentHTML('afterend', '<div class="trend-empty-hint" id="trendEmptyHint">No completed week yet.</div>');
+                }
+                return;
+            }
+            if (existingHint) existingHint.remove();
+
+            const width = Math.max(280, Math.round(wrapper.clientWidth));
+            const height = 240;
+            const paddingLeft = 34;
+            const paddingRight = 12;
+            const paddingTop = 16;
+            const paddingBottom = 24;
+            const plotWidth = width - paddingLeft - paddingRight;
+            const plotHeight = height - paddingTop - paddingBottom;
+
+            // Entire history is compressed into one frame, ending at the current week
+            // (right edge) - same as LeetCode's contest rating graph.
+            const weeks = completedWeeks;
+            const stepX = weeks.length > 1 ? plotWidth / (weeks.length - 1) : 0;
+
+            const maxHours = Math.max(0, ...weeks.map(w => w.hours));
+            const yMax = maxHours > 0 ? maxHours : 1;
+
+            const points = weeks.map((week, index) => ({
+                x: paddingLeft + stepX * index,
+                y: paddingTop + plotHeight - (week.hours / yMax) * plotHeight,
+                week
+            }));
+
+            const linePath = buildSmoothPath(points);
+            const baseline = paddingTop + plotHeight;
+            const areaPath = `${linePath} L ${points[points.length - 1].x} ${baseline} L ${points[0].x} ${baseline} Z`;
+
+            let markup = '';
+
+            [0, yMax / 2, yMax].forEach(value => {
+                const y = paddingTop + plotHeight - (value / yMax) * plotHeight;
+                markup += `<line x1="${paddingLeft}" y1="${y}" x2="${width - paddingRight}" y2="${y}" stroke="#e8ebf2" stroke-width="1"/>`;
+                markup += `<text x="${paddingLeft - 8}" y="${y + 3}" text-anchor="end" font-size="10" fill="#999">${formatHoursLabel(value)}</text>`;
+            });
+
+            markup += `<path d="${areaPath}" fill="#4338ca" fill-opacity="0.1" stroke="none"/>`;
+            markup += `<path d="${linePath}" fill="none" stroke="#4338ca" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+            const lastIndex = points.length - 1;
+            const labelEvery = Math.max(1, Math.ceil(points.length / 6));
+            const labelIndices = new Set();
+            for (let i = 0; i < points.length; i += labelEvery) labelIndices.add(i);
+            labelIndices.forEach(i => {
+                if (i !== lastIndex && lastIndex - i < labelEvery / 2) labelIndices.delete(i);
+            });
+            labelIndices.add(lastIndex);
+
+            points.forEach((point, index) => {
+                if (labelIndices.has(index)) {
+                    markup += `<text x="${point.x}" y="${height - 6}" text-anchor="middle" font-size="10" fill="#999">${formatWeekLabel(point.week.weekStart)}</text>`;
+                }
+            });
+
+            points.forEach((point, index) => {
+                markup += `<circle class="trend-hit" data-index="${index}" cx="${point.x}" cy="${point.y}" r="12" fill="transparent"/>`;
+            });
+
+            const current = points[lastIndex];
+            markup += `<circle cx="${current.x}" cy="${current.y}" r="4" fill="#4338ca" stroke="white" stroke-width="2"/>`;
+            const endLabelY = current.y - 8 < paddingTop + 8 ? current.y + 16 : current.y - 8;
+            markup += `<text x="${current.x - 6}" y="${endLabelY}" text-anchor="end" font-size="11" font-weight="700" fill="#4338ca">${formatHoursLabel(current.week.hours)}</text>`;
+
+            markup += `<line id="trendCrosshair" x1="0" y1="${paddingTop}" x2="0" y2="${baseline}" stroke="#4338ca" stroke-width="1" stroke-dasharray="3,3" style="display:none;"/>`;
+            markup += `<circle id="trendHoverDot" cx="0" cy="0" r="4" fill="#4338ca" stroke="white" stroke-width="2" style="display:none;"/>`;
+
+            svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            svg.innerHTML = markup;
+
+            if (rangeLabel) {
+                rangeLabel.textContent = `${formatWeekLabel(weeks[0].weekStart)} – ${formatWeekLabel(weeks[weeks.length - 1].weekStart)}`;
+            }
+
+            bindTrendHover(svg, points);
+        }
+
+        function buildSmoothPath(points) {
+            if (points.length === 0) return '';
+            if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
+
+            let path = `M ${points[0].x} ${points[0].y}`;
+            for (let i = 0; i < points.length - 1; i++) {
+                const p0 = points[i === 0 ? i : i - 1];
+                const p1 = points[i];
+                const p2 = points[i + 1];
+                const p3 = points[i + 2 < points.length ? i + 2 : i + 1];
+                const cp1x = p1.x + (p2.x - p0.x) / 6;
+                const cp1y = p1.y + (p2.y - p0.y) / 6;
+                const cp2x = p2.x - (p3.x - p1.x) / 6;
+                const cp2y = p2.y - (p3.y - p1.y) / 6;
+                path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+            }
+            return path;
+        }
+
+        function formatHoursLabel(hours) {
+            const rounded = Math.round(hours * 10) / 10;
+            return `${rounded % 1 === 0 ? rounded : rounded.toFixed(1)}h`;
+        }
+
+        function formatWeekLabel(date) {
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function bindTrendHover(svg, points) {
+            svg.onmousemove = (event) => {
+                const rect = svg.getBoundingClientRect();
+                if (rect.width === 0) return;
+                const viewBoxWidth = svg.viewBox.baseVal.width;
+                const x = (event.clientX - rect.left) * (viewBoxWidth / rect.width);
+
+                let nearest = points[0];
+                let nearestDist = Infinity;
+                points.forEach(point => {
+                    const dist = Math.abs(point.x - x);
+                    if (dist < nearestDist) {
+                        nearestDist = dist;
+                        nearest = point;
+                    }
+                });
+
+                showTrendPoint(svg, nearest, event);
+            };
+
+            svg.onmouseleave = () => {
+                const hoverDot = document.getElementById('trendHoverDot');
+                const crosshair = document.getElementById('trendCrosshair');
+                if (hoverDot) hoverDot.style.display = 'none';
+                if (crosshair) crosshair.style.display = 'none';
+                hideTrendTooltip();
+            };
+        }
+
+        function showTrendPoint(svg, point, event) {
+            const hoverDot = document.getElementById('trendHoverDot');
+            const crosshair = document.getElementById('trendCrosshair');
+
+            if (hoverDot) {
+                hoverDot.setAttribute('cx', point.x);
+                hoverDot.setAttribute('cy', point.y);
+                hoverDot.style.display = '';
+            }
+            if (crosshair) {
+                crosshair.setAttribute('x1', point.x);
+                crosshair.setAttribute('x2', point.x);
+                crosshair.style.display = '';
+            }
+
+            showTrendTooltip(point, event);
+        }
+
+        function showTrendTooltip(point, event) {
+            let tooltip = document.getElementById('trend-tooltip');
+            if (!tooltip) {
+                tooltip = document.createElement('div');
+                tooltip.id = 'trend-tooltip';
+                tooltip.className = 'calendar-tooltip';
+                document.body.appendChild(tooltip);
+            }
+            tooltip.textContent = `Week of ${formatWeekLabel(point.week.weekStart)}: ${formatMinutes(point.week.minutes)}`;
+            tooltip.style.left = event.clientX + 'px';
+            tooltip.style.top = event.clientY + 'px';
+        }
+
+        function hideTrendTooltip() {
+            const tooltip = document.getElementById('trend-tooltip');
+            if (tooltip) tooltip.remove();
+        }
+
+        function debounce(fn, wait) {
+            let timeoutId;
+            return (...args) => {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => fn(...args), wait);
+            };
         }
 
         function showTooltip(event, date, minutes) {
