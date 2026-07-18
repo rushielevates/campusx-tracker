@@ -33,6 +33,7 @@ router.get('/user-stats', auth, async (req, res) => {
         const activeDays = Array.from(dailyMinutesMap.values()).filter(minutes => minutes > 0).length;
         const avgDailyMinutes = activeDays > 0 ? Math.round(totalMinutes / activeDays) : 0;
         const avgFocusScore = calculateAverageFocus(sessions);
+        const firstActivityDate = getFirstActivityDateKey(user, sessions);
 
         res.json({
             streak: {
@@ -48,6 +49,7 @@ router.get('/user-stats', auth, async (req, res) => {
                 avgDailyMinutes,
                 avgFocusScore
             },
+            firstActivityDate,
             calendarData
         });
     } catch (error) {
@@ -644,30 +646,44 @@ function buildDailyMinutesMap(user, sessions) {
     const dailyMinutesMap = new Map();
 
     sessions.forEach(session => {
-        const key = toDateKey(session.startTime);
+        const key = toAppDateKey(new Date(session.startTime));
         dailyMinutesMap.set(key, (dailyMinutesMap.get(key) || 0) + (session.durationMinutes || 0));
     });
 
-    // Manual edits in deepWorkStats.dailyStats are the user's intended daily totals.
-    // Deep Work stores these as local calendar days, so use local date parts here.
+    // Only an intentional manual correction should override the live session total.
+    // Auto-generated snapshots can drift from DeepWorkSession records over time (e.g. a
+    // session edited/deleted after its day's snapshot was taken) and must not win here,
+    // or this map disagrees with weekly-review, which always sums sessions directly.
     (user.deepWorkStats?.dailyStats || []).forEach(stat => {
-        const key = toDateKey(stat.date);
+        if (!stat.isManualEntry) return;
+        const key = toAppDateKey(new Date(stat.date));
         dailyMinutesMap.set(key, stat.totalMinutes || 0);
     });
 
     return dailyMinutesMap;
 }
 
+function getFirstActivityDateKey(user, sessions) {
+    const candidates = [];
+
+    if (sessions.length > 0) {
+        candidates.push(toAppDateKey(new Date(sessions[0].startTime)));
+    }
+
+    (user.deepWorkStats?.dailyStats || []).forEach(stat => {
+        candidates.push(toAppDateKey(new Date(stat.date)));
+    });
+
+    if (candidates.length === 0) return null;
+    return candidates.sort()[0];
+}
+
 function generateCalendarData(dailyMinutesMap) {
     const calendar = [];
-    const today = new Date();
+    const todayKey = toAppDateKey(new Date());
 
     for (let i = 364; i >= 0; i--) {
-        const date = new Date(today);
-        date.setDate(date.getDate() - i);
-        date.setHours(0, 0, 0, 0);
-
-        const dateKey = toDateKey(date);
+        const dateKey = addDaysToDateKey(todayKey, -i);
         const minutes = dailyMinutesMap.get(dateKey) || 0;
         const hours = minutes / 60;
 
@@ -1035,15 +1051,6 @@ function formatWeekRange(weekStart, weekEnd) {
     const startLocal = new Date(start.getTime() + APP_TIME_ZONE_OFFSET_MINUTES * 60000);
     const endLocal = new Date(end.getTime() + APP_TIME_ZONE_OFFSET_MINUTES * 60000);
     return `${startLocal.getUTCDate()}-${endLocal.getUTCDate()} ${monthNames[endLocal.getUTCMonth()]}`;
-}
-
-function toDateKey(value) {
-    const date = new Date(value);
-    date.setHours(0, 0, 0, 0);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
 }
 
 module.exports = router;

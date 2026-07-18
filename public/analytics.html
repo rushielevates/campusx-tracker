@@ -92,6 +92,8 @@
         .year-navigation { display: inline-flex; justify-content: center; align-items: center; gap: 8px; flex: none; }
         .year-btn { width: 30px; height: 30px; border-radius: 50%; border: none; background: #f0f0f0; cursor: pointer; font-size: 14px; }
         .year-btn:hover { background: #667eea; color: white; }
+        .year-btn:disabled, .year-btn:disabled:hover { opacity: 0.4; cursor: not-allowed; background: #f0f0f0; color: inherit; }
+        .calendar-empty-hint { color: #667085; font-size: 13px; padding: 30px 10px; }
         .year-label { font-size: 15px; font-weight: 700; min-width: 52px; text-align: center; }
         .calendar-wrapper { display: flex; align-items: flex-start; overflow-x: auto; padding: 10px 0; }
         .day-labels { display: flex; flex-direction: column; gap: 2px; font-size: 9px; color: #999; margin-right: 8px; margin-top: 20px; position: sticky; left: 0; background: white; z-index: 2; }
@@ -590,6 +592,7 @@
                 analyticsData = await response.json();
                 processActivityData();
                 updateStreaks();
+                updateYearNavState();
                 generateCalendar();
                 renderWeeklyTrendChart();
 
@@ -621,10 +624,28 @@
             document.getElementById('compact-longest-streak').textContent = streak.longest || 0;
         }
 
+        function getFirstActivityParts() {
+            const key = analyticsData?.firstActivityDate;
+            if (!key) return null;
+            const [year, month, day] = key.split('-').map(Number);
+            return { year, month: month - 1, day };
+        }
+
         function changeYear(offset) {
-            selectedYear += offset;
+            const nextYear = selectedYear + offset;
+            const first = getFirstActivityParts();
+            if (first && nextYear < first.year) return;
+
+            selectedYear = nextYear;
             document.getElementById('yearLabel').textContent = selectedYear;
+            updateYearNavState();
             generateCalendar();
+        }
+
+        function updateYearNavState() {
+            const first = getFirstActivityParts();
+            const prevBtn = document.querySelector('.year-navigation .year-btn:first-child');
+            if (prevBtn) prevBtn.disabled = Boolean(first && selectedYear <= first.year);
         }
 
         function generateCalendar() {
@@ -632,8 +653,16 @@
             calendarGrid.innerHTML = '';
 
             const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            const first = getFirstActivityParts();
 
-            for (let month = 0; month < 12; month++) {
+            if (first && selectedYear < first.year) {
+                calendarGrid.innerHTML = '<div class="calendar-empty-hint">No activity yet this year.</div>';
+                return;
+            }
+
+            const startMonth = (first && selectedYear === first.year) ? first.month : 0;
+
+            for (let month = startMonth; month < 12; month++) {
                 const monthBlock = document.createElement('div');
                 monthBlock.className = 'month-block';
 
@@ -657,24 +686,31 @@
                     weekColumn.appendChild(createEmptyCell());
                 }
 
-                for (let day = 1; day <= daysInMonth; day++) {
-                    const currentDate = new Date(selectedYear, month, day);
-                    const key = toLocalDateKey(currentDate);
-                    const minutes = activityData[key] || 0;
-                    const dayCell = document.createElement('div');
-                    dayCell.className = `day-cell level-${getIntensity(minutes)}`;
+                const firstVisibleDay = (first && selectedYear === first.year && month === first.month) ? first.day : 1;
 
-                    const today = new Date();
-                    if (currentDate.toDateString() === today.toDateString()) {
-                        dayCell.classList.add('today');
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const currentDayOfWeek = (startDayOfWeek + day - 1) % 7;
+
+                    if (day < firstVisibleDay) {
+                        weekColumn.appendChild(createEmptyCell());
+                    } else {
+                        const currentDate = new Date(selectedYear, month, day);
+                        const key = toLocalDateKey(currentDate);
+                        const minutes = activityData[key] || 0;
+                        const dayCell = document.createElement('div');
+                        dayCell.className = `day-cell level-${getIntensity(minutes)}`;
+
+                        const today = new Date();
+                        if (currentDate.toDateString() === today.toDateString()) {
+                            dayCell.classList.add('today');
+                        }
+
+                        dayCell.addEventListener('mouseover', event => showTooltip(event, currentDate, minutes));
+                        dayCell.addEventListener('mouseout', hideTooltip);
+                        dayCell.addEventListener('click', () => showDateDetails(currentDate, minutes));
+                        weekColumn.appendChild(dayCell);
                     }
 
-                    dayCell.addEventListener('mouseover', event => showTooltip(event, currentDate, minutes));
-                    dayCell.addEventListener('mouseout', hideTooltip);
-                    dayCell.addEventListener('click', () => showDateDetails(currentDate, minutes));
-                    weekColumn.appendChild(dayCell);
-
-                    const currentDayOfWeek = (startDayOfWeek + day - 1) % 7;
                     if (currentDayOfWeek === 6) {
                         weeksContainer.appendChild(weekColumn);
                         weekColumn = document.createElement('div');
